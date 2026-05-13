@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   Search,
   ChevronUp,
@@ -42,24 +42,34 @@ import {
   Eye,
   EyeOff,
   Settings2,
+  GripVertical,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const COLUMNS = [
-  { key: "productGroup", label: "产品组件", width: "140px" },
-  { key: "taxCategory", label: "税务小类", width: "110px" },
-  { key: "productModel", label: "产品型号", width: "140px" },
-  { key: "productDesc", label: "产品说明", width: "280px" },
-  { key: "salesCategory", label: "销售类别", width: "90px" },
-  { key: "serviceCategory", label: "服务类别", width: "90px" },
-  { key: "productStatus", label: "产品状态", width: "90px" },
-  { key: "listPrice", label: "媒体价", width: "100px" },
-  { key: "priceNote", label: "价格说明", width: "110px" },
-  { key: "isNew", label: "新品", width: "60px" },
-  { key: "remark", label: "备注", width: "140px" },
+  { key: "productGroup", label: "产品组件", defaultWidth: 140 },
+  { key: "taxCategory", label: "税务小类", defaultWidth: 110 },
+  { key: "productModel", label: "产品型号", defaultWidth: 140 },
+  { key: "productDesc", label: "产品说明", defaultWidth: 280 },
+  { key: "salesCategory", label: "销售类别", defaultWidth: 90 },
+  { key: "serviceCategory", label: "服务类别", defaultWidth: 90 },
+  { key: "productStatus", label: "产品状态", defaultWidth: 90 },
+  { key: "listPrice", label: "媒体价", defaultWidth: 100 },
+  { key: "priceNote", label: "价格说明", defaultWidth: 110 },
+  { key: "isNew", label: "新品", defaultWidth: 60 },
+  { key: "remark", label: "备注", defaultWidth: 140 },
 ] as const;
 
 type ColumnKey = (typeof COLUMNS)[number]["key"];
+
+const DEFAULT_VISIBLE_COLUMNS: Set<ColumnKey> = new Set([
+  "productModel" as ColumnKey,
+  "productDesc" as ColumnKey,
+  "listPrice" as ColumnKey,
+]);
+
+const STORAGE_KEY_COLUMNS = "ale-cpl-visible-columns";
+const STORAGE_KEY_WIDTHS = "ale-cpl-column-widths";
 
 export default function DataViewer() {
   const [activeSheet, setActiveSheet] = useState<string>("");
@@ -71,9 +81,95 @@ export default function DataViewer() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Record<string, string>>({});
-  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
-    new Set(COLUMNS.map((c) => c.key))
-  );
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_COLUMNS);
+      if (stored) {
+        const parsed = JSON.parse(stored) as string[];
+        const filtered = parsed.filter((col): col is ColumnKey => 
+          COLUMNS.some(c => c.key === col)
+        );
+        if (filtered.length > 0) {
+          return new Set(filtered);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load visible columns from storage", e);
+    }
+    return new Set(Array.from(DEFAULT_VISIBLE_COLUMNS));
+  });
+
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_WIDTHS);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.error("Failed to load column widths from storage", e);
+    }
+    const defaults: Record<string, number> = {};
+    COLUMNS.forEach((col) => {
+      defaults[col.key] = col.defaultWidth;
+    });
+    return defaults;
+  });
+
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
+  const [resizeStartX, setResizeStartX] = useState(0);
+  const [resizeStartWidth, setResizeStartWidth] = useState(0);
+
+  // Save visible columns to localStorage
+  useEffect(() => {
+    try {
+      const cols = Array.from(visibleColumns) as string[];
+      localStorage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(cols));
+    } catch (e) {
+      console.error("Failed to save visible columns to storage", e);
+    }
+  }, [visibleColumns]);
+
+  // Save column widths to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_WIDTHS, JSON.stringify(columnWidths));
+    } catch (e) {
+      console.error("Failed to save column widths to storage", e);
+    }
+  }, [columnWidths]);
+
+  // Handle column resize
+  useEffect(() => {
+    if (!resizingColumn) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - resizeStartX;
+      const newWidth = Math.max(60, resizeStartWidth + delta);
+      setColumnWidths((prev) => ({
+        ...prev,
+        [resizingColumn]: newWidth,
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setResizingColumn(null);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [resizingColumn, resizeStartX, resizeStartWidth]);
+
+  const handleResizeStart = (columnKey: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    setResizingColumn(columnKey);
+    setResizeStartX(e.clientX);
+    setResizeStartWidth(columnWidths[columnKey] || 100);
+  };
 
   // Debounce search
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
@@ -140,13 +236,13 @@ export default function DataViewer() {
 
   const toggleColumnVisibility = (key: ColumnKey) => {
     setVisibleColumns((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev) as Set<ColumnKey>;
       if (next.has(key)) {
         next.delete(key);
       } else {
         next.add(key);
       }
-      return next;
+      return next as Set<ColumnKey>;
     });
   };
 
@@ -163,7 +259,7 @@ export default function DataViewer() {
     );
   };
 
-  const getCellValue = (product: any, key: string) => {
+  const getCellValue = (product: any, key: ColumnKey) => {
     return product[key] || "";
   };
 
@@ -292,23 +388,29 @@ export default function DataViewer() {
         </div>
       )}
 
-      {/* Data table with horizontal scroll */}
+      {/* Data table with horizontal scroll and draggable columns */}
       <div className="flex-1 border rounded-lg bg-card overflow-hidden flex flex-col">
         <div className="overflow-x-auto flex-1">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
-                {visibleColumnsList.map((col) => (
+                {visibleColumnsList.map((col, idx) => (
                   <TableHead
                     key={col.key}
-                    className="cursor-pointer select-none text-xs font-semibold text-foreground/80 hover:text-foreground transition-colors border-r border-border/50 last:border-r-0 px-3 py-2 whitespace-nowrap"
-                    style={{ minWidth: col.width }}
+                    className="cursor-pointer select-none text-xs font-semibold text-foreground/80 hover:text-foreground transition-colors border-r border-border/50 last:border-r-0 px-3 py-2 whitespace-nowrap relative group"
+                    style={{ width: `${columnWidths[col.key] || col.defaultWidth}px` }}
                     onClick={() => handleSort(col.key)}
                   >
                     <div className="flex items-center gap-1">
                       {col.label}
                       {getSortIcon(col.key)}
                     </div>
+                    {/* Resize handle - available for all columns */}
+                    <div
+                      onMouseDown={(e) => handleResizeStart(col.key, e)}
+                      className="absolute right-0 top-0 bottom-0 w-1 bg-border/0 hover:bg-primary/50 cursor-col-resize transition-colors opacity-0 group-hover:opacity-100"
+                      title="拖动调整列宽"
+                    />
                   </TableHead>
                 ))}
               </TableRow>
@@ -342,7 +444,7 @@ export default function DataViewer() {
                       <TableCell
                         key={col.key}
                         className="text-xs py-3 px-3 border-r border-border/50 last:border-r-0 align-top"
-                        style={{ minWidth: col.width }}
+                        style={{ width: `${columnWidths[col.key] || col.defaultWidth}px` }}
                       >
                         <div className="break-words whitespace-normal">
                           {col.key === "isNew" && getCellValue(product, col.key) ? (
