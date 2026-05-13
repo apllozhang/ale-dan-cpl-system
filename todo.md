@@ -14,3 +14,11 @@
 - [x] Initial data seeding from uploaded Excel file
 - [x] Elegant, polished, professional visual design throughout
 - [x] Vitest tests for backend procedures
+
+
+## 表格增强功能
+
+- [x] 每一列添加明显的竖向分隔线
+- [x] 自动调整列宽和行高，根据内容自动换行
+- [x] 表格底部添加横向滚动条
+- [x] 添加列显隐控制，用户可选择显示/隐藏特定列

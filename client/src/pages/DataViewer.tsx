@@ -16,6 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo, useCallback } from "react";
 import {
@@ -31,21 +39,24 @@ import {
   X,
   Loader2,
   Database,
+  Eye,
+  EyeOff,
+  Settings2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const COLUMNS = [
-  { key: "productGroup", label: "产品组件", width: "160px" },
-  { key: "taxCategory", label: "税务小类", width: "120px" },
-  { key: "productModel", label: "产品型号", width: "180px" },
+  { key: "productGroup", label: "产品组件", width: "140px" },
+  { key: "taxCategory", label: "税务小类", width: "110px" },
+  { key: "productModel", label: "产品型号", width: "140px" },
   { key: "productDesc", label: "产品说明", width: "280px" },
-  { key: "salesCategory", label: "销售类别", width: "100px" },
-  { key: "serviceCategory", label: "服务类别", width: "100px" },
+  { key: "salesCategory", label: "销售类别", width: "90px" },
+  { key: "serviceCategory", label: "服务类别", width: "90px" },
   { key: "productStatus", label: "产品状态", width: "90px" },
   { key: "listPrice", label: "媒体价", width: "100px" },
-  { key: "priceNote", label: "价格说明", width: "120px" },
+  { key: "priceNote", label: "价格说明", width: "110px" },
   { key: "isNew", label: "新品", width: "60px" },
-  { key: "remark", label: "备注", width: "160px" },
+  { key: "remark", label: "备注", width: "140px" },
 ] as const;
 
 type ColumnKey = (typeof COLUMNS)[number]["key"];
@@ -60,6 +71,9 @@ export default function DataViewer() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
+    new Set(COLUMNS.map((c) => c.key))
+  );
 
   // Debounce search
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
@@ -124,6 +138,20 @@ export default function DataViewer() {
     setPage(1);
   };
 
+  const toggleColumnVisibility = (key: ColumnKey) => {
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const visibleColumnsList = COLUMNS.filter((c) => visibleColumns.has(c.key));
+
   const activeFilterCount = Object.values(filters).filter((v) => v && v.trim()).length;
 
   const getSortIcon = (column: string) => {
@@ -184,6 +212,35 @@ export default function DataViewer() {
               </Badge>
             )}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-1.5">
+                <Settings2 className="w-3.5 h-3.5" />
+                列设置
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <div className="px-2 py-1.5 text-sm font-medium text-foreground">显示/隐藏列</div>
+              <DropdownMenuSeparator />
+              {COLUMNS.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.key}
+                  checked={visibleColumns.has(col.key)}
+                  onCheckedChange={() => toggleColumnVisibility(col.key)}
+                  className="cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    {visibleColumns.has(col.key) ? (
+                      <Eye className="w-3.5 h-3.5" />
+                    ) : (
+                      <EyeOff className="w-3.5 h-3.5" />
+                    )}
+                    {col.label}
+                  </div>
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -235,16 +292,16 @@ export default function DataViewer() {
         </div>
       )}
 
-      {/* Data table */}
-      <div className="flex-1 border rounded-lg bg-card overflow-hidden">
-        <div className="overflow-auto h-full">
+      {/* Data table with horizontal scroll */}
+      <div className="flex-1 border rounded-lg bg-card overflow-hidden flex flex-col">
+        <div className="overflow-x-auto flex-1">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
-                {COLUMNS.map((col) => (
+                {visibleColumnsList.map((col) => (
                   <TableHead
                     key={col.key}
-                    className="cursor-pointer select-none text-xs font-semibold text-foreground/80 hover:text-foreground transition-colors"
+                    className="cursor-pointer select-none text-xs font-semibold text-foreground/80 hover:text-foreground transition-colors border-r border-border/50 last:border-r-0 px-3 py-2 whitespace-nowrap"
                     style={{ minWidth: col.width }}
                     onClick={() => handleSort(col.key)}
                   >
@@ -259,7 +316,7 @@ export default function DataViewer() {
             <TableBody>
               {productsQuery.isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={COLUMNS.length} className="h-48 text-center">
+                  <TableCell colSpan={visibleColumnsList.length} className="h-48 text-center">
                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span className="text-sm">加载中...</span>
@@ -268,7 +325,7 @@ export default function DataViewer() {
                 </TableRow>
               ) : products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={COLUMNS.length} className="h-48 text-center">
+                  <TableCell colSpan={visibleColumnsList.length} className="h-48 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Database className="w-8 h-8 opacity-30" />
                       <span className="text-sm">暂无数据</span>
@@ -280,37 +337,39 @@ export default function DataViewer() {
                 </TableRow>
               ) : (
                 products.map((product: any) => (
-                  <TableRow key={product.id} className="group hover:bg-accent/30 transition-colors">
-                    {COLUMNS.map((col) => (
+                  <TableRow key={product.id} className="group hover:bg-accent/30 transition-colors border-b border-border/50 last:border-b-0">
+                    {visibleColumnsList.map((col) => (
                       <TableCell
                         key={col.key}
-                        className="text-xs py-2.5"
+                        className="text-xs py-3 px-3 border-r border-border/50 last:border-r-0 align-top"
                         style={{ minWidth: col.width }}
                       >
-                        {col.key === "isNew" && getCellValue(product, col.key) ? (
-                          <Badge variant="default" className="text-[10px] h-5 px-1.5 bg-emerald-500/10 text-emerald-600 border-emerald-200">
-                            {getCellValue(product, col.key)}
-                          </Badge>
-                        ) : col.key === "productStatus" && getCellValue(product, col.key) ? (
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] h-5 px-1.5 ${
-                              getCellValue(product, col.key).includes("GA")
-                                ? "border-emerald-200 text-emerald-600"
-                                : getCellValue(product, col.key).includes("EOS") || getCellValue(product, col.key).includes("EOL")
-                                ? "border-red-200 text-red-500"
-                                : "border-amber-200 text-amber-600"
-                            }`}
-                          >
-                            {getCellValue(product, col.key)}
-                          </Badge>
-                        ) : col.key === "listPrice" ? (
-                          <span className="font-medium tabular-nums">
-                            {getCellValue(product, col.key) ? `¥${Number(getCellValue(product, col.key)).toLocaleString()}` : ""}
-                          </span>
-                        ) : (
-                          <span className="line-clamp-2">{getCellValue(product, col.key)}</span>
-                        )}
+                        <div className="break-words whitespace-normal">
+                          {col.key === "isNew" && getCellValue(product, col.key) ? (
+                            <Badge variant="default" className="text-[10px] h-5 px-1.5 bg-emerald-500/10 text-emerald-600 border-emerald-200">
+                              {getCellValue(product, col.key)}
+                            </Badge>
+                          ) : col.key === "productStatus" && getCellValue(product, col.key) ? (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] h-5 px-1.5 ${
+                                getCellValue(product, col.key).includes("GA")
+                                  ? "border-emerald-200 text-emerald-600"
+                                  : getCellValue(product, col.key).includes("EOS") || getCellValue(product, col.key).includes("EOL")
+                                  ? "border-red-200 text-red-500"
+                                  : "border-amber-200 text-amber-600"
+                              }`}
+                            >
+                              {getCellValue(product, col.key)}
+                            </Badge>
+                          ) : col.key === "listPrice" ? (
+                            <span className="font-medium tabular-nums">
+                              {getCellValue(product, col.key) ? `¥${Number(getCellValue(product, col.key)).toLocaleString()}` : ""}
+                            </span>
+                          ) : (
+                            <span>{getCellValue(product, col.key)}</span>
+                          )}
+                        </div>
                       </TableCell>
                     ))}
                   </TableRow>
