@@ -79,6 +79,7 @@ export default function DataViewer() {
   
   const [activeSheet, setActiveSheet] = useState<string>(sheetFromUrl);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -87,6 +88,7 @@ export default function DataViewer() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [selectAll, setSelectAll] = useState(false);
 
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
     try {
@@ -177,6 +179,36 @@ export default function DataViewer() {
     setResizeStartX(e.clientX);
     setResizeStartWidth(columnWidths[columnKey] || 100);
   };
+
+  // Handle checkbox selection
+  const handleSelectRow = (productId: string) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(productId)) {
+      newSelected.delete(productId);
+    } else {
+      newSelected.add(productId);
+    }
+    setSelectedRows(newSelected);
+    setSelectAll(newSelected.size === products.length && products.length > 0);
+  };
+
+  // Handle select all
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedRows(new Set());
+      setSelectAll(false);
+    } else {
+      const allIds = new Set(products.map((p: any) => p.id.toString()));
+      setSelectedRows(allIds);
+      setSelectAll(true);
+    }
+  };
+
+  // Reset selection when page changes
+  useEffect(() => {
+    setSelectAll(false);
+    setSelectedRows(new Set());
+  }, [page, debouncedSearch, activeSheet]);
 
   // Debounce search
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
@@ -355,6 +387,38 @@ export default function DataViewer() {
         </div>
       </div>
 
+      {/* Batch operation toolbar */}
+      {selectedRows.size > 0 && (
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">
+              已选择 {selectedRows.size} 个产品
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setSelectedRows(new Set());
+                setSelectAll(false);
+              }}
+            >
+              取消选择
+            </Button>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => {
+                console.log('批量导出:', Array.from(selectedRows));
+              }}
+            >
+              批量导出
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Sheet tabs */}
       {sheets.length > 0 && (
         <div className="flex gap-1 overflow-x-auto pb-1 -mb-1 scrollbar-thin">
@@ -409,6 +473,15 @@ export default function DataViewer() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <TableHead className="w-12 px-3 py-2 border-r border-border/50">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 cursor-pointer"
+                    title="全选/取消全选"
+                  />
+                </TableHead>
                 {visibleColumnsList.map((col, idx) => (
                   <TableHead
                     key={col.key}
@@ -463,6 +536,15 @@ export default function DataViewer() {
                         : 'hover:bg-accent/30'
                     }`}
                   >
+                    <TableCell className="w-12 px-3 py-3 border-r border-border/50 align-middle">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.has(product.id.toString())}
+                        onChange={() => handleSelectRow(product.id.toString())}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                    </TableCell>
                     {visibleColumnsList.map((col) => (
                       <TableCell
                         key={col.key}
