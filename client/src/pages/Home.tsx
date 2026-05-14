@@ -140,7 +140,7 @@ export default function Home() {
             {sheets.map((sheet) => (
               <button
                 key={sheet.sheetName}
-                onClick={() => setLocation("/data")}
+                onClick={() => setLocation(`/data?sheet=${encodeURIComponent(sheet.sheetName)}`)}
                 className="bg-card border rounded-lg p-3 text-left hover:shadow-md hover:border-primary/30 transition-all group"
               >
                 <div className="flex items-center gap-2 mb-2">

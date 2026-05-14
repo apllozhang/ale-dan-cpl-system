@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   Search,
   ChevronUp,
@@ -72,7 +73,12 @@ const STORAGE_KEY_COLUMNS = "ale-cpl-visible-columns";
 const STORAGE_KEY_WIDTHS = "ale-cpl-column-widths";
 
 export default function DataViewer() {
-  const [activeSheet, setActiveSheet] = useState<string>("");
+  const [location] = useLocation();
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  const sheetFromUrl = searchParams.get('sheet') || '';
+  
+  const [activeSheet, setActiveSheet] = useState<string>(sheetFromUrl);
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -81,6 +87,7 @@ export default function DataViewer() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Record<string, string>>({});
+
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_COLUMNS);
@@ -186,6 +193,13 @@ export default function DataViewer() {
   const sheetsQuery = trpc.cpl.sheets.useQuery();
   const sheets = sheetsQuery.data ?? [];
 
+  // Update activeSheet when URL parameter changes
+  useEffect(() => {
+    if (sheetFromUrl) {
+      setActiveSheet(sheetFromUrl);
+    }
+  }, [sheetFromUrl]);
+
   // Set first sheet as default when loaded
   const currentSheet = activeSheet || (sheets.length > 0 ? sheets[0].sheetName : "");
 
@@ -197,9 +211,10 @@ export default function DataViewer() {
     return Object.keys(active).length > 0 ? active : undefined;
   }, [filters]);
 
+  // When searching, don't limit to current sheet - search across all products
   const productsQuery = trpc.cpl.products.useQuery(
     {
-      sheetName: currentSheet || undefined,
+      sheetName: debouncedSearch ? undefined : (currentSheet || undefined),
       search: debouncedSearch || undefined,
       page,
       pageSize,
@@ -439,7 +454,15 @@ export default function DataViewer() {
                 </TableRow>
               ) : (
                 products.map((product: any) => (
-                  <TableRow key={product.id} className="group hover:bg-accent/30 transition-colors border-b border-border/50 last:border-b-0">
+                  <TableRow 
+                    key={product.id} 
+                    onClick={() => setSelectedRowId(selectedRowId === product.id ? null : product.id)}
+                    className={`group cursor-pointer border-b border-border/50 last:border-b-0 transition-colors ${
+                      selectedRowId === product.id 
+                        ? 'bg-primary/15 hover:bg-primary/20' 
+                        : 'hover:bg-accent/30'
+                    }`}
+                  >
                     {visibleColumnsList.map((col) => (
                       <TableCell
                         key={col.key}
