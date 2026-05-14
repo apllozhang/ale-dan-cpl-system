@@ -74,8 +74,12 @@ const STORAGE_KEY_WIDTHS = "ale-cpl-column-widths";
 
 export default function DataViewer() {
   const [location] = useLocation();
-  const searchParams = new URLSearchParams(location.split('?')[1] || '');
-  const sheetFromUrl = searchParams.get('sheet') || '';
+  // Parse sheet parameter from URL more reliably
+  const getSheetFromUrl = () => {
+    const match = location.match(/[?&]sheet=([^&]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  };
+  const sheetFromUrl = getSheetFromUrl();
   
   const [activeSheet, setActiveSheet] = useState<string>(sheetFromUrl);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
@@ -229,6 +233,7 @@ export default function DataViewer() {
   useEffect(() => {
     if (sheetFromUrl) {
       setActiveSheet(sheetFromUrl);
+      setPage(1); // Reset to first page when sheet changes
     }
   }, [sheetFromUrl]);
 
