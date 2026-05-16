@@ -28,6 +28,8 @@ import {
   FileText,
   HardDriveUpload,
   Shield,
+  FileSpreadsheet,
+  Users,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -38,6 +40,8 @@ const menuItems = [
   { icon: Database, label: "产品数据", path: "/data" },
   { icon: FileText, label: "变更记录", path: "/summary" },
   { icon: HardDriveUpload, label: "数据导入", path: "/import" },
+  { icon: FileSpreadsheet, label: "报价管理", path: "/quotations" },
+  { icon: Users, label: "用户管理", path: "/users", adminOnly: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -103,6 +107,7 @@ function DashboardLayoutContent({
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find((item) => item.path === location);
+  const visibleMenuItems = menuItems.filter((item: any) => !item.adminOnly || user?.role === "admin");
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -171,7 +176,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0 pt-2">
             <SidebarMenu className="px-2 py-1 space-y-0.5">
-              {menuItems.map((item) => {
+              {visibleMenuItems.map((item) => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

@@ -10,6 +10,9 @@ import Login from "./pages/Login";
 import DataViewer from "./pages/DataViewer";
 import Summary from "./pages/Summary";
 import Import from "./pages/Import";
+import QuotationList from "./pages/QuotationList";
+import QuotationDetail from "./pages/QuotationDetail";
+import UserManagement from "./pages/UserManagement";
 
 function DashboardRoutes() {
   return (
@@ -19,6 +22,10 @@ function DashboardRoutes() {
         <Route path="/data" component={DataViewer} />
         <Route path="/summary" component={Summary} />
         <Route path="/import" component={Import} />
+        <Route path="/quotations" component={QuotationList} />
+        <Route path="/quotations/new" component={QuotationDetail} />
+        <Route path="/quotations/:id" component={QuotationDetail} />
+        <Route path="/users" component={UserManagement} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

@@ -45,6 +45,7 @@ import {
   Settings2,
   GripVertical,
   Download,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { exportToExcel } from "@/lib/exportUtils";
@@ -75,7 +76,7 @@ const STORAGE_KEY_COLUMNS = "ale-cpl-visible-columns";
 const STORAGE_KEY_WIDTHS = "ale-cpl-column-widths";
 
 export default function DataViewer() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   // Parse sheet parameter from URL more reliably
   const getSheetFromUrl = () => {
     const match = location.match(/[?&]sheet=([^&]*)/);
@@ -407,6 +408,17 @@ export default function DataViewer() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => {
+                const selectedProductIds = Array.from(selectedRows).join(",");
+                setLocation(`/quotations/new?productIds=${selectedProductIds}`);
+              }}
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-1" />
+              创建报价
+            </Button>
             <Button
               size="sm"
               variant="outline"

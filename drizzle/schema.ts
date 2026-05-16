@@ -3,6 +3,8 @@ import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "d
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
+  username: varchar("username", { length: 64 }).unique(),
+  passwordHash: text("passwordHash"),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
@@ -60,3 +62,44 @@ export const cplSheets = mysqlTable("cpl_sheets", {
 
 export type CplSheet = typeof cplSheets.$inferSelect;
 export type InsertCplSheet = typeof cplSheets.$inferInsert;
+
+// Quotation table
+export const quotations = mysqlTable("quotations", {
+  id: int("id").autoincrement().primaryKey(),
+  quotationNo: varchar("quotationNo", { length: 64 }).notNull().unique(),
+  customerName: varchar("customerName", { length: 256 }).notNull(),
+  customerContact: varchar("customerContact", { length: 128 }),
+  customerPhone: varchar("customerPhone", { length: 64 }),
+  customerEmail: varchar("customerEmail", { length: 320 }),
+  projectName: varchar("projectName", { length: 256 }),
+  status: mysqlEnum("status", ["draft", "submitted", "approved", "sent", "completed", "cancelled"]).default("draft").notNull(),
+  discountRate: decimal("discountRate", { precision: 5, scale: 2 }).default("0"),
+  totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0"),
+  notes: text("notes"),
+  createdBy: int("createdBy").notNull(),
+  validUntil: timestamp("validUntil"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Quotation = typeof quotations.$inferSelect;
+export type InsertQuotation = typeof quotations.$inferInsert;
+
+// Quotation items table
+export const quotationItems = mysqlTable("quotation_items", {
+  id: int("id").autoincrement().primaryKey(),
+  quotationId: int("quotationId").notNull(),
+  productId: int("productId"),
+  productModel: varchar("productModel", { length: 256 }).notNull(),
+  productDesc: text("productDesc"),
+  listPrice: varchar("listPrice", { length: 64 }),
+  quantity: int("quantity").notNull().default(1),
+  unitPrice: decimal("unitPrice", { precision: 14, scale: 2 }),
+  discountRate: decimal("discountRate", { precision: 5, scale: 2 }).default("0"),
+  subtotal: decimal("subtotal", { precision: 14, scale: 2 }).default("0"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QuotationItem = typeof quotationItems.$inferSelect;
+export type InsertQuotationItem = typeof quotationItems.$inferInsert;

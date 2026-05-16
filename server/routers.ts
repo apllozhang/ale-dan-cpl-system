@@ -1,28 +1,24 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "./_core/env";
 import * as db from "./db";
 import * as XLSX from "xlsx";
-
-// Fixed credentials
-const FIXED_USERNAME = "aletss";
-const FIXED_PASSWORD = "Ale@tss";
-const FIXED_OPEN_ID = "local-aletss";
+import { hash, compare } from "bcryptjs";
 
 function getSessionSecret() {
   return new TextEncoder().encode(ENV.cookieSecret);
 }
 
-async function createLocalSession(name: string): Promise<string> {
+async function createLocalSession(openId: string, name: string): Promise<string> {
   const issuedAt = Date.now();
   const expirationSeconds = Math.floor((issuedAt + ONE_YEAR_MS) / 1000);
   return new SignJWT({
-    openId: FIXED_OPEN_ID,
+    openId,
     appId: ENV.appId,
     name,
   })
@@ -135,32 +131,236 @@ export const appRouter = router({
         password: z.string(),
       }))
       .mutation(async ({ input, ctx }) => {
-        if (input.username !== FIXED_USERNAME || input.password !== FIXED_PASSWORD) {
+        const user = await db.getUserByUsername(input.username);
+        if (!user || !user.passwordHash) {
           throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "用户名或密码错误",
           });
         }
 
-        // Upsert the local user
+        const valid = await compare(input.password, user.passwordHash);
+        if (!valid) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "用户名或密码错误",
+          });
+        }
+
+        // Update lastSignedIn
         await db.upsertUser({
-          openId: FIXED_OPEN_ID,
-          name: "ALE TSS",
-          email: "aletss@ale.com",
-          loginMethod: "local",
-          role: "admin",
+          openId: user.openId,
           lastSignedIn: new Date(),
         });
 
         // Create session token
-        const token = await createLocalSession("ALE TSS");
+        const token = await createLocalSession(user.openId, user.name || user.username || "User");
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, {
           ...cookieOptions,
           maxAge: ONE_YEAR_MS,
         });
 
-        return { success: true, name: "ALE TSS" };
+        return { success: true, name: user.name || user.username };
+      }),
+  }),
+
+  users: router({
+    list: adminProcedure.query(async () => {
+      return db.getAllUsers();
+    }),
+    getById: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return db.getUserById(input.id);
+      }),
+    create: adminProcedure
+      .input(z.object({
+        username: z.string().min(3).max(64),
+        password: z.string().min(6),
+        name: z.string().optional(),
+        email: z.string().email().optional(),
+        role: z.enum(["user", "admin"]).default("user"),
+      }))
+      .mutation(async ({ input }) => {
+        const existingUser = await db.getUserByUsername(input.username);
+        if (existingUser) {
+          throw new TRPCError({ code: "CONFLICT", message: "用户名已存在" });
+        }
+        const passwordHash = await hash(input.password, 10);
+        return db.createUser({
+          username: input.username,
+          passwordHash,
+          name: input.name,
+          email: input.email,
+          role: input.role,
+        });
+      }),
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        username: z.string().min(3).max(64).optional(),
+        password: z.string().min(6).optional(),
+        name: z.string().optional(),
+        email: z.string().email().optional(),
+        role: z.enum(["user", "admin"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, password, username, ...rest } = input;
+        const updateData: any = { ...rest };
+        if (password) {
+          updateData.passwordHash = await hash(password, 10);
+        }
+        if (username) {
+          const existing = await db.getUserByUsername(username);
+          if (existing && existing.id !== id) {
+            throw new TRPCError({ code: "CONFLICT", message: "用户名已存在" });
+          }
+          updateData.username = username;
+        }
+        return db.updateUser(id, updateData);
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteUser(input.id);
+      }),
+  }),
+
+  quotations: router({
+    list: protectedProcedure
+      .input(z.object({
+        search: z.string().optional(),
+        status: z.string().optional(),
+        page: z.number().min(1).default(1),
+        pageSize: z.number().min(1).max(100).default(20),
+        sortBy: z.string().optional(),
+        sortOrder: z.enum(["asc", "desc"]).default("desc"),
+      }))
+      .query(async ({ input, ctx }) => {
+        return db.getQuotations({
+          ...input,
+          createdBy: ctx.user.role === "admin" ? undefined : ctx.user.id,
+        });
+      }),
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return db.getQuotationById(input.id);
+      }),
+    create: protectedProcedure
+      .input(z.object({
+        customerName: z.string().min(1),
+        customerContact: z.string().optional(),
+        customerPhone: z.string().optional(),
+        customerEmail: z.string().optional(),
+        projectName: z.string().optional(),
+        discountRate: z.number().optional(),
+        notes: z.string().optional(),
+        validUntil: z.string().optional(),
+        items: z.array(z.object({
+          productId: z.number().optional(),
+          productModel: z.string(),
+          productDesc: z.string().optional(),
+          listPrice: z.string().optional(),
+          quantity: z.number().min(1).default(1),
+          unitPrice: z.number().optional(),
+          discountRate: z.number().optional(),
+        })),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { items, validUntil, ...quotationData } = input;
+        const processedItems = items.map(item => {
+          const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
+          const discount = item.discountRate ?? input.discountRate ?? 0;
+          const subtotal = unitPrice * item.quantity * (1 - discount / 100);
+          return {
+            productId: item.productId ?? null,
+            productModel: item.productModel,
+            productDesc: item.productDesc ?? null,
+            listPrice: item.listPrice ?? null,
+            quantity: item.quantity,
+            unitPrice: String(unitPrice),
+            discountRate: String(discount),
+            subtotal: String(subtotal),
+          };
+        });
+        const totalAmount = processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+        return db.createQuotation(
+          {
+            ...quotationData,
+            quotationNo: "",
+            status: "draft",
+            totalAmount: String(totalAmount),
+            discountRate: String(input.discountRate ?? 0),
+            validUntil: validUntil ? new Date(validUntil) : undefined,
+            createdBy: ctx.user.id,
+          },
+          processedItems
+        );
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        customerName: z.string().min(1).optional(),
+        customerContact: z.string().optional(),
+        customerPhone: z.string().optional(),
+        customerEmail: z.string().optional(),
+        projectName: z.string().optional(),
+        discountRate: z.number().optional(),
+        notes: z.string().optional(),
+        validUntil: z.string().optional(),
+        items: z.array(z.object({
+          productId: z.number().optional(),
+          productModel: z.string(),
+          productDesc: z.string().optional(),
+          listPrice: z.string().optional(),
+          quantity: z.number().min(1).default(1),
+          unitPrice: z.number().optional(),
+          discountRate: z.number().optional(),
+        })).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, items, validUntil, ...quotationData } = input;
+        let processedItems = undefined;
+        let totalAmount = undefined;
+        if (items) {
+          processedItems = items.map(item => {
+            const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
+            const discount = item.discountRate ?? input.discountRate ?? 0;
+            const subtotal = unitPrice * item.quantity * (1 - discount / 100);
+            return {
+              productId: item.productId ?? null,
+              productModel: item.productModel,
+              productDesc: item.productDesc ?? null,
+              listPrice: item.listPrice ?? null,
+              quantity: item.quantity,
+              unitPrice: String(unitPrice),
+              discountRate: String(discount),
+              subtotal: String(subtotal),
+            };
+          });
+          totalAmount = String(processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0));
+        }
+        return db.updateQuotation(id, {
+          ...quotationData,
+          totalAmount,
+          discountRate: input.discountRate !== undefined ? String(input.discountRate) : undefined,
+          validUntil: validUntil ? new Date(validUntil) : undefined,
+        }, processedItems);
+      }),
+    updateStatus: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(["draft", "submitted", "approved", "sent", "completed", "cancelled"]),
+      }))
+      .mutation(async ({ input }) => {
+        return db.updateQuotationStatus(input.id, input.status);
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteQuotation(input.id);
       }),
   }),
 

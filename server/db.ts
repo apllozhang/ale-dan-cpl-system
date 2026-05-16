@@ -1,6 +1,10 @@
 import { eq, like, or, and, sql, asc, desc, SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, cplProducts, cplSheets, cplSummary, InsertCplProduct, InsertCplSheet, InsertCplSummary } from "../drizzle/schema";
+import {
+  InsertUser, users, cplProducts, cplSheets, cplSummary,
+  InsertCplProduct, InsertCplSheet, InsertCplSummary,
+  quotations, quotationItems, InsertQuotation, InsertQuotationItem,
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -212,4 +216,284 @@ export async function bulkInsertProducts(products: InsertCplProduct[]) {
     const batch = products.slice(i, i + batchSize);
     await db.insert(cplProducts).values(batch);
   }
+}
+
+// ==================== User auth helpers ====================
+export async function getUserByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createUser(data: {
+  username: string;
+  passwordHash: string;
+  name?: string;
+  email?: string;
+  role?: "user" | "admin";
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(users).values({
+    openId: `local-${data.username}`,
+    username: data.username,
+    passwordHash: data.passwordHash,
+    name: data.name || null,
+    email: data.email || null,
+    loginMethod: "local",
+    role: data.role || "user",
+  });
+  return { id: Number(result[0].insertId), username: data.username };
+}
+
+export async function updateUser(id: number, data: {
+  username?: string;
+  passwordHash?: string;
+  name?: string;
+  email?: string;
+  role?: "user" | "admin";
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const updateSet: Record<string, unknown> = {};
+  if (data.username !== undefined) updateSet.username = data.username;
+  if (data.passwordHash !== undefined) updateSet.passwordHash = data.passwordHash;
+  if (data.name !== undefined) updateSet.name = data.name;
+  if (data.email !== undefined) updateSet.email = data.email;
+  if (data.role !== undefined) updateSet.role = data.role;
+  if (data.username !== undefined) updateSet.openId = `local-${data.username}`;
+  await db.update(users).set(updateSet).where(eq(users.id, id));
+}
+
+export async function deleteUser(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(users).where(eq(users.id, id));
+}
+
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: users.id,
+    username: users.username,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn,
+  }).from(users).orderBy(asc(users.id));
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select({
+    id: users.id,
+    username: users.username,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn,
+  }).from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// ==================== Quotation helpers ====================
+export async function getQuotations(params: {
+  search?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  createdBy?: number;
+}) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+
+  const { search, status, page = 1, pageSize = 20, sortBy, sortOrder = "desc", createdBy } = params;
+  const conditions: SQL[] = [];
+
+  if (createdBy) {
+    conditions.push(eq(quotations.createdBy, createdBy));
+  }
+
+  if (status && status !== "all") {
+    conditions.push(eq(quotations.status, status as any));
+  }
+
+  if (search && search.trim()) {
+    const searchTerm = `%${search.trim()}%`;
+    conditions.push(
+      or(
+        like(quotations.quotationNo, searchTerm),
+        like(quotations.customerName, searchTerm),
+        like(quotations.projectName, searchTerm),
+      )!
+    );
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const sortColumnMap: Record<string, any> = {
+    quotationNo: quotations.quotationNo,
+    customerName: quotations.customerName,
+    status: quotations.status,
+    totalAmount: quotations.totalAmount,
+    createdAt: quotations.createdAt,
+  };
+  const sortColumn = sortBy && sortColumnMap[sortBy] ? sortColumnMap[sortBy] : quotations.createdAt;
+  const orderFn = sortOrder === "asc" ? asc : desc;
+
+  const offset = (page - 1) * pageSize;
+
+  const [items, countResult] = await Promise.all([
+    db.select({
+      id: quotations.id,
+      quotationNo: quotations.quotationNo,
+      customerName: quotations.customerName,
+      customerContact: quotations.customerContact,
+      customerPhone: quotations.customerPhone,
+      customerEmail: quotations.customerEmail,
+      projectName: quotations.projectName,
+      status: quotations.status,
+      discountRate: quotations.discountRate,
+      totalAmount: quotations.totalAmount,
+      notes: quotations.notes,
+      createdBy: quotations.createdBy,
+      validUntil: quotations.validUntil,
+      createdAt: quotations.createdAt,
+      updatedAt: quotations.updatedAt,
+      creatorName: users.name,
+      creatorUsername: users.username,
+    })
+      .from(quotations)
+      .leftJoin(users, eq(quotations.createdBy, users.id))
+      .where(whereClause)
+      .orderBy(orderFn(sortColumn))
+      .limit(pageSize)
+      .offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(quotations).where(whereClause),
+  ]);
+
+  return {
+    items,
+    total: Number(countResult[0]?.count ?? 0),
+  };
+}
+
+export async function getQuotationById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [quotation] = await db.select({
+    id: quotations.id,
+    quotationNo: quotations.quotationNo,
+    customerName: quotations.customerName,
+    customerContact: quotations.customerContact,
+    customerPhone: quotations.customerPhone,
+    customerEmail: quotations.customerEmail,
+    projectName: quotations.projectName,
+    status: quotations.status,
+    discountRate: quotations.discountRate,
+    totalAmount: quotations.totalAmount,
+    notes: quotations.notes,
+    createdBy: quotations.createdBy,
+    validUntil: quotations.validUntil,
+    createdAt: quotations.createdAt,
+    updatedAt: quotations.updatedAt,
+    creatorName: users.name,
+    creatorUsername: users.username,
+  })
+    .from(quotations)
+    .leftJoin(users, eq(quotations.createdBy, users.id))
+    .where(eq(quotations.id, id))
+    .limit(1);
+
+  if (!quotation) return null;
+
+  const items = await db.select().from(quotationItems).where(eq(quotationItems.quotationId, id));
+
+  return { ...quotation, items };
+}
+
+export async function createQuotation(data: InsertQuotation, items: InsertQuotationItem[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Generate quotationNo: QT-YYYYMMDD-NNN
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
+  const prefix = `QT-${dateStr}-`;
+  const countResult = await db.select({ count: sql<number>`count(*)` })
+    .from(quotations)
+    .where(sql`quotation_no LIKE ${prefix + "%"}`);
+  const seq = Number(countResult[0]?.count ?? 0) + 1;
+  const quotationNo = `${prefix}${String(seq).padStart(3, "0")}`;
+
+  const result = await db.insert(quotations).values({
+    ...data,
+    quotationNo,
+  });
+  const quotationId = Number(result[0].insertId);
+
+  if (items.length > 0) {
+    const itemsWithQId = items.map(item => ({ ...item, quotationId }));
+    const batchSize = 100;
+    for (let i = 0; i < itemsWithQId.length; i += batchSize) {
+      const batch = itemsWithQId.slice(i, i + batchSize);
+      await db.insert(quotationItems).values(batch);
+    }
+  }
+
+  return { id: quotationId, quotationNo };
+}
+
+export async function updateQuotation(id: number, data: Partial<InsertQuotation>, items?: InsertQuotationItem[]) {
+  const db = await getDb();
+  if (!db) return;
+
+  const updateSet: Record<string, unknown> = {};
+  if (data.customerName !== undefined) updateSet.customerName = data.customerName;
+  if (data.customerContact !== undefined) updateSet.customerContact = data.customerContact;
+  if (data.customerPhone !== undefined) updateSet.customerPhone = data.customerPhone;
+  if (data.customerEmail !== undefined) updateSet.customerEmail = data.customerEmail;
+  if (data.projectName !== undefined) updateSet.projectName = data.projectName;
+  if (data.discountRate !== undefined) updateSet.discountRate = data.discountRate;
+  if (data.totalAmount !== undefined) updateSet.totalAmount = data.totalAmount;
+  if (data.notes !== undefined) updateSet.notes = data.notes;
+  if (data.validUntil !== undefined) updateSet.validUntil = data.validUntil;
+  if (data.status !== undefined) updateSet.status = data.status;
+
+  if (Object.keys(updateSet).length > 0) {
+    await db.update(quotations).set(updateSet).where(eq(quotations.id, id));
+  }
+
+  if (items !== undefined) {
+    await db.delete(quotationItems).where(eq(quotationItems.quotationId, id));
+    if (items.length > 0) {
+      const itemsWithQId = items.map(item => ({ ...item, quotationId: id }));
+      const batchSize = 100;
+      for (let i = 0; i < itemsWithQId.length; i += batchSize) {
+        const batch = itemsWithQId.slice(i, i + batchSize);
+        await db.insert(quotationItems).values(batch);
+      }
+    }
+  }
+}
+
+export async function deleteQuotation(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(quotationItems).where(eq(quotationItems.quotationId, id));
+  await db.delete(quotations).where(eq(quotations.id, id));
+}
+
+export async function updateQuotationStatus(id: number, status: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(quotations).set({ status: status as any }).where(eq(quotations.id, id));
 }
