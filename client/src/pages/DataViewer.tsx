@@ -83,7 +83,10 @@ export default function DataViewer() {
   };
   const sheetFromUrl = getSheetFromUrl();
   
-  const [activeSheet, setActiveSheet] = useState<string>(sheetFromUrl);
+  const [activeSheet, setActiveSheet] = useState<string>(() => {
+    // Initialize with sheet from URL if available, otherwise empty
+    return sheetFromUrl || '';
+  });
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
@@ -233,11 +236,12 @@ export default function DataViewer() {
 
   // Update activeSheet when URL parameter changes
   useEffect(() => {
-    if (sheetFromUrl) {
-      setActiveSheet(sheetFromUrl);
+    const newSheet = getSheetFromUrl();
+    if (newSheet && newSheet !== activeSheet) {
+      setActiveSheet(newSheet);
       setPage(1); // Reset to first page when sheet changes
     }
-  }, [sheetFromUrl]);
+  }, [location, activeSheet]);
 
   // Set first sheet as default when loaded
   const currentSheet = activeSheet || (sheets.length > 0 ? sheets[0].sheetName : "");
