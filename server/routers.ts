@@ -270,11 +270,22 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const { items, validUntil, ...quotationData } = input;
+        const quotation = {
+          ...quotationData,
+          quotationNo: "",
+          status: "draft" as const,
+          totalAmount: "0",
+          discountRate: String(input.discountRate ?? 0),
+          validUntil: validUntil ? new Date(validUntil) : undefined,
+          createdBy: ctx.user.id,
+        };
+        const createdQuotation = await db.createQuotation(quotation, []);
         const processedItems = items.map(item => {
           const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
           const discount = item.discountRate ?? input.discountRate ?? 0;
           const subtotal = unitPrice * item.quantity * (1 - discount / 100);
           return {
+            quotationId: createdQuotation.id,
             productId: item.productId ?? null,
             productModel: item.productModel,
             productDesc: item.productDesc ?? null,
@@ -286,18 +297,9 @@ export const appRouter = router({
           };
         });
         const totalAmount = processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
-        return db.createQuotation(
-          {
-            ...quotationData,
-            quotationNo: "",
-            status: "draft",
-            totalAmount: String(totalAmount),
-            discountRate: String(input.discountRate ?? 0),
-            validUntil: validUntil ? new Date(validUntil) : undefined,
-            createdBy: ctx.user.id,
-          },
-          processedItems
-        );
+        return db.updateQuotation(createdQuotation.id, {
+          totalAmount: String(totalAmount),
+        }, processedItems);
       }),
     update: protectedProcedure
       .input(z.object({
@@ -330,6 +332,7 @@ export const appRouter = router({
             const discount = item.discountRate ?? input.discountRate ?? 0;
             const subtotal = unitPrice * item.quantity * (1 - discount / 100);
             return {
+              quotationId: id,
               productId: item.productId ?? null,
               productModel: item.productModel,
               productDesc: item.productDesc ?? null,

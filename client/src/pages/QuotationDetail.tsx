@@ -221,9 +221,11 @@ export default function QuotationDetail() {
 
     try {
       if (isNew) {
-        const result = await createMutation.mutateAsync(payload);
+        const result = await createMutation.mutateAsync(payload) as any;
         toast.success("报价单已创建");
-        setLocation(`/quotations/${result.id}`);
+        if (result?.id) {
+          setLocation(`/quotations/${result.id}`);
+        }
       } else {
         await updateMutation.mutateAsync({ id: quotationId!, ...payload });
         toast.success("报价单已更新");

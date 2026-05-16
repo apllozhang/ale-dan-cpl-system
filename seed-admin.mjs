@@ -25,13 +25,13 @@ async function main() {
   if (existing[0] && existing[0].length > 0) {
     // Update existing user with password hash
     await db.execute(
-      sql`UPDATE users SET password_hash = ${passwordHash}, open_id = ${openId}, login_method = 'local', role = 'admin' WHERE username = ${username}`
+      sql`UPDATE users SET passwordHash = ${passwordHash}, openId = ${openId}, loginMethod = 'local', role = 'admin' WHERE username = ${username}`
     );
     console.log(`Updated existing admin user: ${username}`);
   } else {
     // Create new admin user
     await db.execute(
-      sql`INSERT INTO users (open_id, username, password_hash, name, email, login_method, role) VALUES (${openId}, ${username}, ${passwordHash}, 'ALE TSS', 'aletss@ale.com', 'local', 'admin')`
+      sql`INSERT INTO users (openId, username, passwordHash, name, email, loginMethod, role) VALUES (${openId}, ${username}, ${passwordHash}, 'ALE TSS', 'aletss@ale.com', 'local', 'admin')`
     );
     console.log(`Created admin user: ${username}`);
   }
