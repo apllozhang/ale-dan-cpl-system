@@ -44,8 +44,10 @@ import {
   EyeOff,
   Settings2,
   GripVertical,
+  Download,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { exportToExcel } from "@/lib/exportUtils";
 
 const COLUMNS = [
   { key: "productGroup", label: "产品组件", defaultWidth: 140 },
@@ -415,10 +417,30 @@ export default function DataViewer() {
               size="sm"
               variant="default"
               onClick={() => {
-                console.log('批量导出:', Array.from(selectedRows));
+                const selectedProducts = products.filter(p => selectedRows.has(String(p.id)));
+                if (selectedProducts.length === 0) {
+                  alert('请先选择产品');
+                  return;
+                }
+
+                const visibleCols = COLUMNS.filter(col => visibleColumns.has(col.key));
+                const exportData = selectedProducts.map(product => {
+                  const row: Record<string, any> = {};
+                  visibleCols.forEach(col => {
+                    row[col.key] = (product as any)[col.key] || '';
+                  });
+                  return row;
+                });
+
+                exportToExcel(
+                  exportData,
+                  visibleCols.map(col => ({ key: col.key, label: col.label })),
+                  `ALE_CPL_${currentSheet}`
+                );
               }}
             >
-              批量导出
+              <Download className="w-4 h-4 mr-1" />
+              批量导出 Excel
             </Button>
           </div>
         </div>
