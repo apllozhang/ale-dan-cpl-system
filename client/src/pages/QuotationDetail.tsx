@@ -112,8 +112,15 @@ export default function QuotationDetail() {
   }, [quotationQuery.data]);
 
   // Product search
+  const [selectedSheet, setSelectedSheet] = useState<string | undefined>(undefined);
+  const sheetsQuery = trpc.cpl.sheets.useQuery();
+  
   const productSearchQuery = trpc.cpl.products.useQuery(
-    { search: productSearchDebounced || undefined, pageSize: 50 },
+    { 
+      sheetName: selectedSheet || undefined,
+      search: productSearchDebounced || undefined, 
+      pageSize: 100 
+    },
     { enabled: productSearchOpen }
   );
 
@@ -467,6 +474,33 @@ export default function QuotationDetail() {
             <DialogTitle>添加产品到报价单</DialogTitle>
           </DialogHeader>
           <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+            {/* Sheet selector */}
+            <div className="flex gap-2 items-center flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground">产品系列:</span>
+              <button
+                onClick={() => setSelectedSheet(undefined)}
+                className={`px-2 py-1 text-xs rounded transition-colors ${
+                  selectedSheet === undefined
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                }`}
+              >
+                全部
+              </button>
+              {sheetsQuery.data?.map((sheet: any) => (
+                <button
+                  key={sheet.sheetName}
+                  onClick={() => setSelectedSheet(sheet.sheetName)}
+                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                    selectedSheet === sheet.sheetName
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-muted/80"
+                  }`}
+                >
+                  {sheet.sheetName}
+                </button>
+              ))}
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input

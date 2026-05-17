@@ -430,7 +430,7 @@ export async function createQuotation(data: InsertQuotation, items: InsertQuotat
   const prefix = `QT-${dateStr}-`;
   const countResult = await db.select({ count: sql<number>`count(*)` })
     .from(quotations)
-    .where(sql`quotation_no LIKE ${prefix + "%"}`);
+    .where(like(quotations.quotationNo, prefix + "%"));
   const seq = Number(countResult[0]?.count ?? 0) + 1;
   const quotationNo = `${prefix}${String(seq).padStart(3, "0")}`;
 
