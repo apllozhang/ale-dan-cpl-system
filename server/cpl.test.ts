@@ -15,7 +15,18 @@ vi.mock("bcryptjs", () => ({
 vi.mock("./db", () => ({
   upsertUser: vi.fn().mockResolvedValue(undefined),
   getUserByOpenId: vi.fn().mockResolvedValue(undefined),
-  getUserByUsername: vi.fn().mockResolvedValue(null),
+  getUserByUsername: vi.fn((username: string) => {
+    if (username === "aletss") {
+      return Promise.resolve({
+        id: 1,
+        username: "aletss",
+        name: "ALE TSS",
+        passwordHash: "$2a$10$hashedpassword",
+        role: "user",
+      });
+    }
+    return Promise.resolve(null);
+  }),
   getCplSheets: vi.fn().mockResolvedValue([
     { id: 1, sheetName: "OmniSwitch 9900", displayOrder: 0, productCount: 57 },
     { id: 2, sheetName: "OmniSwitch 9500", displayOrder: 1, productCount: 18 },
@@ -54,7 +65,9 @@ vi.mock("./db", () => ({
   getQuotations: vi.fn().mockResolvedValue([]),
   getQuotationById: vi.fn().mockResolvedValue(null),
   updateQuotation: vi.fn().mockResolvedValue(undefined),
+  updateQuotationStatus: vi.fn().mockResolvedValue(undefined),
   deleteQuotation: vi.fn().mockResolvedValue(undefined),
+  searchQuotations: vi.fn().mockResolvedValue([]),
 }));
 
 type CookieCall = {
