@@ -6,21 +6,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useRoute } from "wouter";
 import {
-  ArrowLeft, Save, Plus, Trash2, Loader2, Search, X, Download,
+  ArrowLeft, Save, Plus, Trash2, Loader2, Download,
   Send, CheckCircle, CheckCircle2, Mail, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
 import { exportQuotationToExcel } from "@/lib/quotationExport";
+import ProductSelectorDialog from "@/components/ProductSelectorDialog";
 
 type ItemRow = {
   productId?: number;
@@ -60,30 +58,11 @@ export default function QuotationDetail() {
   const [validUntil, setValidUntil] = useState("");
   const [items, setItems] = useState<ItemRow[]>([]);
   const [productSearchOpen, setProductSearchOpen] = useState(false);
-  const [productSearch, setProductSearch] = useState("");
-  const [productSearchDebounced, setProductSearchDebounced] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
-  const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Load existing quotation
   const quotationQuery = trpc.quotations.getById.useQuery(
     { id: quotationId! },
     { enabled: !!quotationId }
-  );
-
-  // Pre-fill from URL product IDs
-  const [urlParams] = useState(() => {
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search);
-      return sp.get("productIds");
-    }
-    return null;
-  });
-
-  // Fetch pre-selected products
-  const prefillQuery = trpc.cpl.products.useQuery(
-    { pageSize: 200 },
-    { enabled: false }
   );
 
   // Load quotation data
@@ -111,68 +90,10 @@ export default function QuotationDetail() {
     }
   }, [quotationQuery.data]);
 
-  // Product search
-  const [selectedSheet, setSelectedSheet] = useState<string | undefined>(undefined);
-  const sheetsQuery = trpc.cpl.sheets.useQuery();
-  
-  const productSearchQuery = trpc.cpl.products.useQuery(
-    { 
-      sheetName: selectedSheet || undefined,
-      search: productSearchDebounced || undefined, 
-      pageSize: 100 
-    },
-    { enabled: productSearchOpen }
-  );
-
-  const searchResults = productSearchQuery.data?.items ?? [];
-
-  const handleProductSearchChange = (value: string) => {
-    setProductSearch(value);
-    if (searchTimer) clearTimeout(searchTimer);
-    const timer = setTimeout(() => setProductSearchDebounced(value), 300);
-    setSearchTimer(timer);
-  };
-
-  const toggleProductSelection = (id: number) => {
-    setSelectedProducts(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const addSelectedProducts = () => {
-    const newItems: ItemRow[] = [];
-    searchResults
-      .filter((p: any) => selectedProducts.has(p.id))
-      .forEach((p: any) => {
-        // Don't add duplicates
-        if (!items.some(item => item.productId === p.id)) {
-          newItems.push({
-            productId: p.id,
-            productModel: p.productModel || "",
-            productDesc: p.productDesc || "",
-            listPrice: p.listPrice || "",
-            quantity: 1,
-            unitPrice: parseFloat(p.listPrice || "0"),
-            discountRate: discountRate,
-            subtotal: parseFloat(p.listPrice || "0") * (1 - discountRate / 100),
-          });
-        }
-      });
-    setItems(prev => [...prev, ...newItems]);
-    setSelectedProducts(new Set());
-    setProductSearchOpen(false);
-    setProductSearch("");
-    setProductSearchDebounced("");
-  };
-
   const updateItem = (index: number, field: keyof ItemRow, value: any) => {
     setItems(prev => prev.map((item, i) => {
       if (i !== index) return item;
       const updated = { ...item, [field]: value };
-      // Recalculate subtotal
       const unitPrice = field === "unitPrice" ? Number(value) : item.unitPrice;
       const qty = field === "quantity" ? Number(value) : item.quantity;
       const disc = field === "discountRate" ? Number(value) : item.discountRate;
@@ -183,6 +104,26 @@ export default function QuotationDetail() {
 
   const removeItem = (index: number) => {
     setItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const existingProductIds = useMemo(() => {
+    const ids = new Set<number>();
+    items.forEach(item => { if (item.productId) ids.add(item.productId); });
+    return ids;
+  }, [items]);
+
+  const handleAddProducts = (products: Array<{ product: any; quantity: number }>) => {
+    const newItems: ItemRow[] = products.map(({ product, quantity }) => ({
+      productId: product.id,
+      productModel: product.productModel || "",
+      productDesc: product.productDesc || "",
+      listPrice: product.listPrice || "",
+      quantity,
+      unitPrice: parseFloat(product.listPrice || "0"),
+      discountRate: discountRate,
+      subtotal: parseFloat(product.listPrice || "0") * quantity * (1 - discountRate / 100),
+    }));
+    setItems(prev => [...prev, ...newItems]);
   };
 
   const totalAmount = useMemo(() => {
@@ -467,6 +408,7 @@ export default function QuotationDetail() {
         </Card>
       </div>
 
+<<<<<<< HEAD
       {/* Product Search Dialog */}
       <Dialog open={productSearchOpen} onOpenChange={setProductSearchOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[80vh] flex flex-col">
@@ -594,6 +536,16 @@ export default function QuotationDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+=======
+      {/* Product Selector Dialog */}
+      <ProductSelectorDialog
+        open={productSearchOpen}
+        onOpenChange={setProductSearchOpen}
+        onAddProducts={handleAddProducts}
+        discountRate={discountRate}
+        existingProductIds={existingProductIds}
+      />
+>>>>>>> c7e2536 (feat: 网络架构分类产品选择弹窗 + Bug修复)
     </div>
   );
 }
