@@ -7,7 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import DataViewer from "./pages/DataViewer";
+import ProductDataPage from "./pages/ProductDataPage";
 import Summary from "./pages/Summary";
 import Import from "./pages/Import";
 import QuotationList from "./pages/QuotationList";
@@ -19,7 +19,7 @@ function DashboardRoutes() {
     <DashboardLayout>
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/data" component={DataViewer} />
+        <Route path="/data" component={ProductDataPage} />
         <Route path="/summary" component={Summary} />
         <Route path="/import" component={Import} />
         <Route path="/quotations" component={QuotationList} />

@@ -22,12 +22,14 @@ import {
 } from "@/lib/productCategories";
 
 const CATEGORY_ICONS: Record<string, any> = {
-  wired: Network,
-  wireless: Wifi,
-  nms: Monitor,
-  security: ShieldCheck,
-  pol: Cable,
-  other: Package,
+  "wired-network": Network,
+  "wireless-network": Wifi,
+  "nms-system": Monitor,
+  "security-system": ShieldCheck,
+  "pol-system": Cable,
+  "other-products": Package,
+  "services": Network,
+  "accessories": Package,
 };
 
 interface ProductSelectorDialogProps {
@@ -203,7 +205,7 @@ export default function ProductSelectorDialog({
                 {categoryNavGroups.map(({ category, subcategories }) => {
                   const Icon = CATEGORY_ICONS[category.category.id] || Package;
                   const hasSubs = subcategories.length > 0;
-                  const isWired = category.category.id === "wired";
+                  const isWired = category.category.id === "wired-network";
                   const isExpanded = isWired ? wiredExpanded : false;
 
                   if (hasSubs) {
