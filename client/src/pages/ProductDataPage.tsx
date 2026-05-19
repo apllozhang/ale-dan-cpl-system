@@ -72,10 +72,19 @@ const DEFAULT_VISIBLE_COLUMNS: Set<ColumnKey> = new Set([
 const STORAGE_KEY_COLUMNS = "ale-cpl-visible-columns";
 const STORAGE_KEY_WIDTHS = "ale-cpl-column-widths";
 const STORAGE_KEY_CATEGORY = "ale-cpl-selected-category";
+const STORAGE_KEY_SIDEBAR_COLLAPSED = "ale-cpl-sidebar-collapsed";
 
 export default function ProductDataPage() {
   const [location, setLocation] = useLocation();
   const sheetsQuery = trpc.cpl.sheets.useQuery();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_SIDEBAR_COLLAPSED);
+      return stored === "true";
+    } catch {
+      return false;
+    }
+  });
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_CATEGORY);
@@ -334,6 +343,12 @@ export default function ProductDataPage() {
     setPage(1);
   };
 
+  const handleToggleSidebar = () => {
+    const newState = !sidebarCollapsed;
+    setSidebarCollapsed(newState);
+    localStorage.setItem(STORAGE_KEY_SIDEBAR_COLLAPSED, String(newState));
+  };
+
   const visibleColumnsList = COLUMNS.filter((c) => visibleColumns.has(c.key));
   const activeFilterCount = Object.values(filters).filter((v) => v && v.trim()).length;
 
@@ -351,13 +366,32 @@ export default function ProductDataPage() {
   };
 
   return (
-    <div className="h-full flex gap-4">
-      {/* Sidebar - Category Navigation */}
-      <div
-        className={`${
-          sidebarOpen ? "w-56" : "w-0"
-        } transition-all duration-300 overflow-hidden flex flex-col border-r bg-muted/30`}
-      >
+    <div className="h-full flex flex-col">
+      {/* Header with sidebar toggle */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b bg-white">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleToggleSidebar}
+          className="-ml-2"
+          title={sidebarCollapsed ? "展开分类" : "收缩分类"}
+        >
+          {sidebarCollapsed ? (
+            <ChevronRight className="h-5 w-5" />
+          ) : (
+            <ChevronLeft className="h-5 w-5" />
+          )}
+        </Button>
+      </div>
+      
+      {/* Main content area */}
+      <div className="flex-1 flex gap-4 overflow-hidden">
+        {/* Sidebar - Category Navigation */}
+        <div
+          className={`${
+            sidebarCollapsed ? "w-0" : "w-64"
+          } transition-all duration-300 overflow-hidden flex flex-col border-r bg-slate-50`}
+        >
         <div className="p-4 border-b">
           <h2 className="text-sm font-semibold text-foreground">产品分类</h2>
         </div>
@@ -428,20 +462,10 @@ export default function ProductDataPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+      <div className="flex-1 flex flex-col gap-4 overflow-hidden px-6 py-4">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 hover:bg-accent rounded-md transition-colors"
-            >
-              {sidebarOpen ? (
-                <ChevronLeft className="w-5 h-5" />
-              ) : (
-                <ChevronRight className="w-5 h-5" />
-              )}
-            </button>
             <Database className="w-5 h-5 text-primary" />
             <h1 className="text-lg font-semibold text-foreground">产品数据</h1>
             {total > 0 && (
@@ -774,6 +798,7 @@ export default function ProductDataPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
