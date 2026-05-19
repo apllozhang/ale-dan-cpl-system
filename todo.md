@@ -91,5 +91,5 @@
 
 ## 部署到生产环境
 
-- [ ] 部署到生产域名 www.extremecloudiq.cn
-- [ ] 验证生产环境功能正常
+- [x] 部署到生产域名 www.extremecloudiq.cn
+- [x] 验证生产环境功能正常

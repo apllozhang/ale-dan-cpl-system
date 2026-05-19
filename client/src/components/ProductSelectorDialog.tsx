@@ -190,12 +190,12 @@ export default function ProductSelectorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-3">
           <DialogTitle>添加产品到报价单</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-1 min-h-0 border-t">
+        <div className="flex flex-1 min-h-0 border-t overflow-hidden">
           {/* Left Panel - Category Navigation */}
           <div className="w-[220px] border-r bg-muted/20">
             <ScrollArea className="h-full">
@@ -298,7 +298,7 @@ export default function ProductSelectorDialog({
             </div>
 
             {/* Product Table */}
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -396,15 +396,16 @@ export default function ProductSelectorDialog({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="px-6 py-3 border-t">
-          <span className="text-xs text-muted-foreground mr-auto">
-            已选择 {totalSelected} 个产品
-            {totalQuantity > totalSelected && `，共 ${totalQuantity} 件`}
+        <DialogFooter className="px-6 py-4 border-t bg-background shrink-0 gap-3">
+          <span className="text-xs text-muted-foreground">
+            已选择 {totalSelected} 个产品{totalQuantity > totalSelected && `，共 ${totalQuantity} 件`}
           </span>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
-          <Button onClick={handleAddProducts} disabled={totalSelected === 0}>
-            添加到报价单
-          </Button>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs">取消</Button>
+            <Button onClick={handleAddProducts} disabled={totalSelected === 0} className="text-xs">
+              添加到报价单
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
