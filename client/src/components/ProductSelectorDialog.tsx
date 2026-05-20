@@ -70,13 +70,12 @@ export default function ProductSelectorDialog({
     return buildCategoryNav(sheetsQuery.data);
   }, [sheetsQuery.data]);
 
-  // Auto-select first nav item
+  // Do not auto-select first nav item - let user choose
   useEffect(() => {
-    if (navItems.length > 0 && !activeNav) {
-      const firstCategory = navItems.find(n => n.type === "category");
-      if (firstCategory) setActiveNav(firstCategory);
+    if (!open) {
+      setActiveNav(null);
     }
-  }, [navItems, activeNav]);
+  }, [open]);
 
   // Compute sheet(s) for active nav item
   const querySheets = useMemo(() => {
@@ -88,10 +87,11 @@ export default function ProductSelectorDialog({
     return { sheetName: getQuerySheetName(activeNav), sheetNames: undefined };
   }, [activeNav, sheetsQuery.data]);
 
-  // Fetch products for active nav item
+  // Fetch products for active nav item - only if subcategory is selected
+  const isSubcategorySelected = activeNav && activeNav.type === "subcategory";
   const productsQuery = trpc.cpl.products.useQuery(
     { sheetName: querySheets.sheetName, sheetNames: querySheets.sheetNames, search: debouncedSearch || undefined, pageSize: 200 },
-    { enabled: open && !!activeNav }
+    { enabled: open && !!isSubcategorySelected }
   );
 
   // Client-side model filter for subcategories
@@ -282,11 +282,9 @@ export default function ProductSelectorDialog({
           <div className="flex-1 flex flex-col min-w-0">
             {/* Search Bar */}
             <div className="flex items-center gap-2 px-4 py-3 border-b">
-              {activeNav && (
+              {isSubcategorySelected && activeNav && activeNav.type === "subcategory" && (
                 <Badge variant="outline" className="text-xs shrink-0">
-                  {activeNav.type === "subcategory"
-                    ? `${activeNav.category.label} / ${activeNav.subcategory.label}`
-                    : activeNav.category.label}
+                  {`${activeNav.category.label} / ${activeNav.subcategory.label}`}
                 </Badge>
               )}
               <div className="relative flex-1">
@@ -333,6 +331,12 @@ export default function ProductSelectorDialog({
                     <TableRow>
                       <TableCell colSpan={6} className="h-32 text-center">
                         <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ) : !isSubcategorySelected ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground text-sm">
+                        请选择左侧子分类查看产品数据
                       </TableCell>
                     </TableRow>
                   ) : filteredProducts.length === 0 ? (
