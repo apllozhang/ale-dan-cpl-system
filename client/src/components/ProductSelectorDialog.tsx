@@ -1,11 +1,7 @@
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Collapsible, CollapsibleContent, CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -14,23 +10,9 @@ import {
 } from "@/components/ui/table";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Search, X, Loader2, ChevronRight, Network, Wifi, Monitor, ShieldCheck, Cable, Package,
+  Search, X, Loader2,
 } from "lucide-react";
-import {
-  buildCategoryNav, getModelFilter, getQuerySheetName, getSheetsBySubcategory,
-  type CategoryNavItem,
-} from "@/lib/productCategories";
-
-const CATEGORY_ICONS: Record<string, any> = {
-  "wired-network": Network,
-  "wireless-network": Wifi,
-  "nms-system": Monitor,
-  "security-system": ShieldCheck,
-  "pol-system": Cable,
-  "other-products": Package,
-  "services": Network,
-  "accessories": Package,
-};
+import { trpc } from "@/lib/trpc";
 
 interface ProductSelectorDialogProps {
   open: boolean;
@@ -43,383 +25,268 @@ interface ProductSelectorDialogProps {
 export default function ProductSelectorDialog({
   open, onOpenChange, onAddProducts, discountRate, existingProductIds,
 }: ProductSelectorDialogProps) {
-  const [activeNav, setActiveNav] = useState<CategoryNavItem | null>(null);
+  const [selectedSheet, setSelectedSheet] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedMap, setSelectedMap] = useState<Map<number, { product: any; quantity: number }>>(new Map());
-  const [wiredExpanded, setWiredExpanded] = useState(true);
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
-      setActiveNav(null);
+      setSelectedSheet(null);
       setSearchText("");
       setDebouncedSearch("");
       setSelectedMap(new Map());
-      setWiredExpanded(true);
     }
   }, [open]);
 
   // Fetch sheets
   const sheetsQuery = trpc.cpl.sheets.useQuery(undefined, { enabled: open });
 
-  // Build navigation from sheet data
-  const navItems = useMemo(() => {
+  // Get unique sheet names for tabs
+  const sheetNames = useMemo(() => {
     if (!sheetsQuery.data) return [];
-    return buildCategoryNav(sheetsQuery.data);
+    return sheetsQuery.data.map(s => s.sheetName).filter((name, index, arr) => arr.indexOf(name) === index);
   }, [sheetsQuery.data]);
 
-  // Do not auto-select first nav item - let user choose
+  // Auto-select first sheet when data loads
   useEffect(() => {
-    if (!open) {
-      setActiveNav(null);
+    if (sheetNames.length > 0 && !selectedSheet) {
+      setSelectedSheet(sheetNames[0]);
     }
-  }, [open]);
+  }, [sheetNames, selectedSheet]);
 
-  // Compute sheet(s) for active nav item
-  const querySheets = useMemo(() => {
-    if (!activeNav || !sheetsQuery.data) return { sheetName: undefined as string | undefined, sheetNames: undefined as string[] | undefined };
-    if (activeNav.type === "subcategory") {
-      const matching = getSheetsBySubcategory(sheetsQuery.data, activeNav.category.id, activeNav.subcategory.id);
-      return { sheetName: undefined, sheetNames: matching.map(s => s.sheetName) };
-    }
-    return { sheetName: getQuerySheetName(activeNav), sheetNames: undefined };
-  }, [activeNav, sheetsQuery.data]);
-
-  // Fetch products for active nav item - only if subcategory is selected
-  const isSubcategorySelected = activeNav && activeNav.type === "subcategory";
+  // Fetch products for selected sheet
   const productsQuery = trpc.cpl.products.useQuery(
-    { sheetName: querySheets.sheetName, sheetNames: querySheets.sheetNames, search: debouncedSearch || undefined, pageSize: 200 },
-    { enabled: open && !!isSubcategorySelected }
+    { sheetName: selectedSheet || undefined, search: debouncedSearch || undefined, pageSize: 200 },
+    { enabled: open && !!selectedSheet }
   );
 
-  // Client-side model filter for subcategories
-  const modelPatterns = activeNav ? getModelFilter(activeNav) : undefined;
-
+  // Filter products by search
   const filteredProducts = useMemo(() => {
-    let result = productsQuery.data?.items ?? [];
-    if (modelPatterns) {
-      result = result.filter(p =>
-        modelPatterns.some(pat => pat.test(p.productModel || ""))
-      );
-    }
-    return result;
-  }, [productsQuery.data?.items, modelPatterns]);
+    const products = productsQuery.data?.items || [];
+    if (!debouncedSearch) return products;
+    const lowerSearch = debouncedSearch.toLowerCase();
+    return products.filter((p: any) =>
+      (p.productModel?.toLowerCase().includes(lowerSearch) ||
+        p.productDesc?.toLowerCase().includes(lowerSearch))
+    );
+  }, [productsQuery.data?.items, debouncedSearch]);
 
+  // Handle search with debounce
   const handleSearchChange = useCallback((value: string) => {
     setSearchText(value);
     if (searchTimer) clearTimeout(searchTimer);
-    const timer = setTimeout(() => setDebouncedSearch(value), 300);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 300);
     setSearchTimer(timer);
   }, [searchTimer]);
 
+  // Toggle product selection
   const toggleProduct = useCallback((product: any) => {
-    setSelectedMap(prev => {
-      const next = new Map(prev);
-      if (next.has(product.id)) {
-        next.delete(product.id);
-      } else {
-        next.set(product.id, { product, quantity: 1 });
-      }
-      return next;
-    });
-  }, []);
+    const newMap = new Map(selectedMap);
+    if (newMap.has(product.id)) {
+      newMap.delete(product.id);
+    } else {
+      newMap.set(product.id, { product, quantity: 1 });
+    }
+    setSelectedMap(newMap);
+  }, [selectedMap]);
 
-  const updateQuantity = useCallback((productId: number, qty: number) => {
-    setSelectedMap(prev => {
-      const next = new Map(prev);
-      const entry = next.get(productId);
-      if (entry) {
-        next.set(productId, { ...entry, quantity: Math.max(1, qty) });
-      }
-      return next;
-    });
-  }, []);
+  // Update quantity
+  const updateQuantity = useCallback((productId: number, quantity: number) => {
+    const newMap = new Map(selectedMap);
+    const item = newMap.get(productId);
+    if (item) {
+      newMap.set(productId, { ...item, quantity });
+      setSelectedMap(newMap);
+    }
+  }, [selectedMap]);
 
+  // Toggle select all
   const toggleSelectAll = useCallback(() => {
-    setSelectedMap(prev => {
-      const next = new Map(prev);
-      const allSelected = filteredProducts.every(p => next.has(p.id));
-      for (const p of filteredProducts) {
-        if (allSelected) {
-          next.delete(p.id);
-        } else if (!next.has(p.id)) {
-          next.set(p.id, { product: p, quantity: 1 });
+    if (filteredProducts.length === 0) return;
+    const newMap = new Map(selectedMap);
+    const allSelected = filteredProducts.every((p: any) => newMap.has(p.id));
+
+    if (allSelected) {
+      filteredProducts.forEach((p: any) => newMap.delete(p.id));
+    } else {
+      filteredProducts.forEach((p: any) => {
+        if (!newMap.has(p.id) && !existingProductIds.has(p.id)) {
+          newMap.set(p.id, { product: p, quantity: 1 });
         }
-      }
-      return next;
-    });
-  }, [filteredProducts]);
-
-  const handleAddProducts = () => {
-    const products: Array<{ product: any; quantity: number }> = [];
-    selectedMap.forEach(({ product, quantity }) => {
-      if (!existingProductIds.has(product.id)) {
-        products.push({ product, quantity });
-      }
-    });
-    onAddProducts(products);
-    onOpenChange(false);
-  };
-
-  // Group navItems for rendering
-  const categoryNavGroups = useMemo(() => {
-    const groups: Array<{ category: CategoryNavItem; subcategories: CategoryNavItem[] }> = [];
-    let i = 0;
-    while (i < navItems.length) {
-      const item = navItems[i];
-      if (item.type === "category") {
-        const subs: CategoryNavItem[] = [];
-        let j = i + 1;
-        while (j < navItems.length && navItems[j].type === "subcategory") {
-          subs.push(navItems[j]);
-          j++;
-        }
-        groups.push({ category: item, subcategories: subs });
-        i = j;
-      } else {
-        i++;
-      }
+      });
     }
-    return groups;
-  }, [navItems]);
+    setSelectedMap(newMap);
+  }, [filteredProducts, selectedMap, existingProductIds]);
 
-  const isNavActive = (nav: CategoryNavItem) => {
-    if (!activeNav) return false;
-    if (nav.type === "category" && activeNav.type === "category") {
-      return nav.category.id === activeNav.category.id;
+  // Handle add products
+  const handleAddProducts = useCallback(() => {
+    const products = Array.from(selectedMap.values());
+    if (products.length > 0) {
+      onAddProducts(products);
+      onOpenChange(false);
     }
-    if (nav.type === "subcategory" && activeNav.type === "subcategory") {
-      return nav.subcategory.id === activeNav.subcategory.id;
-    }
-    return false;
-  };
-
-  const totalSelected = selectedMap.size;
-  const totalQuantity = Array.from(selectedMap.values()).reduce((s, e) => s + e.quantity, 0);
+  }, [selectedMap, onAddProducts, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-3">
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+        <DialogHeader>
           <DialogTitle>添加产品到报价单</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-1 min-h-0 border-t overflow-hidden">
-          {/* Left Panel - Category Navigation */}
-          <div className="w-[220px] border-r bg-muted/20">
-            <ScrollArea className="h-full">
-              <div className="p-2">
-                {categoryNavGroups.map(({ category, subcategories }) => {
-                  const Icon = CATEGORY_ICONS[category.category.id] || Package;
-                  const hasSubs = subcategories.length > 0;
-                  const isWired = category.category.id === "wired-network";
-                  const isExpanded = isWired ? wiredExpanded : false;
+        {/* Sheet Tabs */}
+        <div className="flex gap-1 border-b overflow-x-auto px-4">
+          {sheetNames.map(sheet => (
+            <button
+              key={sheet}
+              onClick={() => setSelectedSheet(sheet)}
+              className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedSheet === sheet
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {sheet}
+            </button>
+          ))}
+        </div>
 
-                  if (hasSubs) {
-                    return (
-                      <Collapsible
-                        key={category.category.id}
-                        open={isExpanded}
-                        onOpenChange={isWired ? setWiredExpanded : undefined}
-                      >
-                        <CollapsibleTrigger asChild>
-                          <button
-                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-accent/50 ${
-                              isNavActive(category) ? "bg-accent text-accent-foreground" : ""
-                            }`}
-                            onClick={() => setActiveNav(category)}
-                          >
-                            <Icon className="w-4 h-4 shrink-0" />
-                            <span className="flex-1 text-left truncate">{category.category.label}</span>
-                            <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-auto">
-                              {category.totalCount}
-                            </Badge>
-                            <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                          </button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="ml-4 pl-3 border-l border-border space-y-0.5 mt-1">
-                            {subcategories.map(sub => (
-                              <button
-                                key={sub.type === "subcategory" ? sub.subcategory.id : sub.category.id}
-                                className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors hover:bg-accent/50 ${
-                                  isNavActive(sub) ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground"
-                                }`}
-                                onClick={() => setActiveNav(sub)}
-                              >
-                                {sub.type === "subcategory" ? sub.subcategory.label : sub.category.label}
-                              </button>
-                            ))}
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    );
-                  }
-
-                  return (
-                    <button
-                      key={category.category.id}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent/50 ${
-                        isNavActive(category) ? "bg-accent text-accent-foreground font-medium" : ""
-                      }`}
-                      onClick={() => setActiveNav(category)}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      <span className="flex-1 text-left truncate">{category.category.label}</span>
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-                        {category.totalCount}
-                      </Badge>
-                    </button>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* Right Panel - Product List */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* Search Bar */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b">
-              {isSubcategorySelected && activeNav && activeNav.type === "subcategory" && (
-                <Badge variant="outline" className="text-xs shrink-0">
-                  {`${activeNav.category.label} / ${activeNav.subcategory.label}`}
-                </Badge>
-              )}
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="搜索产品型号、说明..."
-                  value={searchText}
-                  onChange={e => handleSearchChange(e.target.value)}
-                  className="pl-8 h-8 text-sm"
-                />
-                {searchText && (
-                  <button
-                    onClick={() => { setSearchText(""); setDebouncedSearch(""); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Product Table */}
-            <ScrollArea className="flex-1 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="w-10 text-xs">
-                      <input
-                        type="checkbox"
-                        checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedMap.has(p.id))}
-                        onChange={toggleSelectAll}
-                        className="w-4 h-4 cursor-pointer"
-                      />
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold min-w-[140px]">产品型号</TableHead>
-                    <TableHead className="text-xs font-semibold min-w-[200px]">产品说明</TableHead>
-                    <TableHead className="text-xs font-semibold w-24">媒体价</TableHead>
-                    <TableHead className="text-xs font-semibold w-20">数量</TableHead>
-                    <TableHead className="text-xs font-semibold w-16">状态</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {productsQuery.isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center">
-                        <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
-                      </TableCell>
-                    </TableRow>
-                  ) : !isSubcategorySelected ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground text-sm">
-                        请选择左侧子分类查看产品数据
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground text-sm">
-                        {debouncedSearch ? "未找到匹配产品" : "该分类下暂无产品"}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredProducts.map((p: any) => {
-                      const isSelected = selectedMap.has(p.id);
-                      const isExisting = existingProductIds.has(p.id);
-                      return (
-                        <TableRow
-                          key={p.id}
-                          className={`transition-colors ${
-                            isExisting
-                              ? "opacity-50 cursor-not-allowed"
-                              : isSelected
-                                ? "bg-primary/10 cursor-pointer"
-                                : "hover:bg-accent/30 cursor-pointer"
-                          }`}
-                          onClick={() => !isExisting && toggleProduct(p)}
-                        >
-                          <TableCell>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => !isExisting && toggleProduct(p)}
-                              disabled={isExisting}
-                              className="w-4 h-4 cursor-pointer"
-                            />
-                          </TableCell>
-                          <TableCell className="text-xs font-medium">{p.productModel}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">{p.productDesc}</TableCell>
-                          <TableCell className="text-xs tabular-nums">
-                            {p.listPrice ? `¥${Number(p.listPrice).toLocaleString()}` : "-"}
-                          </TableCell>
-                          <TableCell>
-                            {isSelected ? (
-                              <Input
-                                type="number"
-                                min={1}
-                                value={selectedMap.get(p.id)?.quantity ?? 1}
-                                onChange={e => updateQuantity(p.id, Math.max(1, parseInt(e.target.value) || 1))}
-                                onClick={e => e.stopPropagation()}
-                                className="h-7 w-16 text-xs text-right"
-                              />
-                            ) : isExisting ? (
-                              <span className="text-[10px] text-muted-foreground">已添加</span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {isExisting ? (
-                              <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-muted-foreground">已添加</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                                {p.productStatus || "-"}
-                              </Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+        {/* Search Bar */}
+        <div className="px-4 pt-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="搜索产品型号、说明..."
+              value={searchText}
+              onChange={e => handleSearchChange(e.target.value)}
+              className="pl-10 pr-8"
+            />
+            {searchText && (
+              <button
+                onClick={() => handleSearchChange("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
+        {/* Product Table */}
+        <ScrollArea className="flex-1 overflow-hidden px-4">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <TableHead className="w-10 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedMap.has(p.id))}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 cursor-pointer"
+                  />
+                </TableHead>
+                <TableHead className="text-xs font-semibold min-w-[140px]">产品型号</TableHead>
+                <TableHead className="text-xs font-semibold min-w-[200px]">产品说明</TableHead>
+                <TableHead className="text-xs font-semibold w-24">媒体价</TableHead>
+                <TableHead className="text-xs font-semibold w-20">数量</TableHead>
+                <TableHead className="text-xs font-semibold w-16">状态</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {productsQuery.isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : filteredProducts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground text-sm">
+                    {debouncedSearch ? "未找到匹配产品" : "该分类下暂无产品"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredProducts.map((p: any, index: number) => {
+                  const isSelected = selectedMap.has(p.id);
+                  const isExisting = existingProductIds.has(p.id);
+                  return (
+                    <TableRow
+                      key={p.id}
+                      className={`transition-colors ${
+                        isExisting
+                          ? "opacity-50 cursor-not-allowed"
+                          : isSelected
+                            ? "bg-primary/10 cursor-pointer"
+                            : "hover:bg-accent/30 cursor-pointer"
+                      }`}
+                      onClick={() => !isExisting && toggleProduct(p)}
+                    >
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => !isExisting && toggleProduct(p)}
+                          disabled={isExisting}
+                          className="w-4 h-4 cursor-pointer"
+                        />
+                      </TableCell>
+                      <TableCell className="text-xs font-medium">{p.productModel}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">{p.productDesc}</TableCell>
+                      <TableCell className="text-xs tabular-nums">
+                        {p.listPrice ? `¥${Number(p.listPrice).toLocaleString()}` : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {isSelected ? (
+                          <Input
+                            type="number"
+                            min={1}
+                            value={selectedMap.get(p.id)?.quantity ?? 1}
+                            onChange={e => updateQuantity(p.id, Math.max(1, parseInt(e.target.value) || 1))}
+                            onClick={e => e.stopPropagation()}
+                            className="h-7 w-16 text-xs text-right"
+                          />
+                        ) : isExisting ? (
+                          <span className="text-[10px] text-muted-foreground">已添加</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isExisting ? (
+                          <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-muted-foreground">已添加</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                            {p.productStatus || "-"}
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+
         {/* Footer */}
-        <DialogFooter className="px-6 py-4 border-t bg-background shrink-0 gap-3">
-          <span className="text-xs text-muted-foreground">
-            已选择 {totalSelected} 个产品{totalQuantity > totalSelected && `，共 ${totalQuantity} 件`}
-          </span>
-          <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs">取消</Button>
-            <Button onClick={handleAddProducts} disabled={totalSelected === 0} className="text-xs">
-              添加到报价单
-            </Button>
+        <DialogFooter className="px-4 py-4 border-t">
+          <div className="flex items-center justify-between w-full">
+            <span className="text-sm text-muted-foreground">
+              已选择 {selectedMap.size} 个产品
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                取消
+              </Button>
+              <Button onClick={handleAddProducts} disabled={selectedMap.size === 0}>
+                添加到报价单
+              </Button>
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>
