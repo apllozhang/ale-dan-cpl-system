@@ -1,9 +1,12 @@
-import { eq, like, or, and, sql, asc, desc, SQL } from "drizzle-orm";
+import { eq, like, or, and, sql, asc, desc, SQL, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users, cplProducts, cplSheets, cplSummary,
   InsertCplProduct, InsertCplSheet, InsertCplSummary,
   quotations, quotationItems, InsertQuotation, InsertQuotationItem,
+  organizations, InsertOrganization,
+  userGroups, InsertUserGroup,
+  importLogs, InsertImportLog,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -78,6 +81,7 @@ export async function getUserByOpenId(openId: string) {
 // ==================== CPL Product helpers ====================
 export async function getCplProducts(params: {
   sheetName?: string;
+  sheetNames?: string[];
   search?: string;
   page?: number;
   pageSize?: number;
@@ -88,10 +92,12 @@ export async function getCplProducts(params: {
   const db = await getDb();
   if (!db) return { items: [], total: 0 };
 
-  const { sheetName, search, page = 1, pageSize = 50, sortBy, sortOrder = "asc", filters } = params;
+  const { sheetName, sheetNames, search, page = 1, pageSize = 50, sortBy, sortOrder = "asc", filters } = params;
   const conditions: SQL[] = [];
 
-  if (sheetName) {
+  if (sheetNames && sheetNames.length > 0) {
+    conditions.push(inArray(cplProducts.sheetName, sheetNames));
+  } else if (sheetName) {
     conditions.push(eq(cplProducts.sheetName, sheetName));
   }
 
@@ -232,6 +238,9 @@ export async function createUser(data: {
   name?: string;
   email?: string;
   role?: "user" | "admin";
+  isSuperAdmin?: boolean;
+  organizationId?: number;
+  groupId?: number;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -243,6 +252,9 @@ export async function createUser(data: {
     email: data.email || null,
     loginMethod: "local",
     role: data.role || "user",
+    isSuperAdmin: data.isSuperAdmin ?? false,
+    organizationId: data.organizationId ?? null,
+    groupId: data.groupId ?? null,
   });
   return { id: Number(result[0].insertId), username: data.username };
 }
@@ -253,6 +265,9 @@ export async function updateUser(id: number, data: {
   name?: string;
   email?: string;
   role?: "user" | "admin";
+  isSuperAdmin?: boolean;
+  organizationId?: number | null;
+  groupId?: number | null;
 }) {
   const db = await getDb();
   if (!db) return;
@@ -262,6 +277,9 @@ export async function updateUser(id: number, data: {
   if (data.name !== undefined) updateSet.name = data.name;
   if (data.email !== undefined) updateSet.email = data.email;
   if (data.role !== undefined) updateSet.role = data.role;
+  if (data.isSuperAdmin !== undefined) updateSet.isSuperAdmin = data.isSuperAdmin;
+  if (data.organizationId !== undefined) updateSet.organizationId = data.organizationId;
+  if (data.groupId !== undefined) updateSet.groupId = data.groupId;
   if (data.username !== undefined) updateSet.openId = `local-${data.username}`;
   await db.update(users).set(updateSet).where(eq(users.id, id));
 }
@@ -281,6 +299,9 @@ export async function getAllUsers() {
     name: users.name,
     email: users.email,
     role: users.role,
+    isSuperAdmin: users.isSuperAdmin,
+    organizationId: users.organizationId,
+    groupId: users.groupId,
     createdAt: users.createdAt,
     lastSignedIn: users.lastSignedIn,
   }).from(users).orderBy(asc(users.id));
@@ -295,6 +316,9 @@ export async function getUserById(id: number) {
     name: users.name,
     email: users.email,
     role: users.role,
+    isSuperAdmin: users.isSuperAdmin,
+    organizationId: users.organizationId,
+    groupId: users.groupId,
     createdAt: users.createdAt,
     lastSignedIn: users.lastSignedIn,
   }).from(users).where(eq(users.id, id)).limit(1);
@@ -496,4 +520,119 @@ export async function updateQuotationStatus(id: number, status: string) {
   const db = await getDb();
   if (!db) return;
   await db.update(quotations).set({ status: status as any }).where(eq(quotations.id, id));
+}
+
+// ==================== Organization helpers ====================
+export async function getAllOrganizations() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(organizations).orderBy(asc(organizations.id));
+}
+
+export async function createOrganization(data: { name: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(organizations).values({ name: data.name });
+  return { id: Number(result[0].insertId), name: data.name };
+}
+
+export async function updateOrganization(id: number, data: { name: string }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(organizations).set({ name: data.name }).where(eq(organizations.id, id));
+}
+
+export async function deleteOrganization(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(organizations).where(eq(organizations.id, id));
+}
+
+// ==================== User Group helpers ====================
+export async function getAllUserGroups() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: userGroups.id,
+    name: userGroups.name,
+    organizationId: userGroups.organizationId,
+    createdAt: userGroups.createdAt,
+    updatedAt: userGroups.updatedAt,
+  }).from(userGroups).orderBy(asc(userGroups.id));
+}
+
+export async function createUserGroup(data: { name: string; organizationId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(userGroups).values({
+    name: data.name,
+    organizationId: data.organizationId,
+  });
+  return { id: Number(result[0].insertId), name: data.name, organizationId: data.organizationId };
+}
+
+export async function updateUserGroup(id: number, data: { name?: string; organizationId?: number }) {
+  const db = await getDb();
+  if (!db) return;
+  const updateSet: Record<string, unknown> = {};
+  if (data.name !== undefined) updateSet.name = data.name;
+  if (data.organizationId !== undefined) updateSet.organizationId = data.organizationId;
+  await db.update(userGroups).set(updateSet).where(eq(userGroups.id, id));
+}
+
+export async function deleteUserGroup(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(userGroups).where(eq(userGroups.id, id));
+}
+
+// ==================== Import Log helpers ====================
+export async function getImportLogs(params: {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const { search, page = 1, pageSize = 20 } = params;
+  const conditions: SQL[] = [];
+
+  if (search?.trim()) {
+    const term = `%${search.trim()}%`;
+    conditions.push(or(
+      like(importLogs.fileName, term),
+      like(importLogs.username, term),
+      like(importLogs.orgName || sql`''`, term),
+      like(importLogs.groupName || sql`''`, term),
+      like(importLogs.mode, term),
+    )!);
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const total = await db.$count(importLogs, where);
+  const items = await db.select().from(importLogs)
+    .where(where)
+    .orderBy(desc(importLogs.id))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return { items, total };
+}
+
+export async function createImportLog(data: InsertImportLog) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(importLogs).values(data);
+}
+
+export async function clearImportLogs() {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(importLogs);
+}
+
+export async function countCplProducts() {
+  const db = await getDb();
+  if (!db) return 0;
+  return db.$count(cplProducts);
 }

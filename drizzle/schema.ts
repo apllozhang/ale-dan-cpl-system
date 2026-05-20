@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -9,6 +9,9 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  isSuperAdmin: boolean("isSuperAdmin").default(false).notNull(),
+  organizationId: int("organizationId"),
+  groupId: int("groupId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -16,6 +19,29 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+// Organization table
+export const organizations = mysqlTable("organizations", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull().unique(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganization = typeof organizations.$inferInsert;
+
+// User Group table
+export const userGroups = mysqlTable("user_groups", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  organizationId: int("organizationId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserGroup = typeof userGroups.$inferSelect;
+export type InsertUserGroup = typeof userGroups.$inferInsert;
 
 // CPL Product data table
 export const cplProducts = mysqlTable("cpl_products", {
@@ -103,3 +129,20 @@ export const quotationItems = mysqlTable("quotation_items", {
 
 export type QuotationItem = typeof quotationItems.$inferSelect;
 export type InsertQuotationItem = typeof quotationItems.$inferInsert;
+
+// Import log table
+export const importLogs = mysqlTable("import_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  fileName: varchar("fileName", { length: 256 }).notNull(),
+  userId: int("userId").notNull(),
+  username: varchar("username", { length: 64 }).notNull(),
+  orgName: varchar("orgName", { length: 128 }),
+  groupName: varchar("groupName", { length: 128 }),
+  mode: varchar("mode", { length: 16 }).notNull(), // "overwrite" | "merge"
+  sheetsCount: int("sheetsCount").notNull().default(0),
+  productsCount: int("productsCount").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ImportLog = typeof importLogs.$inferSelect;
+export type InsertImportLog = typeof importLogs.$inferInsert;

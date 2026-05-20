@@ -1,7 +1,7 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, superAdminProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { SignJWT, jwtVerify } from "jose";
@@ -165,6 +165,49 @@ export const appRouter = router({
       }),
   }),
 
+  organizations: router({
+    list: superAdminProcedure.query(async () => {
+      return db.getAllOrganizations();
+    }),
+    create: superAdminProcedure
+      .input(z.object({ name: z.string().min(1).max(128) }))
+      .mutation(async ({ input }) => {
+        return db.createOrganization(input);
+      }),
+    update: superAdminProcedure
+      .input(z.object({ id: z.number(), name: z.string().min(1).max(128) }))
+      .mutation(async ({ input }) => {
+        return db.updateOrganization(input.id, { name: input.name });
+      }),
+    delete: superAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteOrganization(input.id);
+      }),
+  }),
+
+  userGroups: router({
+    list: superAdminProcedure.query(async () => {
+      return db.getAllUserGroups();
+    }),
+    create: superAdminProcedure
+      .input(z.object({ name: z.string().min(1).max(128), organizationId: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.createUserGroup(input);
+      }),
+    update: superAdminProcedure
+      .input(z.object({ id: z.number(), name: z.string().min(1).max(128).optional(), organizationId: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return db.updateUserGroup(id, data);
+      }),
+    delete: superAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteUserGroup(input.id);
+      }),
+  }),
+
   users: router({
     list: adminProcedure.query(async () => {
       return db.getAllUsers();
@@ -181,6 +224,9 @@ export const appRouter = router({
         name: z.string().optional(),
         email: z.string().email().optional(),
         role: z.enum(["user", "admin"]).default("user"),
+        isSuperAdmin: z.boolean().optional(),
+        organizationId: z.number().optional(),
+        groupId: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
         const existingUser = await db.getUserByUsername(input.username);
@@ -194,6 +240,9 @@ export const appRouter = router({
           name: input.name,
           email: input.email,
           role: input.role,
+          isSuperAdmin: input.isSuperAdmin,
+          organizationId: input.organizationId,
+          groupId: input.groupId,
         });
       }),
     update: adminProcedure
@@ -204,6 +253,9 @@ export const appRouter = router({
         name: z.string().optional(),
         email: z.string().email().optional(),
         role: z.enum(["user", "admin"]).optional(),
+        isSuperAdmin: z.boolean().optional(),
+        organizationId: z.number().nullable().optional(),
+        groupId: z.number().nullable().optional(),
       }))
       .mutation(async ({ input }) => {
         const { id, password, username, ...rest } = input;
@@ -377,6 +429,7 @@ export const appRouter = router({
     products: publicProcedure
       .input(z.object({
         sheetName: z.string().optional(),
+        sheetNames: z.array(z.string()).optional(),
         search: z.string().optional(),
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(200).default(50),
@@ -393,18 +446,27 @@ export const appRouter = router({
       return db.getLatestSummary();
     }),
 
+    // Check if existing data exists
+    hasData: publicProcedure.query(async () => {
+      const count = await db.countCplProducts();
+      return { hasData: count > 0, count };
+    }),
+
     // Import Excel file
-    import: protectedProcedure
+    import: superAdminProcedure
       .input(z.object({
         fileBase64: z.string(),
         fileName: z.string(),
+        mode: z.enum(["merge", "overwrite"]).default("overwrite"),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const buffer = Buffer.from(input.fileBase64, "base64");
         const { products, sheetMeta, summaryContent } = parseExcelBuffer(buffer);
 
-        // Clear existing data and insert new
-        await db.clearAllProducts();
+        if (input.mode === "overwrite") {
+          await db.clearAllProducts();
+        }
+        // For merge: don't clear, just insert
         await db.clearAndInsertSheets(sheetMeta);
 
         if (products.length > 0) {
@@ -418,6 +480,30 @@ export const appRouter = router({
           });
         }
 
+        // Fetch org/group names for logging
+        let orgName = "";
+        let groupName = "";
+        if (ctx.user!.organizationId) {
+          const orgs = await db.getAllOrganizations();
+          orgName = orgs.find((o: any) => o.id === ctx.user!.organizationId)?.name || "";
+        }
+        if (ctx.user!.groupId) {
+          const groups = await db.getAllUserGroups();
+          groupName = groups.find((g: any) => g.id === ctx.user!.groupId)?.name || "";
+        }
+
+        // Write import log
+        await db.createImportLog({
+          fileName: input.fileName,
+          userId: ctx.user!.id,
+          username: ctx.user!.username || "unknown",
+          orgName: orgName || null,
+          groupName: groupName || null,
+          mode: input.mode,
+          sheetsCount: sheetMeta.length,
+          productsCount: products.length,
+        } as any);
+
         return {
           success: true,
           sheetsImported: sheetMeta.length,
@@ -425,6 +511,31 @@ export const appRouter = router({
           hasSummary: !!summaryContent,
         };
       }),
+  }),
+
+  importLogs: router({
+    list: superAdminProcedure
+      .input(z.object({
+        search: z.string().optional(),
+        page: z.number().min(1).default(1),
+        pageSize: z.number().min(1).max(100).default(20),
+      }))
+      .query(async ({ input }) => {
+        return db.getImportLogs(input);
+      }),
+    clear: superAdminProcedure.mutation(async () => {
+      await db.clearImportLogs();
+      return { success: true };
+    }),
+    export: superAdminProcedure.query(async () => {
+      const { items } = await db.getImportLogs({ page: 1, pageSize: 10000 });
+      // Format as CSV
+      const header = "ID,文件名,用户,组织,用户组,模式,Sheet数,产品数,时间";
+      const rows = items.map((l: any) =>
+        `${l.id},"${l.fileName}","${l.username}","${l.orgName || ''}","${l.groupName || ''}","${l.mode === 'overwrite' ? '完全覆盖' : '合并'}",${l.sheetsCount},${l.productsCount},"${new Date(l.createdAt).toLocaleString('zh-CN')}"`
+      );
+      return header + "\n" + rows.join("\n");
+    }),
   }),
 });
 

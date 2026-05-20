@@ -40,7 +40,7 @@ import {
   getAllCategories,
   buildCategoryNav,
   getSheetsByCategory,
-  getQuerySheetName,
+  getSheetsBySubcategory,
   getModelFilter,
   type ProductCategory,
   type CategoryNavItem,
@@ -93,6 +93,7 @@ export default function ProductDataPage() {
       return "wired-network";
     }
   });
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(["wired-network"])
   );
@@ -220,31 +221,31 @@ export default function ProductDataPage() {
     );
   }, [sheetsQuery.data]);
 
-  // Get sheets for selected category
+  // Get sheets for selected category (filtered by subcategory if selected)
   const categorySheets = useMemo(() => {
     if (!sheetsQuery.data) return [];
-    return getSheetsByCategory(
-      sheetsQuery.data.map(s => ({
-        sheetName: s.sheetName,
-        productCount: s.productCount,
-      })),
-      selectedCategoryId
-    );
-  }, [sheetsQuery.data, selectedCategoryId]);
+    const sheets = sheetsQuery.data.map(s => ({
+      sheetName: s.sheetName,
+      productCount: s.productCount,
+    }));
+    if (selectedSubcategoryId) {
+      return getSheetsBySubcategory(sheets, selectedCategoryId, selectedSubcategoryId);
+    }
+    return getSheetsByCategory(sheets, selectedCategoryId);
+  }, [sheetsQuery.data, selectedCategoryId, selectedSubcategoryId]);
 
-  // Set default sheet when category changes
+  // Set default sheet only when subcategory changes (not main category)
   useEffect(() => {
-    if (categorySheets.length > 0) {
-      // Always set to first sheet of selected category
+    if (selectedSubcategoryId && categorySheets.length > 0) {
       setSelectedSheet(categorySheets[0].sheetName);
       setPage(1);
     }
-  }, [categorySheets]);
+  }, [selectedSubcategoryId, categorySheets]);
 
   // Fetch products for selected sheet
   const productsQuery = trpc.cpl.products.useQuery(
     {
-      sheetName: selectedSheet,
+      sheetName: selectedSheet || undefined,
       search: debouncedSearch,
       page,
       pageSize,
@@ -339,7 +340,8 @@ export default function ProductDataPage() {
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
-    setSelectedSheet(""); // Reset sheet to trigger re-fetch with new category
+    setSelectedSubcategoryId("");
+    setSelectedSheet(""); // Don't auto-select sheet for main category
     setPage(1);
   };
 
@@ -442,19 +444,35 @@ export default function ProductDataPage() {
                 {isExpanded &&
                   categoryItems
                     .filter((item) => item.type === "subcategory")
-                    .map((item) => (
-                      <button
-                        key={item.subcategory?.id}
-                        onClick={() => {
-                          setSelectedCategoryId(category.id);
-                          setSelectedSheet(item.matchedSheets[0]);
-                          setPage(1);
-                        }}
-                        className="w-full px-8 py-2 text-left text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                      >
-                        {item.subcategory?.label}
-                      </button>
-                    ))}
+                    .map((item) => {
+                      const isSubSelected = selectedSubcategoryId === item.subcategory?.id;
+                      return (
+                        <button
+                          key={item.subcategory?.id}
+                          onClick={() => {
+                            const subId = item.subcategory?.id || "";
+                            setSelectedCategoryId(category.id);
+                            setSelectedSubcategoryId(subId);
+                            setPage(1);
+                            // Directly find matching sheets for this subcategory
+                            if (sheetsQuery.data) {
+                              const sheets = sheetsQuery.data.map(s => ({ sheetName: s.sheetName, productCount: s.productCount }));
+                              const matching = getSheetsBySubcategory(sheets, category.id, subId);
+                              setSelectedSheet(matching[0]?.sheetName || "");
+                            } else {
+                              setSelectedSheet("");
+                            }
+                          }}
+                          className={`w-full px-8 py-2 text-left text-xs transition-colors ${
+                            isSubSelected
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                          }`}
+                        >
+                          {item.subcategory?.label}
+                        </button>
+                      );
+                    })}
               </div>
             );
           })}
@@ -542,8 +560,8 @@ export default function ProductDataPage() {
           </div>
         </div>
 
-        {/* Sheet tabs */}
-        {categorySheets.length > 1 && (
+        {/* Sheet tabs - only show when subcategory selected */}
+        {selectedSubcategoryId && categorySheets.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-2 border-b">
             {categorySheets.map((sheet) => (
               <button
@@ -690,7 +708,16 @@ export default function ProductDataPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {productsQuery.isLoading ? (
+                {!selectedSubcategoryId ? (
+                  <TableRow>
+                    <TableCell colSpan={visibleColumnsList.length + 1} className="h-48 text-center">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Database className="w-8 h-8 opacity-20" />
+                        <span className="text-sm">请选择左侧子分类查看产品数据</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : productsQuery.isLoading ? (
                   <TableRow>
                     <TableCell colSpan={visibleColumnsList.length + 1} className="h-48 text-center">
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">

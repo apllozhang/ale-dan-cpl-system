@@ -12,28 +12,58 @@ if (!DATABASE_URL) {
 async function main() {
   const db = drizzle(DATABASE_URL);
 
+  // 1. Create default organization
+  const orgResult = await db.execute(
+    sql`SELECT id FROM organizations WHERE name = 'ALE' LIMIT 1`
+  );
+  let orgId;
+  if (orgResult[0] && orgResult[0].length > 0) {
+    orgId = orgResult[0][0].id;
+    console.log(`Organization already exists: ALE (id=${orgId})`);
+  } else {
+    const inserted = await db.execute(
+      sql`INSERT INTO organizations (name) VALUES ('ALE')`
+    );
+    orgId = inserted[0].insertId;
+    console.log(`Created organization: ALE (id=${orgId})`);
+  }
+
+  // 2. Create default user group
+  const groupResult = await db.execute(
+    sql`SELECT id FROM user_groups WHERE name = 'administrator' AND organizationId = ${orgId} LIMIT 1`
+  );
+  let groupId;
+  if (groupResult[0] && groupResult[0].length > 0) {
+    groupId = groupResult[0][0].id;
+    console.log(`User group already exists: administrator (id=${groupId})`);
+  } else {
+    const inserted = await db.execute(
+      sql`INSERT INTO user_groups (name, organizationId) VALUES ('administrator', ${orgId})`
+    );
+    groupId = inserted[0].insertId;
+    console.log(`Created user group: administrator (id=${groupId})`);
+  }
+
+  // 3. Create/update super admin user
   const username = "aletss";
   const password = "Ale@tss";
   const passwordHash = await hash(password, 10);
   const openId = `local-${username}`;
 
-  // Check if user exists
   const existing = await db.execute(
     sql`SELECT id FROM users WHERE username = ${username} LIMIT 1`
   );
 
   if (existing[0] && existing[0].length > 0) {
-    // Update existing user with password hash
     await db.execute(
-      sql`UPDATE users SET passwordHash = ${passwordHash}, openId = ${openId}, loginMethod = 'local', role = 'admin' WHERE username = ${username}`
+      sql`UPDATE users SET passwordHash = ${passwordHash}, openId = ${openId}, loginMethod = 'local', role = 'admin', isSuperAdmin = true, organizationId = ${orgId}, groupId = ${groupId} WHERE username = ${username}`
     );
-    console.log(`Updated existing admin user: ${username}`);
+    console.log(`Updated super admin user: ${username}`);
   } else {
-    // Create new admin user
     await db.execute(
-      sql`INSERT INTO users (openId, username, passwordHash, name, email, loginMethod, role) VALUES (${openId}, ${username}, ${passwordHash}, 'ALE TSS', 'aletss@ale.com', 'local', 'admin')`
+      sql`INSERT INTO users (openId, username, passwordHash, name, email, loginMethod, role, isSuperAdmin, organizationId, groupId) VALUES (${openId}, ${username}, ${passwordHash}, 'ALE TSS', 'aletss@ale.com', 'local', 'admin', true, ${orgId}, ${groupId})`
     );
-    console.log(`Created admin user: ${username}`);
+    console.log(`Created super admin user: ${username}`);
   }
 
   console.log("Done!");

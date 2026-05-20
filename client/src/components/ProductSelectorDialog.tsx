@@ -17,7 +17,7 @@ import {
   Search, X, Loader2, ChevronRight, Network, Wifi, Monitor, ShieldCheck, Cable, Package,
 } from "lucide-react";
 import {
-  buildCategoryNav, getModelFilter, getQuerySheetName,
+  buildCategoryNav, getModelFilter, getQuerySheetName, getSheetsBySubcategory,
   type CategoryNavItem,
 } from "@/lib/productCategories";
 
@@ -78,10 +78,19 @@ export default function ProductSelectorDialog({
     }
   }, [navItems, activeNav]);
 
+  // Compute sheet(s) for active nav item
+  const querySheets = useMemo(() => {
+    if (!activeNav || !sheetsQuery.data) return { sheetName: undefined as string | undefined, sheetNames: undefined as string[] | undefined };
+    if (activeNav.type === "subcategory") {
+      const matching = getSheetsBySubcategory(sheetsQuery.data, activeNav.category.id, activeNav.subcategory.id);
+      return { sheetName: undefined, sheetNames: matching.map(s => s.sheetName) };
+    }
+    return { sheetName: getQuerySheetName(activeNav), sheetNames: undefined };
+  }, [activeNav, sheetsQuery.data]);
+
   // Fetch products for active nav item
-  const sheetName = activeNav ? getQuerySheetName(activeNav) : undefined;
   const productsQuery = trpc.cpl.products.useQuery(
-    { sheetName, search: debouncedSearch || undefined, pageSize: 200 },
+    { sheetName: querySheets.sheetName, sheetNames: querySheets.sheetNames, search: debouncedSearch || undefined, pageSize: 200 },
     { enabled: open && !!activeNav }
   );
 

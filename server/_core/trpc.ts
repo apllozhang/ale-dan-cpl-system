@@ -43,3 +43,20 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+export const superAdminProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.user || !ctx.user.isSuperAdmin) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "需要超级管理员权限" });
+    }
+
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user,
+      },
+    });
+  }),
+);

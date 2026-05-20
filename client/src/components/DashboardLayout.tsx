@@ -39,7 +39,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "仪表盘", path: "/" },
   { icon: Database, label: "产品数据", path: "/data" },
   { icon: FileText, label: "变更记录", path: "/summary" },
-  { icon: HardDriveUpload, label: "数据导入", path: "/import" },
+  { icon: HardDriveUpload, label: "数据导入", path: "/import", superAdminOnly: true },
   { icon: FileSpreadsheet, label: "报价管理", path: "/quotations" },
   { icon: Users, label: "用户管理", path: "/users", adminOnly: true },
 ];
@@ -107,7 +107,11 @@ function DashboardLayoutContent({
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find((item) => item.path === location);
-  const visibleMenuItems = menuItems.filter((item: any) => !item.adminOnly || user?.role === "admin");
+  const visibleMenuItems = menuItems.filter((item: any) => {
+    if (item.superAdminOnly && !user?.isSuperAdmin) return false;
+    if (item.adminOnly && user?.role !== "admin") return false;
+    return true;
+  });
   const isMobile = useIsMobile();
 
   useEffect(() => {

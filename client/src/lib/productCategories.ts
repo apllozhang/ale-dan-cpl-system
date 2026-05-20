@@ -24,14 +24,14 @@ export type CategoryNavItem =
 
 /**
  * 8 Main Categories:
- * 1. 网络交换机 (12 series) - OmniSwitch 9900, 9500, 6920, 6900, 6870, 6865, 6860, 6575, 6570, 6560, 6465, 6360, 6350, 6250, 2260/2360, 国产化, Transceivers
- * 2. 无线网络系统 (2 series) - OmniAccess Stellar WLAN, OmniAccess WLAN
- * 3. 网管系统 (1 series) - OmniVista 2500 NMS
- * 4. 网络安全系统 (1 series) - OmniAccess ESR
- * 5. 无源光网络系统 (1 series) - OS9500 POL
- * 6. 其他产品 (4 series) - OmniSwitch 6450, 6350, 6250, 2220, OmniVista 3600
- * 7. 服务 (1 series) - Service and Support
- * 8. 配件 (1 series) - Accessories
+ * 1. 网络交换机 - 子分类: 插槽式(9900/9500), 盒式(6920/6900/6870/6860/6570/6560/6360/2260/2360), 工业级(6865/6575/6465), 国产化(2960/2560/2160), 光模块(Transceivers)
+ * 2. 无线网络系统 - OmniAccess Stellar WLAN, OmniAccess WLAN
+ * 3. 网管系统 - OmniVista 2500 NMS
+ * 4. 网络安全系统 - OmniAccess ESR
+ * 5. 无源光网络系统 - OS9500 POL
+ * 6. 其他产品 - OmniSwitch 6450, 6350, 6250, 2220, OmniVista 3600
+ * 7. 服务 - Service and Support
+ * 8. 配件 - Accessories
  */
 
 const CATEGORIES: ProductCategory[] = [
@@ -51,29 +51,50 @@ const CATEGORIES: ProductCategory[] = [
       /omniswitch\s*6570/i,
       /omniswitch\s*6560/i,
       /omniswitch\s*6465/i,
-      /omniswitch\s*6360/i,
+      /(?:omniswitch|os)\s*6360/i,
       /os\s*2260|os\s*2360/i,
-      /国产化\s*os|国产化\s*os2960|国产化\s*os2560|国产化\s*os2160/i,
+      /国产化/i,
       /transceiver/i,
     ],
     subcategories: [
       {
-        id: "wired-core",
-        label: "核心层交换机",
+        id: "wired-chassis",
+        label: "插槽式",
         sheetPatterns: [/omniswitch\s*9900/i, /omniswitch\s*9500/i],
-        modelPatterns: [/^OS\s*(9900|9500|10K)/i],
+        modelPatterns: [/^OS\s*(9900|9500)/i],
       },
       {
-        id: "wired-aggregation",
-        label: "汇聚层交换机",
-        sheetPatterns: [/omniswitch\s*6[0-9]{3}/i],
-        modelPatterns: [/^OS\s*(6900|6870|6865|6860|6575|6570|6560|6465[^T])/i],
+        id: "wired-box",
+        label: "盒式",
+        sheetPatterns: [
+          /omniswitch\s*6920/i,
+          /omniswitch\s*6900/i,
+          /omniswitch\s*6870/i,
+          /omniswitch\s*6860/i,
+          /omniswitch\s*6570/i,
+          /omniswitch\s*6560/i,
+          /os\s*6360/i,
+          /os\s*2260|os\s*2360/i,
+        ],
+        modelPatterns: [/^OS\s*(6920|6900|6870|6860|6570|6560|6360|2260|2360)/i],
       },
       {
-        id: "wired-access",
-        label: "接入层交换机",
-        sheetPatterns: [/omniswitch\s*6[0-9]{3}/i],
-        modelPatterns: [/^OS\s*(6360|6350|6250|6465T|2260|2360|2220)/i],
+        id: "wired-industrial",
+        label: "工业级",
+        sheetPatterns: [/omniswitch\s*6865/i, /omniswitch\s*6575/i, /omniswitch\s*6465/i],
+        modelPatterns: [/^OS\s*(6865|6575|6465)/i],
+      },
+      {
+        id: "wired-domestic",
+        label: "国产化",
+        sheetPatterns: [/国产化/i, /os\s*2960/i, /os\s*2560/i, /os\s*2160/i],
+        modelPatterns: [/^OS\s*(2960|2560|2160)/i],
+      },
+      {
+        id: "wired-transceiver",
+        label: "光模块",
+        sheetPatterns: [/transceiver/i],
+        modelPatterns: [],
       },
     ],
   },
@@ -213,6 +234,23 @@ export function getSheetsByCategory(
   if (!category) return [];
   
   return sheets.filter(s => category.sheetPatterns.some(p => p.test(s.sheetName)));
+}
+
+/**
+ * Get sheets matching a specific subcategory's sheetPatterns
+ */
+export function getSheetsBySubcategory(
+  sheets: Array<{ sheetName: string; productCount: number }>,
+  categoryId: string,
+  subcategoryId: string
+): Array<{ sheetName: string; productCount: number }> {
+  const category = CATEGORIES.find(c => c.id === categoryId);
+  if (!category?.subcategories) return [];
+
+  const sub = category.subcategories.find(s => s.id === subcategoryId);
+  if (!sub) return [];
+
+  return sheets.filter(s => sub.sheetPatterns.some(p => p.test(s.sheetName)));
 }
 
 /**

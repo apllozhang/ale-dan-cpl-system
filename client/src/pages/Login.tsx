@@ -2,15 +2,146 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Lock, User, Shield, Loader2 } from "lucide-react";
+import { Lock, User, Shield, Loader2, RefreshCw } from "lucide-react";
+
+function randomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomChar() {
+  const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+  return chars[Math.floor(Math.random() * chars.length)];
+}
+
+function generateCaptcha() {
+  const chars = [randomChar(), randomChar(), randomChar(), randomChar()];
+  return { chars, text: chars.join("") };
+}
+
+// ==================== Canvas Captcha ====================
+function CaptchaImage({ chars, width, height, onRefresh }: {
+  chars: string[];
+  width: number;
+  height: number;
+  onRefresh: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Scale for HiDPI
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    ctx.scale(dpr, dpr);
+
+    // Background - gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+    bgGrad.addColorStop(0, `hsl(${randomInt(0, 360)}, 15%, ${randomInt(92, 97)}%)`);
+    bgGrad.addColorStop(1, `hsl(${randomInt(0, 360)}, 20%, ${randomInt(88, 93)}%)`);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Interference lines
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      const y = randomInt(0, height);
+      ctx.moveTo(0, y);
+      // Bezier curve for wavy lines
+      const cp1x = width * 0.25;
+      const cp1y = y + randomInt(-15, 15);
+      const cp2x = width * 0.75;
+      const cp2y = y + randomInt(-15, 15);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, width, y + randomInt(-10, 10));
+      ctx.strokeStyle = `hsl(${randomInt(0, 360)}, 50%, ${randomInt(55, 75)}%)`;
+      ctx.lineWidth = randomInt(1, 3);
+      ctx.stroke();
+    }
+
+    // Noise dots
+    for (let i = 0; i < 80; i++) {
+      const x = randomInt(0, width);
+      const y = randomInt(0, height);
+      ctx.fillStyle = `hsl(${randomInt(0, 360)}, 40%, ${randomInt(30, 70)}%)`;
+      ctx.fillRect(x, y, randomInt(1, 3), randomInt(1, 3));
+    }
+
+    // Mosaic blocks (small pixelation patches)
+    for (let i = 0; i < 15; i++) {
+      const x = randomInt(0, width - 8);
+      const y = randomInt(0, height - 8);
+      const s = randomInt(3, 6);
+      ctx.fillStyle = `hsl(${randomInt(0, 360)}, 30%, ${randomInt(60, 90)}%)`;
+      ctx.fillRect(x, y, s, s);
+    }
+
+    // Draw characters with rotation and offset
+    const charWidth = width / chars.length;
+    chars.forEach((ch, idx) => {
+      ctx.save();
+      const x = charWidth * idx + charWidth * 0.5;
+      const y = height * 0.5 + randomInt(-5, 5);
+      const angle = (randomInt(-30, 30) * Math.PI) / 180;
+      const fontSize = randomInt(22, 28);
+
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = `hsl(${randomInt(200, 300)}, ${randomInt(40, 70)}%, ${randomInt(25, 45)}%)`;
+      ctx.font = `${randomInt(0, 1) ? "bold" : "normal"} ${fontSize}px "Courier New", monospace`;
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+
+      // Duplicate faint offset (ghost)
+      ctx.save();
+      ctx.translate(x + randomInt(-2, 2), y + randomInt(-2, 2));
+      ctx.rotate(angle + (randomInt(-5, 5) * Math.PI) / 180);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = `hsla(${randomInt(200, 300)}, 30%, 50%, 0.15)`;
+      ctx.font = `${fontSize - 2}px "Courier New", monospace`;
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+    });
+
+    // Cross-hatching
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(randomInt(0, width), 0);
+      ctx.lineTo(randomInt(0, width), height);
+      ctx.strokeStyle = `hsla(0, 0%, 50%, 0.15)`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }, [chars, width, height]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      onClick={onRefresh}
+      className="rounded cursor-pointer border border-border/60 w-full"
+      title="点击刷新"
+    />
+  );
+}
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [error, setError] = useState("");
   const [, setLocation] = useLocation();
+
+  const [captcha, setCaptcha] = useState(generateCaptcha);
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
@@ -18,6 +149,8 @@ export default function Login() {
     },
     onError: (err) => {
       setError(err.message || "登录失败，请重试");
+      setCaptcha(generateCaptcha());
+      setCaptchaAnswer("");
     },
   });
 
@@ -28,8 +161,24 @@ export default function Login() {
       setError("请输入用户名和密码");
       return;
     }
+    if (!captchaAnswer.trim()) {
+      setError("请输入验证码");
+      return;
+    }
+    if (captchaAnswer.trim().toUpperCase() !== captcha.text) {
+      setError("验证码错误，请重新输入");
+      setCaptcha(generateCaptcha());
+      setCaptchaAnswer("");
+      return;
+    }
     loginMutation.mutate({ username: username.trim(), password });
   };
+
+  const refreshCaptcha = useCallback(() => {
+    setCaptcha(generateCaptcha());
+    setCaptchaAnswer("");
+    setError("");
+  }, []);
 
   return (
     <div className="min-h-screen flex">
@@ -125,6 +274,40 @@ export default function Login() {
                   className="pl-10 h-11 bg-secondary/50 border-border/60 focus:bg-background transition-colors"
                   autoComplete="current-password"
                 />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="captcha" className="text-sm font-medium text-foreground">
+                验证码 · 输入图中字符
+              </Label>
+              <CaptchaImage
+                chars={captcha.chars}
+                width={280}
+                height={56}
+                onRefresh={refreshCaptcha}
+              />
+              <div className="flex gap-2">
+                <Input
+                  id="captcha"
+                  type="text"
+                  placeholder="输入图中字符"
+                  value={captchaAnswer}
+                  onChange={(e) => setCaptchaAnswer(e.target.value.toUpperCase())}
+                  className="h-11 bg-secondary/50 border-border/60 focus:bg-background transition-colors flex-1 font-mono text-lg tracking-wider"
+                  autoComplete="off"
+                  maxLength={4}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 shrink-0"
+                  onClick={refreshCaptcha}
+                  title="换一个"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
               </div>
             </div>
 
