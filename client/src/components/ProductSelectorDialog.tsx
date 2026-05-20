@@ -49,6 +49,7 @@ export default function ProductSelectorDialog({
   const [selectedMap, setSelectedMap] = useState<Map<number, { product: any; quantity: number }>>(new Map());
   const [wiredExpanded, setWiredExpanded] = useState(true);
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
+  const [selectedSheetTab, setSelectedSheetTab] = useState<string | null>(null);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -87,10 +88,31 @@ export default function ProductSelectorDialog({
     return { sheetName: getQuerySheetName(activeNav), sheetNames: undefined };
   }, [activeNav, sheetsQuery.data]);
 
+  // Reset selected sheet tab when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedSheetTab(null);
+    }
+  }, [open]);
+
+  // Update selected sheet tab when subcategory changes
+  useEffect(() => {
+    if (activeNav?.type === "subcategory" && querySheets.sheetNames && querySheets.sheetNames.length > 0) {
+      setSelectedSheetTab(querySheets.sheetNames[0]);
+    } else {
+      setSelectedSheetTab(null);
+    }
+  }, [activeNav, querySheets.sheetNames]);
+
   // Fetch products for active nav item - only if subcategory is selected
   const isSubcategorySelected = activeNav && activeNav.type === "subcategory";
   const productsQuery = trpc.cpl.products.useQuery(
-    { sheetName: querySheets.sheetName, sheetNames: querySheets.sheetNames, search: debouncedSearch || undefined, pageSize: 200 },
+    { 
+      sheetName: selectedSheetTab || querySheets.sheetName, 
+      sheetNames: selectedSheetTab ? [selectedSheetTab] : querySheets.sheetNames, 
+      search: debouncedSearch || undefined, 
+      pageSize: 200 
+    },
     { enabled: open && !!isSubcategorySelected }
   );
 
@@ -280,6 +302,25 @@ export default function ProductSelectorDialog({
 
           {/* Right Panel - Product List */}
           <div className="flex-1 flex flex-col min-w-0">
+            {/* Sheet Tabs - Show when subcategory is selected with multiple sheets */}
+            {isSubcategorySelected && querySheets.sheetNames && querySheets.sheetNames.length > 1 && (
+              <div className="flex items-center gap-1 px-4 py-2 border-b bg-muted/20 overflow-x-auto">
+                {querySheets.sheetNames.map(sheetName => (
+                  <button
+                    key={sheetName}
+                    onClick={() => setSelectedSheetTab(sheetName)}
+                    className={`px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+                      selectedSheetTab === sheetName
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-foreground hover:bg-accent/50"
+                    }`}
+                  >
+                    {sheetName}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Search Bar */}
             <div className="flex items-center gap-2 px-4 py-3 border-b">
               {isSubcategorySelected && activeNav && activeNav.type === "subcategory" && (

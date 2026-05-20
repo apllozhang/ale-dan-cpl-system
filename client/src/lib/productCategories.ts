@@ -61,7 +61,7 @@ const CATEGORIES: ProductCategory[] = [
         id: "wired-chassis",
         label: "插槽式",
         sheetPatterns: [/omniswitch\s*9900/i, /omniswitch\s*9500/i],
-        modelPatterns: [/^OS\s*(9900|9500)/i],
+        modelPatterns: [/^(OS99|OS95|PW\d+N-OS99|PW\d+N-OS95|PP\d+[NC]-OS99|PP\d+[NC]-OS95)/i],
       },
       {
         id: "wired-box",
@@ -76,19 +76,19 @@ const CATEGORIES: ProductCategory[] = [
           /os\s*6360/i,
           /os\s*2260|os\s*2360/i,
         ],
-        modelPatterns: [/^OS\s*(6920|6900|6870|6860|6570|6560|6360|2260|2360)/i],
+        modelPatterns: [/^(OS69|OS68|OS65|OS63|OS22|OS23|PW\d+N-OS69|PW\d+N-OS68|PW\d+N-OS65|PW\d+N-OS63|PP\d+[NC]-OS69|PP\d+[NC]-OS68|PP\d+[NC]-OS65|PP\d+[NC]-OS63)/i],
       },
       {
         id: "wired-industrial",
         label: "工业级",
         sheetPatterns: [/omniswitch\s*6865/i, /omniswitch\s*6575/i, /omniswitch\s*6465/i],
-        modelPatterns: [/^OS\s*(6865|6575|6465)/i],
+        modelPatterns: [/^(OS68|OS65|OS64|PW\d+N-OS68|PW\d+N-OS65|PW\d+N-OS64|PP\d+[NC]-OS68|PP\d+[NC]-OS65|PP\d+[NC]-OS64)/i],
       },
       {
         id: "wired-domestic",
         label: "国产化",
         sheetPatterns: [/国产化/i, /os\s*2960/i, /os\s*2560/i, /os\s*2160/i],
-        modelPatterns: [/^OS\s*(2960|2560|2160)/i],
+        modelPatterns: [/^(OS29|OS25|OS21|PW\d+N-OS29|PW\d+N-OS25|PW\d+N-OS21|PP\d+[NC]-OS29|PP\d+[NC]-OS25|PP\d+[NC]-OS21)/i],
       },
       {
         id: "wired-transceiver",

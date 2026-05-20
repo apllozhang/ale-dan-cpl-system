@@ -123,3 +123,11 @@
 - [x] Sheet tabs 仅在选中子分类且有多个 sheet 时显示
 - [x] 测试所有分类的导航流程
 - [x] 部署到生产环境
+
+## ProductSelectorDialog 混合导航设计（分类导航 + Sheet tabs）
+
+- [x] 在 ProductSelectorDialog 中添加 Sheet tabs 组件
+- [x] 当选中子分类（如"插槽式"）时，显示关联的产品系列作为 tabs（如 OmniSwitch 9900、OmniSwitch 9500）
+- [x] 实现 Sheet tabs 的切换功能，显示不同产品系列的数据
+- [x] 测试混合导航流程
+- [x] 部署到生产环境
