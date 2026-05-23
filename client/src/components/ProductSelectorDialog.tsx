@@ -104,8 +104,10 @@ export default function ProductSelectorDialog({
     }
   }, [activeNav, querySheets.sheetNames]);
 
-  // Fetch products for active nav item - only if subcategory is selected
+  // Fetch products for active nav item - if subcategory is selected OR if a simple category is selected
   const isSubcategorySelected = activeNav && activeNav.type === "subcategory";
+  const isSimpleCategorySelected = activeNav && activeNav.type === "category" && !activeNav.category.subcategories;
+  const shouldFetchProducts = isSubcategorySelected || isSimpleCategorySelected;
   const productsQuery = trpc.cpl.products.useQuery(
     { 
       sheetName: selectedSheetTab || querySheets.sheetName, 
@@ -113,7 +115,7 @@ export default function ProductSelectorDialog({
       search: debouncedSearch || undefined, 
       pageSize: 200 
     },
-    { enabled: open && !!isSubcategorySelected }
+    { enabled: open && !!shouldFetchProducts }
   );
 
   // Client-side model filter for subcategories
@@ -302,8 +304,8 @@ export default function ProductSelectorDialog({
 
           {/* Right Panel - Product List */}
           <div className="flex-1 flex flex-col min-w-0">
-            {/* Sheet Tabs - Show when subcategory is selected with multiple sheets */}
-            {isSubcategorySelected && querySheets.sheetNames && querySheets.sheetNames.length > 1 && (
+            {/* Sheet Tabs - Show when subcategory is selected with multiple sheets, or when simple category is selected with multiple sheets */}
+            {(isSubcategorySelected || isSimpleCategorySelected) && querySheets.sheetNames && querySheets.sheetNames.length > 1 && (
               <div className="flex items-center gap-1 px-4 py-2 border-b bg-muted/20 overflow-x-auto">
                 {querySheets.sheetNames.map(sheetName => (
                   <button
@@ -326,6 +328,11 @@ export default function ProductSelectorDialog({
               {isSubcategorySelected && activeNav && activeNav.type === "subcategory" && (
                 <Badge variant="outline" className="text-xs shrink-0">
                   {`${activeNav.category.label} / ${activeNav.subcategory.label}`}
+                </Badge>
+              )}
+              {isSimpleCategorySelected && activeNav && activeNav.type === "category" && (
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {activeNav.category.label}
                 </Badge>
               )}
               <div className="relative flex-1">

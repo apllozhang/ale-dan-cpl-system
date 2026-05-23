@@ -131,3 +131,30 @@
 - [x] 实现 Sheet tabs 的切换功能，显示不同产品系列的数据
 - [x] 测试混合导航流程
 - [x] 部署到生产环境
+
+## 产品分类数据加载修复
+
+- [x] 修复 productCategories.ts 中的正则表达式
+- [x] 修复 ProductDataPage.tsx 的数据加载逻辑
+- [x] 验证所有分类数据正确显示
+
+## ProductSelectorDialog 多分类测试与优化
+
+- [x] 测试 ProductSelectorDialog 中的无线网络系统分类
+- [x] 测试 ProductSelectorDialog 中的网管系统分类
+- [x] 测试 ProductSelectorDialog 中的其他分类
+- [x] 验证所有分类的 Sheet tabs 功能正常
+
+## 分类数据统计仪表板
+
+- [ ] 在仪表盘添加分类统计卡片
+- [ ] 显示各分类的产品数量
+- [ ] 显示最近更新时间
+- [ ] 添加分类数据可视化图表
+
+## 产品数据导入日志系统
+
+- [ ] 创建导入日志数据表
+- [ ] 记录导入时间、数量、失败项
+- [ ] 在数据导入页面显示导入历史
+- [ ] 添加导入统计信息
