@@ -161,16 +161,17 @@ export default function Login() {
       setError("请输入用户名和密码");
       return;
     }
-    if (!captchaAnswer.trim()) {
-      setError("请输入验证码");
-      return;
-    }
-    if (captchaAnswer.trim().toUpperCase() !== captcha.text) {
-      setError("验证码错误，请重新输入");
-      setCaptcha(generateCaptcha());
-      setCaptchaAnswer("");
-      return;
-    }
+    // TODO: 验证码功能暂时禁用，上线时启用
+    // if (!captchaAnswer.trim()) {
+    //   setError("请输入验证码");
+    //   return;
+    // }
+    // if (captchaAnswer.trim().toUpperCase() !== captcha.text) {
+    //   setError("验证码错误，请重新输入");
+    //   setCaptcha(generateCaptcha());
+    //   setCaptchaAnswer("");
+    //   return;
+    // }
     loginMutation.mutate({ username: username.trim(), password });
   };
 
@@ -277,7 +278,8 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* TODO: 验证码功能暂时禁用，上线时启用 */}
+            {/* <div className="space-y-2">
               <Label htmlFor="captcha" className="text-sm font-medium text-foreground">
                 验证码 · 输入图中字符
               </Label>
@@ -309,7 +311,7 @@ export default function Login() {
                   <RefreshCw className="w-4 h-4" />
                 </Button>
               </div>
-            </div>
+            </div> */}
 
             {error && (
               <div className="text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-md px-3 py-2.5">
