@@ -381,10 +381,10 @@ export default function ProductSelectorDialog({
                         <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
                       </TableCell>
                     </TableRow>
-                  ) : !isSubcategorySelected ? (
+                  ) : !(isSubcategorySelected || isSimpleCategorySelected) ? (
                     <TableRow>
                       <TableCell colSpan={6} className="h-32 text-center text-muted-foreground text-sm">
-                        请选择左侧子分类查看产品数据
+                        请选择左侧分类查看产品数据
                       </TableCell>
                     </TableRow>
                   ) : filteredProducts.length === 0 ? (
