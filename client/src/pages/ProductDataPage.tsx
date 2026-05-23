@@ -725,7 +725,7 @@ export default function ProductDataPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!selectedSubcategoryId ? (
+                {!selectedSheet ? (
                   <TableRow>
                     <TableCell colSpan={visibleColumnsList.length + 1} className="h-48 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
