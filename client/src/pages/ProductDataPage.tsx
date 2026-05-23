@@ -234,13 +234,26 @@ export default function ProductDataPage() {
     return getSheetsByCategory(sheets, selectedCategoryId);
   }, [sheetsQuery.data, selectedCategoryId, selectedSubcategoryId]);
 
-  // Set default sheet only when subcategory changes (not main category)
+  // Set default sheet when subcategory changes OR when category changes (for categories without subcategories)
   useEffect(() => {
-    if (selectedSubcategoryId && categorySheets.length > 0) {
-      setSelectedSheet(categorySheets[0].sheetName);
-      setPage(1);
+    if (categorySheets.length > 0) {
+      // Find the selected category from the nav
+      const selectedCat = categoryNav.find(
+        item => item.type === 'category' && item.category.id === selectedCategoryId
+      )?.category;
+      
+      // Check if category has subcategories
+      const hasSubcategories = selectedCat?.subcategories && selectedCat.subcategories.length > 0;
+      
+      // Auto-select sheet if:
+      // 1. A subcategory is selected, OR
+      // 2. The category has no subcategories (like wireless, nms, etc.)
+      if (selectedSubcategoryId || !hasSubcategories) {
+        setSelectedSheet(categorySheets[0].sheetName);
+        setPage(1);
+      }
     }
-  }, [selectedSubcategoryId, categorySheets]);
+  }, [selectedSubcategoryId, categorySheets, selectedCategoryId]);
 
   // Fetch products for selected sheet
   const productsQuery = trpc.cpl.products.useQuery(
@@ -326,6 +339,17 @@ export default function ProductDataPage() {
     });
   };
 
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    setSelectedSubcategoryId("");
+    // Sheet will be auto-selected by useEffect based on whether category has subcategories
+  };
+
+  const handleSubcategorySelect = (subcategoryId: string) => {
+    setSelectedSubcategoryId(subcategoryId);
+    // Sheet will be auto-selected by useEffect
+  };
+
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) => {
       const next = new Set(prev);
@@ -336,13 +360,6 @@ export default function ProductDataPage() {
       }
       return next;
     });
-  };
-
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategoryId(categoryId);
-    setSelectedSubcategoryId("");
-    setSelectedSheet(""); // Don't auto-select sheet for main category
-    setPage(1);
   };
 
   const handleToggleSidebar = () => {

@@ -1,0 +1,90 @@
+{
+  "query": "SELECT COUNT(*) as count, sheetName FROM cpl_products GROUP BY sheetName ORDER BY count DESC LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 36JDpBo3zu5AaRu.c009522ec6e2 --database neEWayju942ovVPrciQXjy --execute SELECT COUNT(*) as count, sheetName FROM cpl_products GROUP BY sheetName ORDER BY count DESC LIMIT 20",
+  "rows": [
+    {
+      "count": "320",
+      "sheetName": "OmniAccess Stellar WLAN"
+    },
+    {
+      "count": "177",
+      "sheetName": "OmniVista 2500 NMS"
+    },
+    {
+      "count": "126",
+      "sheetName": "Transceivers"
+    },
+    {
+      "count": "62",
+      "sheetName": "OmniSwitch 6900"
+    },
+    {
+      "count": "57",
+      "sheetName": "OmniSwitch 9900"
+    },
+    {
+      "count": "47",
+      "sheetName": "OmniVista 3600"
+    },
+    {
+      "count": "44",
+      "sheetName": "OS6360"
+    },
+    {
+      "count": "41",
+      "sheetName": "OmniSwitch 6860"
+    },
+    {
+      "count": "41",
+      "sheetName": "OmniAccess ESR"
+    },
+    {
+      "count": "41",
+      "sheetName": "OmniSwitch 6870"
+    },
+    {
+      "count": "40",
+      "sheetName": "OmniSwitch 6560"
+    },
+    {
+      "count": "40",
+      "sheetName": "OmniSwitch 6465"
+    },
+    {
+      "count": "37",
+      "sheetName": "OmniSwitch 6575"
+    },
+    {
+      "count": "33",
+      "sheetName": "OmniSwitch 6865"
+    },
+    {
+      "count": "28",
+      "sheetName": "OS9500 POL"
+    },
+    {
+      "count": "26",
+      "sheetName": "OmniSwitch 6920"
+    },
+    {
+      "count": "24",
+      "sheetName": "OmniSwitch 6570"
+    },
+    {
+      "count": "23",
+      "sheetName": "OS2260 OS2360"
+    },
+    {
+      "count": "22",
+      "sheetName": "Service and Support"
+    },
+    {
+      "count": "18",
+      "sheetName": "OmniSwitch 9500"
+    }
+  ],
+  "messages": [],
+  "stdout": "count\tsheetName\n320\tOmniAccess Stellar WLAN\n177\tOmniVista 2500 NMS\n126\tTransceivers\n62\tOmniSwitch 6900\n57\tOmniSwitch 9900\n47\tOmniVista 3600\n44\tOS6360\n41\tOmniSwitch 6860\n41\tOmniAccess ESR\n41\tOmniSwitch 6870\n40\tOmniSwitch 6560\n40\tOmniSwitch 6465\n37\tOmniSwitch 6575\n33\tOmniSwitch 6865\n28\tOS9500 POL\n26\tOmniSwitch 6920\n24\tOmniSwitch 6570\n23\tOS2260 OS2360\n22\tService and Support\n18\tOmniSwitch 9500\n",
+  "stderr": "",
+  "execution_time_ms": 262
+}

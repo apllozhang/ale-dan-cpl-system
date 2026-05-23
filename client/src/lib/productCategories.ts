@@ -101,26 +101,26 @@ const CATEGORIES: ProductCategory[] = [
   {
     id: "wireless",
     label: "无线网络系统",
-    icon: "📡",
-    sheetPatterns: [/stellar|wlan|wireless|ominiaccss.*wlan/i],
+    icon: "📱",
+    sheetPatterns: [/omniaccss.*stellar|omniaccss.*wlan|stellar.*wlan|wireless/i],
   },
   {
     id: "nms",
     label: "网管系统",
-    icon: "📊",
-    sheetPatterns: [/omnivista\s*2500|nms/i],
+    icon: "📋",
+    sheetPatterns: [/omnivista.*2500|nms/i],
   },
   {
     id: "security",
     label: "网络安全系统",
-    icon: "🔒",
-    sheetPatterns: [/esr|ominiaccss.*esr/i],
+    icon: "🔐",
+    sheetPatterns: [/omniaccss.*esr|esr.*omniaccss|esr/i],
   },
   {
     id: "pol",
     label: "无源光网络系统",
-    icon: "💡",
-    sheetPatterns: [/os9500\s*pol|pol|passive\s*optical/i],
+    icon: "💫",
+    sheetPatterns: [/os9500.*pol|pol/i],
   },
   {
     id: "other",
@@ -138,13 +138,13 @@ const CATEGORIES: ProductCategory[] = [
     id: "service",
     label: "服务",
     icon: "🛠️",
-    sheetPatterns: [/service|support/i],
+    sheetPatterns: [/service.*support|support.*service|service|support/i],
   },
   {
     id: "accessories",
     label: "配件",
     icon: "🔧",
-    sheetPatterns: [/accessories|accessory/i],
+    sheetPatterns: [/accessories|accessory|spare.*parts|parts/i],
   },
 ];
 
