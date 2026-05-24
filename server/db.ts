@@ -7,6 +7,10 @@ import {
   organizations, InsertOrganization,
   userGroups, InsertUserGroup,
   importLogs, InsertImportLog,
+  activityLogs, InsertActivityLog,
+  quotationTemplates, InsertQuotationTemplate,
+  quotationVersions, InsertQuotationVersion,
+  savedSearches, InsertSavedSearch,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -237,7 +241,7 @@ export async function createUser(data: {
   passwordHash: string;
   name?: string;
   email?: string;
-  role?: "user" | "admin";
+  role?: "user" | "admin" | "sales_manager" | "sales_rep" | "viewer";
   isSuperAdmin?: boolean;
   organizationId?: number;
   groupId?: number;
@@ -264,7 +268,7 @@ export async function updateUser(id: number, data: {
   passwordHash?: string;
   name?: string;
   email?: string;
-  role?: "user" | "admin";
+  role?: "user" | "admin" | "sales_manager" | "sales_rep" | "viewer";
   isSuperAdmin?: boolean;
   organizationId?: number | null;
   groupId?: number | null;
@@ -431,6 +435,8 @@ export async function getQuotationById(id: number) {
     updatedAt: quotations.updatedAt,
     creatorName: users.name,
     creatorUsername: users.username,
+    version: quotations.version,
+    shareToken: quotations.shareToken,
   })
     .from(quotations)
     .leftJoin(users, eq(quotations.createdBy, users.id))
@@ -635,4 +641,220 @@ export async function countCplProducts() {
   const db = await getDb();
   if (!db) return 0;
   return db.$count(cplProducts);
+}
+
+// ==================== Activity Log helpers ====================
+export async function createActivityLog(data: InsertActivityLog) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(activityLogs).values(data);
+}
+
+export async function getActivityLogs(params: {
+  search?: string;
+  action?: string;
+  userId?: number;
+  page: number;
+  pageSize: number;
+}) {
+  const db = await getDb();
+  if (!db) return { items: [] as any[], total: 0 };
+  const { search, action, userId, page, pageSize } = params;
+
+  const conditions: SQL[] = [];
+  if (search) {
+    const term = `%${search}%`;
+    conditions.push(or(
+      like(activityLogs.username || sql`''`, term),
+      like(activityLogs.action, term),
+      like(activityLogs.detail || sql`''`, term),
+    )!);
+  }
+  if (action) {
+    conditions.push(eq(activityLogs.action, action));
+  }
+  if (userId) {
+    conditions.push(eq(activityLogs.userId, userId));
+  }
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const total = await db.$count(activityLogs, where);
+  const items = await db.select().from(activityLogs)
+    .where(where)
+    .orderBy(desc(activityLogs.id))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return { items, total };
+}
+
+export async function getActivityStats() {
+  const db = await getDb();
+  if (!db) return { today: 0, week: 0, byAction: {} };
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const weekLogs = await db.select({
+    action: activityLogs.action,
+    count: sql<number>`count(*)`,
+  }).from(activityLogs)
+    .where(sql`${activityLogs.createdAt} >= ${sevenDaysAgo}`)
+    .groupBy(activityLogs.action);
+
+  const [todayResult] = await db.select({
+    count: sql<number>`count(*)`,
+  }).from(activityLogs)
+    .where(sql`${activityLogs.createdAt} >= ${todayStart}`);
+
+  const byAction: Record<string, number> = {};
+  for (const row of weekLogs) {
+    byAction[row.action] = row.count;
+  }
+
+  return { today: todayResult?.count ?? 0, week: weekLogs.reduce((s, r) => s + r.count, 0), byAction };
+}
+
+export async function clearActivityLogs() {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(activityLogs);
+}
+
+// ==================== CPL Stats helpers ====================
+export async function getCplStats() {
+  const db = await getDb();
+  if (!db) return { bySheet: [], byStatus: [], bySalesCategory: [], total: 0 };
+
+  const bySheet = await db.select({
+    sheetName: cplProducts.sheetName,
+    count: sql<number>`count(*)`,
+  }).from(cplProducts)
+    .groupBy(cplProducts.sheetName)
+    .orderBy(desc(sql`count(*)`));
+
+  const byStatus = await db.select({
+    status: cplProducts.productStatus,
+    count: sql<number>`count(*)`,
+  }).from(cplProducts)
+    .where(sql`${cplProducts.productStatus} IS NOT NULL AND ${cplProducts.productStatus} != ''`)
+    .groupBy(cplProducts.productStatus)
+    .orderBy(desc(sql`count(*)`));
+
+  const bySalesCategory = await db.select({
+    category: cplProducts.salesCategory,
+    count: sql<number>`count(*)`,
+  }).from(cplProducts)
+    .where(sql`${cplProducts.salesCategory} IS NOT NULL AND ${cplProducts.salesCategory} != ''`)
+    .groupBy(cplProducts.salesCategory)
+    .orderBy(desc(sql`count(*)`))
+    .limit(15);
+
+  const [totalRow] = await db.select({
+    count: sql<number>`count(*)`,
+  }).from(cplProducts);
+
+  return { bySheet, byStatus, bySalesCategory, total: totalRow?.count ?? 0 };
+}
+
+// ==================== Quotation Template helpers ====================
+export async function getQuotationTemplates(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(quotationTemplates)
+    .where(or(
+      eq(quotationTemplates.createdBy, userId),
+      eq(quotationTemplates.isPublic, true),
+    ))
+    .orderBy(desc(quotationTemplates.updatedAt));
+}
+
+export async function getQuotationTemplateById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db.select().from(quotationTemplates).where(eq(quotationTemplates.id, id));
+  return row ?? null;
+}
+
+export async function createQuotationTemplate(data: InsertQuotationTemplate) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(quotationTemplates).values(data);
+  return { id: Number(result[0].insertId) };
+}
+
+export async function updateQuotationTemplate(id: number, data: Partial<InsertQuotationTemplate>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(quotationTemplates).set(data).where(eq(quotationTemplates.id, id));
+}
+
+export async function deleteQuotationTemplate(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(quotationTemplates).where(eq(quotationTemplates.id, id));
+}
+
+// ==================== Quotation Version helpers ====================
+export async function createQuotationVersion(data: InsertQuotationVersion) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(quotationVersions).values(data);
+}
+
+export async function getQuotationVersions(quotationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(quotationVersions)
+    .where(eq(quotationVersions.quotationId, quotationId))
+    .orderBy(desc(quotationVersions.version));
+}
+
+// ==================== Saved Search helpers ====================
+export async function getSavedSearches(userId: number, page: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(savedSearches)
+    .where(and(eq(savedSearches.userId, userId), eq(savedSearches.page, page)))
+    .orderBy(desc(savedSearches.createdAt));
+}
+
+export async function createSavedSearch(data: InsertSavedSearch) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(savedSearches).values(data);
+  return { id: Number(result[0].insertId) };
+}
+
+export async function deleteSavedSearch(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(savedSearches).where(eq(savedSearches.id, id));
+}
+
+// ==================== Search Suggestions ====================
+export async function getSearchSuggestions(field: string, query: string, limit: number = 10) {
+  const db = await getDb();
+  if (!db || !query) return [];
+  const columnMap: Record<string, any> = {
+    productModel: cplProducts.productModel,
+    productDesc: cplProducts.productDesc,
+    productGroup: cplProducts.productGroup,
+  };
+  const col = columnMap[field];
+  if (!col) return [];
+  const term = `%${query}%`;
+  return db.selectDistinct({ value: col }).from(cplProducts)
+    .where(like(col, term))
+    .limit(limit);
+}
+
+// ==================== Quotation Share helpers ====================
+export async function getQuotationByShareToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [q] = await db.select().from(quotations).where(eq(quotations.shareToken, token));
+  if (!q) return null;
+  const items = await db.select().from(quotationItems).where(eq(quotationItems.quotationId, q.id));
+  return { ...q, items };
 }

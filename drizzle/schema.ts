@@ -8,7 +8,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "sales_manager", "sales_rep", "viewer"]).default("user").notNull(),
   isSuperAdmin: boolean("isSuperAdmin").default(false).notNull(),
   organizationId: int("organizationId"),
   groupId: int("groupId"),
@@ -103,6 +103,8 @@ export const quotations = mysqlTable("quotations", {
   totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0"),
   notes: text("notes"),
   createdBy: int("createdBy").notNull(),
+  version: int("version").default(1).notNull(),
+  shareToken: varchar("shareToken", { length: 64 }).unique(),
   validUntil: timestamp("validUntil"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -146,3 +148,63 @@ export const importLogs = mysqlTable("import_logs", {
 
 export type ImportLog = typeof importLogs.$inferSelect;
 export type InsertImportLog = typeof importLogs.$inferInsert;
+
+// Activity / Audit log table
+export const activityLogs = mysqlTable("activity_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  username: varchar("username", { length: 64 }),
+  action: varchar("action", { length: 64 }).notNull(),
+  resourceType: varchar("resourceType", { length: 64 }),
+  resourceId: int("resourceId"),
+  detail: text("detail"),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = typeof activityLogs.$inferInsert;
+
+// Quotation templates
+export const quotationTemplates = mysqlTable("quotation_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  description: text("description"),
+  createdBy: int("createdBy").notNull(),
+  isPublic: boolean("isPublic").default(false).notNull(),
+  discountRate: decimal("discountRate", { precision: 5, scale: 2 }).default("0"),
+  notes: text("notes"),
+  validDays: int("validDays"),
+  items: text("items").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QuotationTemplate = typeof quotationTemplates.$inferSelect;
+export type InsertQuotationTemplate = typeof quotationTemplates.$inferInsert;
+
+// Quotation versions
+export const quotationVersions = mysqlTable("quotation_versions", {
+  id: int("id").autoincrement().primaryKey(),
+  quotationId: int("quotationId").notNull(),
+  version: int("version").notNull(),
+  snapshot: text("snapshot").notNull(),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type QuotationVersion = typeof quotationVersions.$inferSelect;
+export type InsertQuotationVersion = typeof quotationVersions.$inferInsert;
+
+// Saved searches
+export const savedSearches = mysqlTable("saved_searches", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 128 }).notNull(),
+  page: varchar("page", { length: 32 }).notNull(),
+  conditions: text("conditions").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SavedSearch = typeof savedSearches.$inferSelect;
+export type InsertSavedSearch = typeof savedSearches.$inferInsert;

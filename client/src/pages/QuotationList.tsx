@@ -12,9 +12,10 @@ import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   Search, Plus, Loader2, FileSpreadsheet, X,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GitCompare,
 } from "lucide-react";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
+import QuotationCompare from "@/components/QuotationCompare";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "全部状态" },
@@ -49,6 +50,8 @@ export default function QuotationList() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showCompare, setShowCompare] = useState(false);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -56,6 +59,7 @@ export default function QuotationList() {
     const timer = setTimeout(() => {
       setDebouncedSearch(value);
       setPage(1);
+      setSelectedIds(new Set());
     }, 300);
     setSearchTimer(timer);
   }, [searchTimer]);
@@ -116,6 +120,12 @@ export default function QuotationList() {
             <Plus className="w-4 h-4" />
             新建报价
           </Button>
+          {selectedIds.size >= 2 && (
+            <Button size="sm" variant="outline" onClick={() => setShowCompare(true)} className="gap-1.5">
+              <GitCompare className="w-4 h-4" />
+              对比 ({selectedIds.size})
+            </Button>
+          )}
         </div>
       </div>
 
@@ -124,6 +134,24 @@ export default function QuotationList() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
+              <TableHead className="text-xs font-semibold w-10">
+                <input
+                  type="checkbox"
+                  checked={items.length > 0 && items.every((q: any) => selectedIds.has(q.id))}
+                  onChange={() => {
+                    setSelectedIds(prev => {
+                      const next = new Set(prev);
+                      if (items.every((q: any) => next.has(q.id))) {
+                        items.forEach((q: any) => next.delete(q.id));
+                      } else {
+                        items.forEach((q: any) => next.add(q.id));
+                      }
+                      return next;
+                    });
+                  }}
+                  className="w-4 h-4 cursor-pointer"
+                />
+              </TableHead>
               <TableHead className="text-xs font-semibold">报价编号</TableHead>
               <TableHead className="text-xs font-semibold">客户名称</TableHead>
               <TableHead className="text-xs font-semibold">项目名称</TableHead>
@@ -136,7 +164,7 @@ export default function QuotationList() {
           <TableBody>
             {quotationsQuery.isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-48 text-center">
+                <TableCell colSpan={8} className="h-48 text-center">
                   <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span className="text-sm">加载中...</span>
@@ -145,7 +173,7 @@ export default function QuotationList() {
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-48 text-center">
+                <TableCell colSpan={8} className="h-48 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <FileSpreadsheet className="w-8 h-8 opacity-30" />
                     <span className="text-sm">暂无报价单</span>
@@ -165,6 +193,21 @@ export default function QuotationList() {
                   onClick={() => setLocation(`/quotations/${q.id}`)}
                   className="cursor-pointer hover:bg-accent/30 transition-colors"
                 >
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(q.id)}
+                      onChange={() => {
+                        setSelectedIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(q.id)) next.delete(q.id);
+                          else next.add(q.id);
+                          return next;
+                        });
+                      }}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                  </TableCell>
                   <TableCell className="text-sm font-medium text-primary">{q.quotationNo}</TableCell>
                   <TableCell className="text-sm">{q.customerName}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{q.projectName || "-"}</TableCell>
@@ -233,6 +276,14 @@ export default function QuotationList() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Compare Dialog */}
+      {showCompare && selectedIds.size >= 2 && (
+        <QuotationCompare
+          quotationIds={Array.from(selectedIds)}
+          onClose={() => setShowCompare(false)}
+        />
       )}
     </div>
   );

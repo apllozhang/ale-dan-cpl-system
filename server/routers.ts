@@ -1,7 +1,7 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS, PERMISSIONS, hasPermission } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, adminProcedure, superAdminProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, superAdminProcedure, permissionProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { SignJWT, jwtVerify } from "jose";
@@ -9,6 +9,7 @@ import { ENV } from "./_core/env";
 import * as db from "./db";
 import * as XLSX from "xlsx";
 import { hash, compare } from "bcryptjs";
+import { randomBytes } from "crypto";
 
 function getSessionSecret() {
   return new TextEncoder().encode(ENV.cookieSecret);
@@ -153,6 +154,15 @@ export const appRouter = router({
           lastSignedIn: new Date(),
         });
 
+        // Audit log
+        await db.createActivityLog({
+          userId: user.id,
+          username: user.username || user.name || "",
+          action: "login",
+          detail: JSON.stringify({ method: "local" }),
+          ipAddress: ctx.req.ip || ctx.req.headers["x-forwarded-for"] as string || null,
+        });
+
         // Create session token
         const token = await createLocalSession(user.openId, user.name || user.username || "User");
         const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -223,7 +233,7 @@ export const appRouter = router({
         password: z.string().min(6),
         name: z.string().optional(),
         email: z.string().email().optional(),
-        role: z.enum(["user", "admin"]).default("user"),
+        role: z.enum(["user", "admin", "sales_manager", "sales_rep", "viewer"]).default("user"),
         isSuperAdmin: z.boolean().optional(),
         organizationId: z.number().optional(),
         groupId: z.number().optional(),
@@ -252,7 +262,7 @@ export const appRouter = router({
         password: z.string().min(6).optional(),
         name: z.string().optional(),
         email: z.string().email().optional(),
-        role: z.enum(["user", "admin"]).optional(),
+        role: z.enum(["user", "admin", "sales_manager", "sales_rep", "viewer"]).optional(),
         isSuperAdmin: z.boolean().optional(),
         organizationId: z.number().nullable().optional(),
         groupId: z.number().nullable().optional(),
@@ -452,6 +462,10 @@ export const appRouter = router({
       return { hasData: count > 0, count };
     }),
 
+    stats: publicProcedure.query(async () => {
+      return db.getCplStats();
+    }),
+
     // Import Excel file
     import: superAdminProcedure
       .input(z.object({
@@ -536,6 +550,157 @@ export const appRouter = router({
       );
       return header + "\n" + rows.join("\n");
     }),
+  }),
+
+  // Activity logs (audit trail)
+  activityLogs: router({
+    list: permissionProcedure(PERMISSIONS.VIEW_ACTIVITY_LOGS)
+      .input(z.object({
+        search: z.string().optional(),
+        action: z.string().optional(),
+        userId: z.number().optional(),
+        page: z.number().min(1).default(1),
+        pageSize: z.number().min(1).max(100).default(20),
+      }))
+      .query(async ({ input }) => {
+        return db.getActivityLogs(input);
+      }),
+    stats: permissionProcedure(PERMISSIONS.VIEW_ACTIVITY_LOGS)
+      .query(async () => {
+        return db.getActivityStats();
+      }),
+    clear: superAdminProcedure.mutation(async () => {
+      await db.clearActivityLogs();
+      return { success: true };
+    }),
+  }),
+
+  // Quotation templates
+  templates: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return db.getQuotationTemplates(ctx.user!.id);
+    }),
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return db.getQuotationTemplateById(input.id);
+      }),
+    create: permissionProcedure(PERMISSIONS.CREATE_QUOTATION)
+      .input(z.object({
+        name: z.string().min(1).max(256),
+        description: z.string().optional(),
+        isPublic: z.boolean().default(false),
+        discountRate: z.number().optional(),
+        notes: z.string().optional(),
+        validDays: z.number().optional(),
+        items: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.createQuotationTemplate({
+          ...input,
+          createdBy: ctx.user!.id,
+        } as any);
+      }),
+    update: permissionProcedure(PERMISSIONS.CREATE_QUOTATION)
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(256).optional(),
+        description: z.string().optional(),
+        isPublic: z.boolean().optional(),
+        discountRate: z.number().optional(),
+        notes: z.string().optional(),
+        validDays: z.number().optional(),
+        items: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { id, ...data } = input;
+        const template = await db.getQuotationTemplateById(id);
+        if (!template) throw new TRPCError({ code: "NOT_FOUND" });
+        if (template.createdBy !== ctx.user!.id && !hasPermission(ctx.user!, PERMISSIONS.MANAGE_USERS)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "只能编辑自己的模板" });
+        }
+        await db.updateQuotationTemplate(id, data as any);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const template = await db.getQuotationTemplateById(input.id);
+        if (!template) throw new TRPCError({ code: "NOT_FOUND" });
+        if (template.createdBy !== ctx.user!.id && !hasPermission(ctx.user!, PERMISSIONS.MANAGE_USERS)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "只能删除自己的模板" });
+        }
+        await db.deleteQuotationTemplate(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // Quotation versions
+  versions: router({
+    list: protectedProcedure
+      .input(z.object({ quotationId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getQuotationVersions(input.quotationId);
+      }),
+  }),
+
+  // Quotation sharing
+  sharing: router({
+    share: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const q = await db.getQuotationById(input.id);
+        if (!q) throw new TRPCError({ code: "NOT_FOUND" });
+        if (q.createdBy !== ctx.user!.id && !hasPermission(ctx.user!, PERMISSIONS.EDIT_ALL_QUOTATIONS)) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        if (q.shareToken) return { shareToken: q.shareToken };
+        const token = randomBytes(16).toString("hex");
+        await db.updateQuotation(input.id, { shareToken: token } as any, undefined);
+        return { shareToken: token };
+      }),
+    getByToken: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        return db.getQuotationByShareToken(input.token);
+      }),
+  }),
+
+  // Saved searches
+  searches: router({
+    list: protectedProcedure
+      .input(z.object({ page: z.string() }))
+      .query(async ({ input, ctx }) => {
+        return db.getSavedSearches(ctx.user!.id, input.page);
+      }),
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1).max(128),
+        page: z.string().min(1),
+        conditions: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.createSavedSearch({ ...input, userId: ctx.user!.id });
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteSavedSearch(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // Search suggestions
+  suggestions: router({
+    get: publicProcedure
+      .input(z.object({
+        field: z.string(),
+        query: z.string(),
+        limit: z.number().min(1).max(20).default(10),
+      }))
+      .query(async ({ input }) => {
+        return db.getSearchSuggestions(input.field, input.query, input.limit);
+      }),
   }),
 });
 

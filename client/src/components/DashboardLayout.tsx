@@ -20,6 +20,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useTheme } from "@/contexts/ThemeContext";
+import { hasPermission, PERMISSIONS } from "@shared/const";
 import {
   LayoutDashboard,
   LogOut,
@@ -30,6 +32,10 @@ import {
   Shield,
   FileSpreadsheet,
   Users,
+  Activity,
+  BarChart3,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -38,10 +44,12 @@ import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 const menuItems = [
   { icon: LayoutDashboard, label: "仪表盘", path: "/" },
   { icon: Database, label: "产品数据", path: "/data" },
+  { icon: BarChart3, label: "分类统计", path: "/stats" },
   { icon: FileText, label: "变更记录", path: "/summary" },
-  { icon: HardDriveUpload, label: "数据导入", path: "/import", superAdminOnly: true },
+  { icon: HardDriveUpload, label: "数据导入", path: "/import", permission: PERMISSIONS.IMPORT_DATA },
   { icon: FileSpreadsheet, label: "报价管理", path: "/quotations" },
-  { icon: Users, label: "用户管理", path: "/users", adminOnly: true },
+  { icon: Users, label: "用户管理", path: "/users", permission: PERMISSIONS.MANAGE_USERS },
+  { icon: Activity, label: "操作日志", path: "/activity", permission: PERMISSIONS.VIEW_ACTIVITY_LOGS },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -101,6 +109,7 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -108,8 +117,7 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find((item) => item.path === location);
   const visibleMenuItems = menuItems.filter((item: any) => {
-    if (item.superAdminOnly && !user?.isSuperAdmin) return false;
-    if (item.adminOnly && user?.role !== "admin") return false;
+    if (item.permission && !hasPermission(user!, item.permission)) return false;
     return true;
   });
   const isMobile = useIsMobile();
@@ -202,34 +210,49 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border shrink-0">
-                    <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
-                      {user?.name?.charAt(0).toUpperCase() || "A"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
-                      {user?.name || "用户"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "管理员"}
-                    </p>
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="cursor-pointer text-destructive focus:text-destructive"
+            <div className="flex items-center gap-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors flex-1 min-w-0 text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <Avatar className="h-9 w-9 border shrink-0">
+                      <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                        {user?.name?.charAt(0).toUpperCase() || "A"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+                      <p className="text-sm font-medium truncate leading-none">
+                        {user?.name || "用户"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate mt-1.5">
+                        {user?.email || "管理员"}
+                      </p>
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>退出登录</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {toggleTheme && (
+                <button
+                  onClick={toggleTheme}
+                  className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-accent/50 transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={theme === "dark" ? "切换亮色模式" : "切换暗色模式"}
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>退出登录</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  {theme === "dark" ? (
+                    <Sun className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Moon className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              )}
+            </div>
           </SidebarFooter>
         </Sidebar>
         <div

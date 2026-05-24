@@ -13,7 +13,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import {
   ArrowLeft, Save, Plus, Trash2, Loader2, Download,
-  Send, CheckCircle, CheckCircle2, Mail, XCircle,
+  Send, CheckCircle, CheckCircle2, Mail, XCircle, Share2, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
@@ -255,6 +255,8 @@ export default function QuotationDetail() {
   const createMutation = trpc.quotations.create.useMutation();
   const updateMutation = trpc.quotations.update.useMutation();
   const statusMutation = trpc.quotations.updateStatus.useMutation();
+  const shareMutation = trpc.sharing.share.useMutation();
+  const templateCreateMutation = trpc.templates.create.useMutation();
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
@@ -321,6 +323,34 @@ export default function QuotationDetail() {
     exportQuotationToExcel(quotationQuery.data, items);
   };
 
+  const handleShare = async () => {
+    if (!quotationId) return;
+    try {
+      const result = await shareMutation.mutateAsync({ id: quotationId });
+      const url = `${window.location.origin}/share/${result.shareToken}`;
+      await navigator.clipboard.writeText(url);
+      toast.success("分享链接已复制到剪贴板");
+    } catch (err: any) {
+      toast.error(err.message || "分享失败");
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    const name = prompt("请输入模板名称:");
+    if (!name) return;
+    try {
+      await templateCreateMutation.mutateAsync({
+        name,
+        items: JSON.stringify(items),
+        discountRate,
+        notes,
+      });
+      toast.success("模板已保存");
+    } catch (err: any) {
+      toast.error(err.message || "保存模板失败");
+    }
+  };
+
   const currentStatus = quotationQuery.data?.status || "draft";
   const transitions = QUOTATION_STATUS_TRANSITIONS[currentStatus] || [];
   const isLoadingQuotation = !!quotationId && quotationQuery.isLoading;
@@ -364,6 +394,18 @@ export default function QuotationDetail() {
             <Button size="sm" variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-1" />
               导出 Excel
+            </Button>
+          )}
+          {!isNew && (
+            <Button size="sm" variant="outline" onClick={handleShare} disabled={shareMutation.isPending}>
+              <Share2 className="w-4 h-4 mr-1" />
+              分享
+            </Button>
+          )}
+          {items.length > 0 && (
+            <Button size="sm" variant="outline" onClick={handleSaveTemplate} disabled={templateCreateMutation.isPending}>
+              <Copy className="w-4 h-4 mr-1" />
+              存为模板
             </Button>
           )}
           <Button size="sm" onClick={handleSave} disabled={isSaving}>

@@ -13,6 +13,8 @@ import Import from "./pages/Import";
 import QuotationList from "./pages/QuotationList";
 import QuotationDetail from "./pages/QuotationDetail";
 import UserManagement from "./pages/UserManagement";
+import ActivityLog from "./pages/ActivityLog";
+import CategoryStats from "./pages/CategoryStats";
 
 function DashboardRoutes() {
   return (
@@ -26,6 +28,8 @@ function DashboardRoutes() {
         <Route path="/quotations/new" component={QuotationDetail} />
         <Route path="/quotations/:id" component={QuotationDetail} />
         <Route path="/users" component={UserManagement} />
+        <Route path="/activity" component={ActivityLog} />
+        <Route path="/stats" component={CategoryStats} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>
@@ -36,6 +40,11 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/share/:token" component={() => {
+        // Lazy load to avoid circular deps
+        const QuotationShared = require("./pages/QuotationShared").default;
+        return <QuotationShared />;
+      }} />
       <Route component={DashboardRoutes} />
     </Switch>
   );
@@ -44,7 +53,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="light" switchable>
         <TooltipProvider>
           <Toaster />
           <Router />

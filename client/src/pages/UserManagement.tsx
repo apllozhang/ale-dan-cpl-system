@@ -1,5 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { ROLE_LABELS, hasPermission, PERMISSIONS } from "@shared/const";
+import type { Role } from "@shared/const";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
-import { Users, Plus, Pencil, Trash2, Loader2, Shield, User, Building2, Group } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Loader2, Shield, Building2, Group } from "lucide-react";
 import { toast } from "sonner";
 
 type UserForm = {
@@ -29,7 +31,7 @@ type UserForm = {
   password2: string;
   name: string;
   email: string;
-  role: "user" | "admin";
+  role: Role;
   isSuperAdmin: boolean;
   organizationId: number | undefined;
   groupId: number | undefined;
@@ -40,12 +42,25 @@ const emptyUserForm: UserForm = {
   isSuperAdmin: false, organizationId: undefined, groupId: undefined,
 };
 
+const ROLE_BADGE_STYLES: Record<Role, string> = {
+  user: "bg-gray-100 text-gray-700 border-gray-200",
+  admin: "bg-blue-50 text-blue-700 border-blue-200",
+  sales_manager: "bg-amber-50 text-amber-700 border-amber-200",
+  sales_rep: "bg-green-50 text-green-700 border-green-200",
+  viewer: "bg-purple-50 text-purple-700 border-purple-200",
+};
+
+function roleBadgeStyle(role: string): string {
+  return ROLE_BADGE_STYLES[role as Role] ?? "bg-gray-100 text-gray-700 border-gray-200";
+}
+
 export default function UserManagement() {
   const { user } = useAuth();
   const isSuperAdmin = user?.isSuperAdmin === true;
+  const canManageUsers = user ? hasPermission(user, PERMISSIONS.MANAGE_USERS) : false;
 
   // Access control
-  if (user?.role !== "admin") {
+  if (!canManageUsers) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <Shield className="w-12 h-12 text-muted-foreground/30" />
@@ -440,7 +455,7 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                 <TableCell className="text-sm text-muted-foreground">{u.email || "-"}</TableCell>
                 {isSuperAdmin && <TableCell className="text-xs">{getOrgName(u.organizationId)}</TableCell>}
                 {isSuperAdmin && <TableCell className="text-xs">{getGroupName(u.groupId)}</TableCell>}
-                <TableCell><Badge variant={u.role === "admin" ? "default" : "secondary"} className="text-[10px] h-5 px-1.5">{u.role === "admin" ? "管理员" : "普通用户"}</Badge></TableCell>
+                <TableCell><Badge className={`text-[10px] h-5 px-1.5 ${roleBadgeStyle(u.role)}`}>{ROLE_LABELS[u.role as Role] || u.role}</Badge></TableCell>
                 <TableCell className="text-xs text-muted-foreground">{u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleString("zh-CN") : "-"}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
@@ -493,9 +508,13 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
               </>
             )}
             <div className="space-y-1.5"><Label>角色</Label>
-              <Select value={form.role} onValueChange={(v: any) => setForm(f => ({ ...f, role: v }))}>
+              <Select value={form.role} onValueChange={(v: string) => setForm(f => ({ ...f, role: v as Role }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="user">普通用户</SelectItem><SelectItem value="admin">管理员</SelectItem></SelectContent>
+                <SelectContent>
+                  {(Object.entries(ROLE_LABELS) as [Role, string][]).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
           </div>
