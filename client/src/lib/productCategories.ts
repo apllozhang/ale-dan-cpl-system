@@ -1,8 +1,3 @@
-/**
- * Enhanced product categories structure
- * Groups 27 product series into 8 main categories for better organization
- */
-
 export interface ProductSubcategory {
   id: string;
   label: string;
@@ -19,40 +14,38 @@ export interface ProductCategory {
 }
 
 export type CategoryNavItem =
-  | { type: "category"; category: ProductCategory; matchedSheets: string[]; totalCount: number }
-  | { type: "subcategory"; category: ProductCategory; subcategory: ProductSubcategory; matchedSheets: string[]; totalCount: number };
-
-/**
- * 8 Main Categories:
- * 1. 网络交换机 - 子分类: 插槽式(9900/9500), 盒式(6920/6900/6870/6860/6570/6560/6360/2260/2360), 工业级(6865/6575/6465), 国产化(2960/2560/2160), 光模块(Transceivers)
- * 2. 无线网络系统 - OmniAccess Stellar WLAN, OmniAccess WLAN
- * 3. 网管系统 - OmniVista 2500 NMS
- * 4. 网络安全系统 - OmniAccess ESR
- * 5. 无源光网络系统 - OS9500 POL
- * 6. 其他产品 - OmniSwitch 6450, 6350, 6250, 2220, OmniVista 3600
- * 7. 服务 - Service and Support
- * 8. 配件 - Accessories
- */
+  | {
+      type: "category";
+      category: ProductCategory;
+      matchedSheets: string[];
+      totalCount: number;
+    }
+  | {
+      type: "subcategory";
+      category: ProductCategory;
+      subcategory: ProductSubcategory;
+      matchedSheets: string[];
+      totalCount: number;
+    };
 
 const CATEGORIES: ProductCategory[] = [
   {
     id: "wired-network",
     label: "网络交换机",
-    icon: "🔌",
     sheetPatterns: [
-      /omniswitch\s*9900/i,
-      /omniswitch\s*9500/i,
-      /omniswitch\s*6920/i,
-      /omniswitch\s*6900/i,
-      /omniswitch\s*6870/i,
-      /omniswitch\s*6865/i,
-      /omniswitch\s*6860/i,
-      /omniswitch\s*6575/i,
-      /omniswitch\s*6570/i,
-      /omniswitch\s*6560/i,
-      /omniswitch\s*6465/i,
-      /(?:omniswitch|os)\s*6360/i,
-      /os\s*2260|os\s*2360/i,
+      /omniswitch\s+9900/i,
+      /omniswitch\s+9500/i,
+      /omniswitch\s+6920/i,
+      /omniswitch\s+6900/i,
+      /omniswitch\s+6870/i,
+      /omniswitch\s+6865/i,
+      /omniswitch\s+6860/i,
+      /omniswitch\s+6575/i,
+      /omniswitch\s+6570/i,
+      /omniswitch\s+6560/i,
+      /omniswitch\s+6465/i,
+      /^OS6360$/i,
+      /^OS2260\s+OS2360$/i,
       /国产化/i,
       /transceiver/i,
     ],
@@ -60,35 +53,41 @@ const CATEGORIES: ProductCategory[] = [
       {
         id: "wired-chassis",
         label: "插槽式",
-        sheetPatterns: [/omniswitch\s*9900/i, /omniswitch\s*9500/i],
-        modelPatterns: [/^(OS99|OS95|PW\d+N-OS99|PW\d+N-OS95|PP\d+[NC]-OS99|PP\d+[NC]-OS95)/i],
+        sheetPatterns: [/omniswitch\s+9900/i, /omniswitch\s+9500/i],
+        modelPatterns: [/^OS(99\d\d|95\d\d)/i],
       },
       {
         id: "wired-box",
         label: "盒式",
         sheetPatterns: [
-          /omniswitch\s*6920/i,
-          /omniswitch\s*6900/i,
-          /omniswitch\s*6870/i,
-          /omniswitch\s*6860/i,
-          /omniswitch\s*6570/i,
-          /omniswitch\s*6560/i,
-          /os\s*6360/i,
-          /os\s*2260|os\s*2360/i,
+          /omniswitch\s+6920/i,
+          /omniswitch\s+6900/i,
+          /omniswitch\s+6870/i,
+          /omniswitch\s+6860/i,
+          /omniswitch\s+6570/i,
+          /omniswitch\s+6560/i,
+          /^OS6360$/i,
+          /^OS2260\s+OS2360$/i,
         ],
-        modelPatterns: [/^(OS69|OS68|OS65|OS63|OS22|OS23|PW\d+N-OS69|PW\d+N-OS68|PW\d+N-OS65|PW\d+N-OS63|PP\d+[NC]-OS69|PP\d+[NC]-OS68|PP\d+[NC]-OS65|PP\d+[NC]-OS63)/i],
+        modelPatterns: [
+          /^OS(69\d\d|6860|6870|6560|6570|6360|2260|2360)/i,
+        ],
       },
       {
         id: "wired-industrial",
         label: "工业级",
-        sheetPatterns: [/omniswitch\s*6865/i, /omniswitch\s*6575/i, /omniswitch\s*6465/i],
-        modelPatterns: [/^(OS68|OS65|OS64|PW\d+N-OS68|PW\d+N-OS65|PW\d+N-OS64|PP\d+[NC]-OS68|PP\d+[NC]-OS65|PP\d+[NC]-OS64)/i],
+        sheetPatterns: [
+          /omniswitch\s+6865/i,
+          /omniswitch\s+6575/i,
+          /omniswitch\s+6465/i,
+        ],
+        modelPatterns: [/^OS(6865|6575|6465)/i],
       },
       {
         id: "wired-domestic",
         label: "国产化",
-        sheetPatterns: [/国产化/i, /os\s*2960/i, /os\s*2560/i, /os\s*2160/i],
-        modelPatterns: [/^(OS29|OS25|OS21|PW\d+N-OS29|PW\d+N-OS25|PW\d+N-OS21|PP\d+[NC]-OS29|PP\d+[NC]-OS25|PP\d+[NC]-OS21)/i],
+        sheetPatterns: [/国产化/i],
+        modelPatterns: [/^OS(29\d\d|25\d\d|21\d\d)/i],
       },
       {
         id: "wired-transceiver",
@@ -101,63 +100,58 @@ const CATEGORIES: ProductCategory[] = [
   {
     id: "wireless",
     label: "无线网络系统",
-    icon: "📱",
-    sheetPatterns: [/omniaccss.*stellar|omniaccss.*wlan|stellar.*wlan|wireless/i],
+    sheetPatterns: [/omniaccess(?!.*esr)/i],
   },
   {
     id: "nms",
     label: "网管系统",
-    icon: "📋",
-    sheetPatterns: [/omnivista.*2500|nms/i],
+    sheetPatterns: [/omnivista(?!.*3600)/i],
   },
   {
     id: "security",
     label: "网络安全系统",
-    icon: "🔐",
-    sheetPatterns: [/omniaccss.*esr|esr.*omniaccss|esr/i],
+    sheetPatterns: [/esr/i],
   },
   {
     id: "pol",
     label: "无源光网络系统",
-    icon: "💫",
-    sheetPatterns: [/os9500.*pol|pol/i],
+    sheetPatterns: [/OS9500\s+POL/i],
   },
   {
     id: "other",
     label: "其他产品",
-    icon: "📦",
     sheetPatterns: [
-      /omniswitch\s*6450/i,
-      /omniswitch\s*6350/i,
-      /omniswitch\s*6250/i,
-      /omniswitch\s*2220/i,
-      /omnivista\s*3600/i,
+      /omniswitch\s+6450/i,
+      /omniswitch\s+6350/i,
+      /omniswitch\s+6250/i,
+      /omniswitch\s+2220/i,
+      /omnivista\s+3600/i,
     ],
   },
   {
     id: "service",
     label: "服务",
-    icon: "🛠️",
-    sheetPatterns: [/service.*support|support.*service|service|support/i],
+    sheetPatterns: [/^Service\s+and\s+Support$/i],
   },
   {
     id: "accessories",
     label: "配件",
-    icon: "🔧",
-    sheetPatterns: [/accessories|accessory|spare.*parts|parts/i],
+    sheetPatterns: [/^Accessories$/i],
   },
 ];
 
-/**
- * Resolve which category a sheet belongs to
- */
-export function resolveCategoryForSheet(sheetName: string): ProductCategory | undefined {
+const OTHER_CATEGORY: ProductCategory = {
+  id: "other",
+  label: "其他产品",
+  sheetPatterns: [],
+};
+
+export function resolveCategoryForSheet(
+  sheetName: string
+): ProductCategory | undefined {
   return CATEGORIES.find(cat => cat.sheetPatterns.some(p => p.test(sheetName)));
 }
 
-/**
- * Build category navigation items from available sheets
- */
 export function buildCategoryNav(
   sheets: Array<{ sheetName: string; productCount: number }>
 ): CategoryNavItem[] {
@@ -165,80 +159,88 @@ export function buildCategoryNav(
   const assignedSheets = new Set<string>();
 
   for (const cat of CATEGORIES) {
-    const matched = sheets.filter(s => cat.sheetPatterns.some(p => p.test(s.sheetName)));
+    const matched = sheets.filter(s =>
+      cat.sheetPatterns.some(p => p.test(s.sheetName))
+    );
     if (matched.length === 0) continue;
-    
     matched.forEach(s => assignedSheets.add(s.sheetName));
 
     const totalCount = matched.reduce((sum, s) => sum + s.productCount, 0);
     const matchedSheetNames = matched.map(s => s.sheetName);
 
     if (cat.subcategories && cat.subcategories.length > 0) {
-      // Category with subcategories - add main category first
-      navItems.push({ 
-        type: "category", 
-        category: cat, 
-        matchedSheets: matchedSheetNames, 
-        totalCount 
+      navItems.push({
+        type: "category",
+        category: cat,
+        matchedSheets: matchedSheetNames,
+        totalCount,
       });
 
-      // Then add subcategories
       for (const sub of cat.subcategories) {
-        navItems.push({ 
-          type: "subcategory", 
-          category: cat, 
-          subcategory: sub, 
-          matchedSheets: matchedSheetNames, 
-          totalCount 
+        const subMatched = sheets.filter(s =>
+          sub.sheetPatterns.some(p => p.test(s.sheetName))
+        );
+        const subSheetNames = subMatched.map(s => s.sheetName);
+
+        navItems.push({
+          type: "subcategory",
+          category: cat,
+          subcategory: sub,
+          matchedSheets: subSheetNames.length > 0 ? subSheetNames : matchedSheetNames,
+          totalCount,
         });
       }
     } else {
-      // Simple category without subcategories
-      navItems.push({ 
-        type: "category", 
-        category: cat, 
-        matchedSheets: matchedSheetNames, 
-        totalCount 
+      navItems.push({
+        type: "category",
+        category: cat,
+        matchedSheets: matchedSheetNames,
+        totalCount,
       });
     }
+  }
+
+  // "Other" category for unmatched sheets
+  const unmatched = sheets.filter(s => !assignedSheets.has(s.sheetName));
+  if (unmatched.length > 0) {
+    const totalCount = unmatched.reduce((sum, s) => sum + s.productCount, 0);
+    const matchedSheetNames = unmatched.map(s => s.sheetName);
+    navItems.push({
+      type: "category",
+      category: OTHER_CATEGORY,
+      matchedSheets: matchedSheetNames,
+      totalCount,
+    });
   }
 
   return navItems;
 }
 
-/**
- * Get the first sheet name from a category navigation item
- */
-export function getQuerySheetName(navItem: CategoryNavItem): string | undefined {
-  return navItem.matchedSheets[0];
+export function getQuerySheetNames(navItem: CategoryNavItem): string[] {
+  return navItem.matchedSheets;
 }
 
-/**
- * Get model filter patterns for a navigation item (used for subcategories)
- */
 export function getModelFilter(navItem: CategoryNavItem): RegExp[] | undefined {
   if (navItem.type === "subcategory") {
-    return navItem.subcategory.modelPatterns;
+    const patterns = navItem.subcategory.modelPatterns;
+    return patterns.length > 0 ? patterns : undefined;
   }
   return undefined;
 }
 
-/**
- * Get all sheets that match a category
- */
+export function getAllCategories(): ProductCategory[] {
+  return CATEGORIES;
+}
+
 export function getSheetsByCategory(
   sheets: Array<{ sheetName: string; productCount: number }>,
   categoryId: string
 ): Array<{ sheetName: string; productCount: number }> {
   const category = CATEGORIES.find(c => c.id === categoryId);
   if (!category) return [];
-  
   return sheets.filter(s => category.sheetPatterns.some(p => p.test(s.sheetName)));
 }
 
-/**
- * Get sheets matching a specific subcategory's sheetPatterns
- */
 export function getSheetsBySubcategory(
   sheets: Array<{ sheetName: string; productCount: number }>,
   categoryId: string,
@@ -246,16 +248,7 @@ export function getSheetsBySubcategory(
 ): Array<{ sheetName: string; productCount: number }> {
   const category = CATEGORIES.find(c => c.id === categoryId);
   if (!category?.subcategories) return [];
-
   const sub = category.subcategories.find(s => s.id === subcategoryId);
   if (!sub) return [];
-
   return sheets.filter(s => sub.sheetPatterns.some(p => p.test(s.sheetName)));
-}
-
-/**
- * Export all categories for UI rendering
- */
-export function getAllCategories(): ProductCategory[] {
-  return CATEGORIES;
 }

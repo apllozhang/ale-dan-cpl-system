@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import {
   ArrowLeft, Save, Plus, Trash2, Loader2, Download,
@@ -26,7 +26,6 @@ type ItemRow = {
   productDesc: string;
   listPrice: string;
   quantity: number;
-  unitPrice: number;
   discountRate: number;
   subtotal: number;
 };
@@ -38,6 +37,130 @@ const STATUS_ICONS: Record<string, any> = {
   completed: CheckCircle2,
   cancelled: XCircle,
 };
+
+// Column definitions for resizable quotation table
+const Q_COLS = [
+  { key: "idx", label: "#", width: 40, minWidth: 32 },
+  { key: "model", label: "产品型号", width: 160, minWidth: 80 },
+  { key: "desc", label: "产品说明", width: 280, minWidth: 100 },
+  { key: "price", label: "媒体价", width: 110, minWidth: 70 },
+  { key: "qty", label: "数量", width: 80, minWidth: 60 },
+  { key: "disc", label: "折扣(%)", width: 90, minWidth: 60 },
+  { key: "sub", label: "小计", width: 120, minWidth: 80 },
+  { key: "act", label: "", width: 40, minWidth: 36 },
+];
+
+function useColWidths(cols: typeof Q_COLS) {
+  const [widths, setWidths] = useState(() => cols.map(c => c.width));
+  const dragRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
+
+  const startResize = useCallback((index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { index, startX: e.clientX, startWidth: widths[index] };
+    const onMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return;
+      const delta = ev.clientX - dragRef.current.startX;
+      const next = Math.max(cols[dragRef.current.index].minWidth, dragRef.current.startWidth + delta);
+      setWidths(prev => { const c = [...prev]; c[dragRef.current!.index] = next; return c; });
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [widths, cols]);
+
+  return { widths, startResize };
+}
+
+function QuotationItemsTable({
+  items,
+  onUpdate,
+  onRemove,
+}: {
+  items: ItemRow[];
+  onUpdate: (index: number, field: keyof ItemRow, value: any) => void;
+  onRemove: (index: number) => void;
+}) {
+  const { widths, startResize } = useColWidths(Q_COLS);
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full" style={{ tableLayout: "fixed" }}>
+        <thead>
+          <tr className="bg-muted/30">
+            {Q_COLS.map((col, i) => (
+              <th
+                key={col.key}
+                className={`relative text-xs font-semibold px-3 py-2 text-left border-l border-border ${col.key === "sub" ? "text-right" : ""}`}
+                style={{ width: widths[i] }}
+              >
+                {col.label}
+                {col.key !== "act" && (
+                  <span
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 z-10"
+                    onMouseDown={e => startResize(i, e)}
+                  />
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item, idx) => (
+            <tr key={idx} className="border-b border-border/50 hover:bg-accent/20">
+              <td className="px-2 py-1.5 text-xs text-muted-foreground border-l border-border" style={{ width: widths[0] }}>
+                {idx + 1}
+              </td>
+              <td className="px-3 py-1.5 text-xs font-medium border-l border-border" style={{ width: widths[1] }}>
+                {item.productModel}
+              </td>
+              <td className="px-3 py-1.5 text-xs text-muted-foreground border-l border-border" style={{ width: widths[2] }}>
+                {item.productDesc}
+              </td>
+              <td className="px-3 py-1.5 text-xs tabular-nums border-l border-border" style={{ width: widths[3] }}>
+                {item.listPrice ? `¥${Number(item.listPrice).toLocaleString()}` : "-"}
+              </td>
+              <td className="px-3 py-1.5 border-l border-border" style={{ width: widths[4] }}>
+                <Input
+                  type="number"
+                  min={1}
+                  value={item.quantity}
+                  onChange={e => onUpdate(idx, "quantity", Math.max(1, parseInt(e.target.value) || 1))}
+                  className="h-7 w-16 text-xs text-right"
+                />
+              </td>
+              <td className="px-3 py-1.5 border-l border-border" style={{ width: widths[5] }}>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={item.discountRate}
+                  onChange={e => onUpdate(idx, "discountRate", parseFloat(e.target.value) || 0)}
+                  className="h-7 w-16 text-xs text-right"
+                />
+              </td>
+              <td className="px-3 py-1.5 text-xs text-right font-medium tabular-nums border-l border-border" style={{ width: widths[6] }}>
+                ¥{item.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td className="px-2 py-1.5 border-l border-border" style={{ width: widths[7] }}>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => onRemove(idx)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default function QuotationDetail() {
   const [, setLocation] = useLocation();
@@ -83,7 +206,6 @@ export default function QuotationDetail() {
         productDesc: item.productDesc || "",
         listPrice: item.listPrice || "",
         quantity: item.quantity || 1,
-        unitPrice: Number(item.unitPrice) || 0,
         discountRate: Number(item.discountRate) || 0,
         subtotal: Number(item.subtotal) || 0,
       })));
@@ -94,10 +216,10 @@ export default function QuotationDetail() {
     setItems(prev => prev.map((item, i) => {
       if (i !== index) return item;
       const updated = { ...item, [field]: value };
-      const unitPrice = field === "unitPrice" ? Number(value) : item.unitPrice;
+      const price = parseFloat(updated.listPrice) || 0;
       const qty = field === "quantity" ? Number(value) : item.quantity;
       const disc = field === "discountRate" ? Number(value) : item.discountRate;
-      updated.subtotal = unitPrice * qty * (1 - disc / 100);
+      updated.subtotal = price * qty * (1 - disc / 100);
       return updated;
     }));
   };
@@ -119,7 +241,6 @@ export default function QuotationDetail() {
       productDesc: product.productDesc || "",
       listPrice: product.listPrice || "",
       quantity,
-      unitPrice: parseFloat(product.listPrice || "0"),
       discountRate: discountRate,
       subtotal: parseFloat(product.listPrice || "0") * quantity * (1 - discountRate / 100),
     }));
@@ -162,7 +283,7 @@ export default function QuotationDetail() {
         productDesc: item.productDesc || undefined,
         listPrice: item.listPrice || undefined,
         quantity: item.quantity,
-        unitPrice: item.unitPrice,
+        unitPrice: parseFloat(item.listPrice) || 0,
         discountRate: item.discountRate,
       })),
     };
@@ -307,70 +428,11 @@ export default function QuotationDetail() {
                 <p className="text-xs mt-1">点击"添加产品"从产品目录中选择</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table style={{ width: "max-content", minWidth: "100%" }}>
-                  <TableHeader>
-                    <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableHead className="text-xs font-semibold w-10">#</TableHead>
-                      <TableHead className="text-xs font-semibold min-w-[140px]">产品型号</TableHead>
-                      <TableHead className="text-xs font-semibold min-w-[200px]">产品说明</TableHead>
-                      <TableHead className="text-xs font-semibold w-24">媒体价</TableHead>
-                      <TableHead className="text-xs font-semibold w-20">数量</TableHead>
-                      <TableHead className="text-xs font-semibold w-24">单价</TableHead>
-                      <TableHead className="text-xs font-semibold w-20">折扣(%)</TableHead>
-                      <TableHead className="text-xs font-semibold w-28 text-right">小计</TableHead>
-                      <TableHead className="text-xs font-semibold w-12"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item, idx) => (
-                      <TableRow key={idx} className="hover:bg-accent/20">
-                        <TableCell className="text-xs text-muted-foreground">{idx + 1}</TableCell>
-                        <TableCell className="text-xs font-medium">{item.productModel}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">{item.productDesc}</TableCell>
-                        <TableCell className="text-xs">{item.listPrice ? `¥${Number(item.listPrice).toLocaleString()}` : "-"}</TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={e => updateItem(idx, "quantity", Math.max(1, parseInt(e.target.value) || 1))}
-                            className="h-8 w-16 text-xs text-right"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={item.unitPrice}
-                            onChange={e => updateItem(idx, "unitPrice", parseFloat(e.target.value) || 0)}
-                            className="h-8 w-20 text-xs text-right"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={item.discountRate}
-                            onChange={e => updateItem(idx, "discountRate", parseFloat(e.target.value) || 0)}
-                            className="h-8 w-16 text-xs text-right"
-                          />
-                        </TableCell>
-                        <TableCell className="text-xs text-right font-medium tabular-nums">
-                          ¥{item.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => removeItem(idx)}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <QuotationItemsTable
+                items={items}
+                onUpdate={updateItem}
+                onRemove={removeItem}
+              />
             )}
           </CardContent>
         </Card>

@@ -9,15 +9,61 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Search, X, Loader2, ChevronRight, Network, Wifi, Monitor, ShieldCheck, Cable, Package,
+  PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
+
+// Column definitions with default widths
+interface ColDef {
+  key: string;
+  label: string;
+  width: number;
+  minWidth: number;
+}
+
+const PRODUCT_COLS: ColDef[] = [
+  { key: "model", label: "产品型号", width: 160, minWidth: 80 },
+  { key: "desc", label: "产品说明", width: 280, minWidth: 100 },
+  { key: "price", label: "媒体价", width: 110, minWidth: 70 },
+  { key: "qty", label: "数量", width: 90, minWidth: 60 },
+];
+
+function useColumnWidths(cols: ColDef[]) {
+  const [widths, setWidths] = useState<number[]>(cols.map(c => c.width));
+  const dragging = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
+
+  const startResize = useCallback((index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = { index, startX: e.clientX, startWidth: widths[index] };
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = ev.clientX - dragging.current.startX;
+      const next = Math.max(cols[dragging.current.index].minWidth, dragging.current.startWidth + delta);
+      setWidths(prev => {
+        const copy = [...prev];
+        copy[dragging.current!.index] = next;
+        return copy;
+      });
+    };
+    const onUp = () => {
+      dragging.current = null;
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [widths, cols]);
+
+  return { widths, startResize };
+}
 import {
-  buildCategoryNav, getModelFilter, getQuerySheetName, getSheetsBySubcategory,
+  buildCategoryNav, getModelFilter, getQuerySheetNames, getSheetsBySubcategory,
   type CategoryNavItem,
 } from "@/lib/productCategories";
 
@@ -50,6 +96,7 @@ export default function ProductSelectorDialog({
   const [wiredExpanded, setWiredExpanded] = useState(true);
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const [selectedSheetTab, setSelectedSheetTab] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -59,6 +106,7 @@ export default function ProductSelectorDialog({
       setDebouncedSearch("");
       setSelectedMap(new Map());
       setWiredExpanded(true);
+      setSidebarCollapsed(false);
     }
   }, [open]);
 
@@ -85,7 +133,7 @@ export default function ProductSelectorDialog({
       const matching = getSheetsBySubcategory(sheetsQuery.data, activeNav.category.id, activeNav.subcategory.id);
       return { sheetName: undefined, sheetNames: matching.map(s => s.sheetName) };
     }
-    return { sheetName: getQuerySheetName(activeNav), sheetNames: undefined };
+    return { sheetName: undefined, sheetNames: getQuerySheetNames(activeNav) };
   }, [activeNav, sheetsQuery.data]);
 
   // Reset selected sheet tab when dialog closes
@@ -222,6 +270,7 @@ export default function ProductSelectorDialog({
 
   const totalSelected = selectedMap.size;
   const totalQuantity = Array.from(selectedMap.values()).reduce((s, e) => s + e.quantity, 0);
+  const { widths: colWidths, startResize } = useColumnWidths(PRODUCT_COLS);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -232,75 +281,88 @@ export default function ProductSelectorDialog({
 
         <div className="flex flex-1 min-h-0 border-t overflow-hidden">
           {/* Left Panel - Category Navigation */}
-          <div className="w-[220px] border-r bg-muted/20">
-            <ScrollArea className="h-full">
-              <div className="p-2">
-                {categoryNavGroups.map(({ category, subcategories }) => {
-                  const Icon = CATEGORY_ICONS[category.category.id] || Package;
-                  const hasSubs = subcategories.length > 0;
-                  const isWired = category.category.id === "wired-network";
-                  const isExpanded = isWired ? wiredExpanded : false;
+          {!sidebarCollapsed && (
+            <div className="w-[220px] border-r bg-muted/20 shrink-0">
+              <ScrollArea className="h-full">
+                <div className="p-2">
+                  {categoryNavGroups.map(({ category, subcategories }) => {
+                    const Icon = CATEGORY_ICONS[category.category.id] || Package;
+                    const hasSubs = subcategories.length > 0;
+                    const isWired = category.category.id === "wired-network";
+                    const isExpanded = isWired ? wiredExpanded : false;
 
-                  if (hasSubs) {
+                    if (hasSubs) {
+                      return (
+                        <Collapsible
+                          key={category.category.id}
+                          open={isExpanded}
+                          onOpenChange={isWired ? setWiredExpanded : undefined}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <button
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-accent/50 ${
+                                isNavActive(category) ? "bg-accent text-accent-foreground" : ""
+                              }`}
+                              onClick={() => setActiveNav(category)}
+                            >
+                              <Icon className="w-4 h-4 shrink-0" />
+                              <span className="flex-1 text-left truncate">{category.category.label}</span>
+                              <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-auto">
+                                {category.totalCount}
+                              </Badge>
+                              <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="ml-4 pl-3 border-l border-border space-y-0.5 mt-1">
+                              {subcategories.map(sub => (
+                                <button
+                                  key={sub.type === "subcategory" ? sub.subcategory.id : sub.category.id}
+                                  className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors hover:bg-accent/50 ${
+                                    isNavActive(sub) ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground"
+                                  }`}
+                                  onClick={() => setActiveNav(sub)}
+                                >
+                                  {sub.type === "subcategory" ? sub.subcategory.label : sub.category.label}
+                                </button>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    }
+
                     return (
-                      <Collapsible
+                      <button
                         key={category.category.id}
-                        open={isExpanded}
-                        onOpenChange={isWired ? setWiredExpanded : undefined}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent/50 ${
+                          isNavActive(category) ? "bg-accent text-accent-foreground font-medium" : ""
+                        }`}
+                        onClick={() => setActiveNav(category)}
                       >
-                        <CollapsibleTrigger asChild>
-                          <button
-                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-accent/50 ${
-                              isNavActive(category) ? "bg-accent text-accent-foreground" : ""
-                            }`}
-                            onClick={() => setActiveNav(category)}
-                          >
-                            <Icon className="w-4 h-4 shrink-0" />
-                            <span className="flex-1 text-left truncate">{category.category.label}</span>
-                            <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-auto">
-                              {category.totalCount}
-                            </Badge>
-                            <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                          </button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="ml-4 pl-3 border-l border-border space-y-0.5 mt-1">
-                            {subcategories.map(sub => (
-                              <button
-                                key={sub.type === "subcategory" ? sub.subcategory.id : sub.category.id}
-                                className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors hover:bg-accent/50 ${
-                                  isNavActive(sub) ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground"
-                                }`}
-                                onClick={() => setActiveNav(sub)}
-                              >
-                                {sub.type === "subcategory" ? sub.subcategory.label : sub.category.label}
-                              </button>
-                            ))}
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span className="flex-1 text-left truncate">{category.category.label}</span>
+                        <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+                          {category.totalCount}
+                        </Badge>
+                      </button>
                     );
-                  }
-
-                  return (
-                    <button
-                      key={category.category.id}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent/50 ${
-                        isNavActive(category) ? "bg-accent text-accent-foreground font-medium" : ""
-                      }`}
-                      onClick={() => setActiveNav(category)}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      <span className="flex-1 text-left truncate">{category.category.label}</span>
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-                        {category.totalCount}
-                      </Badge>
-                    </button>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </div>
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+          {/* Sidebar Toggle */}
+          <button
+            onClick={() => setSidebarCollapsed(v => !v)}
+            className="w-5 flex items-center justify-center border-r bg-muted/10 hover:bg-accent/30 transition-colors shrink-0"
+            title={sidebarCollapsed ? "展开分类导航" : "收起分类导航"}
+          >
+            {sidebarCollapsed
+              ? <PanelLeftOpen className="w-3.5 h-3.5 text-muted-foreground" />
+              : <PanelLeftClose className="w-3.5 h-3.5 text-muted-foreground" />
+            }
+          </button>
 
           {/* Right Panel - Product List */}
           <div className="flex-1 flex flex-col min-w-0">
@@ -356,51 +418,59 @@ export default function ProductSelectorDialog({
 
             {/* Product Table */}
             <ScrollArea className="flex-1 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="w-10 text-xs">
+              <table className="w-full" style={{ tableLayout: "fixed" }}>
+                <thead>
+                  <tr className="bg-muted/30">
+                    <th className="w-10 px-2 py-2 text-left">
                       <input
                         type="checkbox"
                         checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedMap.has(p.id))}
                         onChange={toggleSelectAll}
                         className="w-4 h-4 cursor-pointer"
                       />
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold min-w-[140px]">产品型号</TableHead>
-                    <TableHead className="text-xs font-semibold min-w-[200px]">产品说明</TableHead>
-                    <TableHead className="text-xs font-semibold w-24">媒体价</TableHead>
-                    <TableHead className="text-xs font-semibold w-20">数量</TableHead>
-                    <TableHead className="text-xs font-semibold w-16">状态</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                    </th>
+                    {PRODUCT_COLS.map((col, i) => (
+                      <th
+                        key={col.key}
+                        className="relative text-xs font-semibold px-3 py-2 text-left border-l border-border"
+                        style={{ width: colWidths[i] }}
+                      >
+                        {col.label}
+                        <span
+                          className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 z-10"
+                          onMouseDown={e => startResize(i, e)}
+                        />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   {productsQuery.isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center">
+                    <tr>
+                      <td colSpan={5} className="h-32 text-center">
                         <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ) : !(isSubcategorySelected || isSimpleCategorySelected) ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground text-sm">
+                    <tr>
+                      <td colSpan={5} className="h-32 text-center text-muted-foreground text-sm">
                         请选择左侧分类查看产品数据
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ) : filteredProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground text-sm">
+                    <tr>
+                      <td colSpan={5} className="h-32 text-center text-muted-foreground text-sm">
                         {debouncedSearch ? "未找到匹配产品" : "该分类下暂无产品"}
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ) : (
                     filteredProducts.map((p: any) => {
                       const isSelected = selectedMap.has(p.id);
                       const isExisting = existingProductIds.has(p.id);
                       return (
-                        <TableRow
+                        <tr
                           key={p.id}
-                          className={`transition-colors ${
+                          className={`border-b border-border/50 transition-colors ${
                             isExisting
                               ? "opacity-50 cursor-not-allowed"
                               : isSelected
@@ -409,7 +479,7 @@ export default function ProductSelectorDialog({
                           }`}
                           onClick={() => !isExisting && toggleProduct(p)}
                         >
-                          <TableCell>
+                          <td className="px-2 py-1.5">
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -417,13 +487,17 @@ export default function ProductSelectorDialog({
                               disabled={isExisting}
                               className="w-4 h-4 cursor-pointer"
                             />
-                          </TableCell>
-                          <TableCell className="text-xs font-medium">{p.productModel}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">{p.productDesc}</TableCell>
-                          <TableCell className="text-xs tabular-nums">
+                          </td>
+                          <td className="px-3 py-1.5 text-xs font-medium border-l border-border" style={{ width: colWidths[0] }}>
+                            {p.productModel}
+                          </td>
+                          <td className="px-3 py-1.5 text-xs text-muted-foreground border-l border-border" style={{ width: colWidths[1] }}>
+                            {p.productDesc}
+                          </td>
+                          <td className="px-3 py-1.5 text-xs tabular-nums border-l border-border" style={{ width: colWidths[2] }}>
                             {p.listPrice ? `¥${Number(p.listPrice).toLocaleString()}` : "-"}
-                          </TableCell>
-                          <TableCell>
+                          </td>
+                          <td className="px-3 py-1.5 border-l border-border" style={{ width: colWidths[3] }}>
                             {isSelected ? (
                               <Input
                                 type="number"
@@ -438,22 +512,13 @@ export default function ProductSelectorDialog({
                             ) : (
                               <span className="text-xs text-muted-foreground">-</span>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            {isExisting ? (
-                              <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-muted-foreground">已添加</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                                {p.productStatus || "-"}
-                              </Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       );
                     })
                   )}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </ScrollArea>
           </div>
         </div>

@@ -14,29 +14,33 @@ export function exportQuotationToExcel(quotation: any, items: any[]) {
   rows.push(["创建日期", quotation.createdAt ? new Date(quotation.createdAt).toLocaleDateString("zh-CN") : "", "", "有效期", quotation.validUntil ? new Date(quotation.validUntil).toLocaleDateString("zh-CN") : ""]);
   rows.push([]);
 
-  // Items header
-  rows.push(["序号", "产品型号", "产品说明", "媒体价", "数量", "单价", "折扣率(%)", "小计"]);
+  // Items header: 序号 | 产品型号 | 产品说明 | 单价 | 数量 | 折扣率(%) | 小计(¥) | 媒体价(¥)
+  rows.push(["序号", "产品型号", "产品说明", "单价(¥)", "数量", "折扣率(%)", "小计(¥)", "媒体价(¥)"]);
 
   // Items
   let total = 0;
   items.forEach((item, idx) => {
-    const subtotal = parseFloat(item.subtotal || "0");
+    const listPrice = parseFloat(item.listPrice) || 0;
+    const discount = Number(item.discountRate) || 0;
+    const unitPrice = listPrice * (1 - discount / 100);
+    const qty = item.quantity || 1;
+    const subtotal = unitPrice * qty;
     total += subtotal;
     rows.push([
       idx + 1,
       item.productModel || "",
       item.productDesc || "",
-      item.listPrice || "",
-      item.quantity || 0,
-      item.unitPrice || "",
-      item.discountRate || "0",
-      subtotal.toFixed(2),
+      unitPrice.toFixed(2),
+      qty,
+      discount,
+      `¥${subtotal.toFixed(2)}`,
+      listPrice ? `¥${listPrice.toFixed(2)}` : "",
     ]);
   });
 
   // Total row
   rows.push([]);
-  rows.push(["", "", "", "", "", "", "合计", total.toFixed(2)]);
+  rows.push(["", "", "", "", "", "", `合计：¥${total.toFixed(2)}`]);
 
   if (quotation.notes) {
     rows.push([]);
@@ -50,11 +54,11 @@ export function exportQuotationToExcel(quotation: any, items: any[]) {
     { wch: 8 },   // 序号
     { wch: 25 },  // 产品型号
     { wch: 40 },  // 产品说明
-    { wch: 12 },  // 媒体价
+    { wch: 14 },  // 单价(¥)
     { wch: 8 },   // 数量
-    { wch: 12 },  // 单价
     { wch: 10 },  // 折扣率
-    { wch: 14 },  // 小计
+    { wch: 14 },  // 小计(¥)
+    { wch: 14 },  // 媒体价(¥)
   ];
 
   // Merge title cell
