@@ -10,9 +10,20 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { useMemo } from "react";
 
 const CHART_COLORS = [
-  "var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)",
-  "#6366f1", "#8b5cf6", "#a855f7", "#c084fc", "#d8b4fe",
-  "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe",
+  "#3b82f6", // 蓝
+  "#ef4444", // 红
+  "#22c55e", // 绿
+  "#f59e0b", // 橙
+  "#8b5cf6", // 紫
+  "#06b6d4", // 青
+  "#ec4899", // 粉
+  "#14b8a6", // 蓝绿
+  "#f97316", // 深橙
+  "#6366f1", // 靛蓝
+  "#84cc16", // 黄绿
+  "#e11d48", // 玫红
+  "#0ea5e9", // 天蓝
+  "#a855f7", // 亮紫
 ];
 
 export default function CategoryStats() {
@@ -139,8 +150,15 @@ export default function CategoryStats() {
                   cx="50%"
                   cy="50%"
                   outerRadius={120}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={{ strokeWidth: 1 }}
+                  label={({ name, percent, index }) => (
+                    <text x={0} y={0} textAnchor="end" fill={CHART_COLORS[index % CHART_COLORS.length]} fontSize={11} fontWeight={600}>
+                      {name} {(percent * 100).toFixed(0)}%
+                    </text>
+                  )}
+                  labelLine={(props: any) => {
+                    const { points, index } = props;
+                    return <polyline points={points.map((p: any) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={1.5} />;
+                  }}
                 >
                   {statusData.map((_, i) => (
                     <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />

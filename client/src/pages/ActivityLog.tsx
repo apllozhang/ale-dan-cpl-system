@@ -12,6 +12,47 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+const RESOURCE_LABELS: Record<string, string> = {
+  quotation: "报价单",
+  user: "用户",
+  import: "数据导入",
+  product: "产品",
+  auth: "认证",
+};
+
+function formatDetail(action: string, detail: string | null): string {
+  if (!detail) return "-";
+  try {
+    const d = JSON.parse(detail);
+    switch (action) {
+      case "login":
+        return d.method === "local" ? "账号密码登录" : d.method === "oauth" ? "OAuth 登录" : "登录系统";
+      case "logout":
+        return "退出系统";
+      case "create_quotation":
+        return `创建报价单「${d.quotationNo || ""}」，客户：${d.customerName || ""}，${d.itemCount ?? 0} 个产品`;
+      case "update_quotation":
+        return `更新报价单「${d.quotationNo || ""}」`;
+      case "delete_quotation":
+        return `删除报价单「${d.quotationNo || ""}」，客户：${d.customerName || ""}`;
+      case "update_status":
+        return `报价单「${d.quotationNo || ""}」状态变更为「${d.newStatus || ""}」`;
+      case "import_data":
+        return `导入文件「${d.fileName || ""}」，${d.sheetsCount ?? 0} 个 Sheet，${d.productsCount ?? 0} 个产品`;
+      case "create_user":
+        return `创建用户「${d.username || ""}」，角色：${d.role || ""}`;
+      case "update_user":
+        return `更新用户「${d.username || ""}」${d.changes ? "，变更：" + d.changes : ""}`;
+      case "delete_user":
+        return `删除用户「${d.username || ""}」`;
+      default:
+        return Object.entries(d).map(([k, v]) => `${k}: ${v}`).join("，");
+    }
+  } catch {
+    return detail.slice(0, 120);
+  }
+}
+
 const ACTION_LABELS: Record<string, string> = {
   login: "登录",
   logout: "登出",
@@ -168,9 +209,9 @@ export default function ActivityLog() {
                       {ACTION_LABELS[log.action] || log.action}
                     </Badge>
                   </td>
-                  <td className="px-4 py-2 text-xs text-muted-foreground">{log.resourceType || "-"}</td>
-                  <td className="px-4 py-2 text-xs text-muted-foreground truncate max-w-[300px]">
-                    {log.detail ? (() => { try { const d = JSON.parse(log.detail); return JSON.stringify(d).slice(0, 100); } catch { return log.detail?.slice(0, 100); } })() : "-"}
+                  <td className="px-4 py-2 text-xs text-muted-foreground">{RESOURCE_LABELS[log.resourceType] || log.resourceType || "-"}</td>
+                  <td className="px-4 py-2 text-xs text-muted-foreground" style={{ maxWidth: 400 }}>
+                    {formatDetail(log.action, log.detail)}
                   </td>
                 </tr>
               ))}
