@@ -381,7 +381,14 @@ export default function ProductDataPage() {
   };
 
   const getCellValue = (product: any, key: ColumnKey) => {
-    return product[key] || "";
+    const value = product[key];
+    if (key === "listPrice" && value) {
+      const numValue = typeof value === "string" ? parseFloat(value) : value;
+      if (!isNaN(numValue)) {
+        return `¥${numValue.toLocaleString()}`;
+      }
+    }
+    return value || "";
   };
 
   return (
@@ -692,7 +699,7 @@ export default function ProductDataPage() {
         {/* Data table */}
         <div className="flex-1 border rounded-lg bg-card overflow-hidden flex flex-col">
           <div className="overflow-x-auto flex-1">
-            <Table style={{ width: 'max-content', minWidth: '100%' }}>
+            <Table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableHead className="w-12 px-3 py-2 border-r border-border/50">
