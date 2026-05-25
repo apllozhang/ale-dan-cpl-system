@@ -36,6 +36,8 @@ import {
   BarChart3,
   Sun,
   Moon,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -114,6 +116,7 @@ function DashboardLayoutContent({
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find((item) => item.path === location);
   const visibleMenuItems = menuItems.filter((item: any) => {
@@ -266,20 +269,39 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset>
-        {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground text-sm font-medium">
-                    {activeMenuItem?.label ?? "ALE DAN CPL 系统"}
-                  </span>
-                </div>
-              </div>
-            </div>
+        <div className="flex items-center justify-between h-11 px-4 border-b bg-background/80 sticky top-0 z-30">
+          <div className="flex items-center gap-2">
+            {isMaximized && (
+              <button
+                onClick={() => { setIsMaximized(false); if (state === "collapsed") toggleSidebar(); }}
+                className="group h-9 w-9 flex items-center justify-center rounded-md hover:bg-primary/10 hover:text-primary transition-colors"
+                title="还原侧边栏"
+              >
+                <Minimize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </button>
+            )}
+            <span className="text-xs text-muted-foreground font-medium">{activeMenuItem?.label ?? ""}</span>
           </div>
-        )}
+          <div className="flex items-center gap-1">
+            {isMaximized ? (
+              <button
+                onClick={() => { setIsMaximized(false); if (state === "collapsed") toggleSidebar(); }}
+                className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
+                title="还原侧边栏"
+              >
+                <Minimize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </button>
+            ) : (
+              <button
+                onClick={() => { setIsMaximized(true); if (state !== "collapsed") toggleSidebar(); }}
+                className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
+                title="全屏查看（折叠侧边栏）"
+              >
+                <Maximize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </button>
+            )}
+          </div>
+        </div>
         <main className="flex-1 p-5 lg:p-6">{children}</main>
       </SidebarInset>
     </>

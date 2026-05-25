@@ -97,6 +97,7 @@ export const quotations = mysqlTable("quotations", {
   customerContact: varchar("customerContact", { length: 128 }),
   customerPhone: varchar("customerPhone", { length: 64 }),
   customerEmail: varchar("customerEmail", { length: 320 }),
+  industry: varchar("industry", { length: 128 }),
   projectName: varchar("projectName", { length: 256 }),
   status: mysqlEnum("status", ["draft", "submitted", "approved", "sent", "completed", "cancelled"]).default("draft").notNull(),
   discountRate: decimal("discountRate", { precision: 5, scale: 2 }).default("0"),
