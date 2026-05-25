@@ -29,6 +29,13 @@
       "when": 1779283375847,
       "tag": "0003_steady_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1779689928690,
+      "tag": "0004_lowly_skin",
+      "breakpoints": true
     }
   ]
 }
