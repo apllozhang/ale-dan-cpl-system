@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -37,6 +38,12 @@ const STATUS_ICONS: Record<string, any> = {
   completed: CheckCircle2,
   cancelled: XCircle,
 };
+
+const INDUSTRY_OPTIONS = [
+  "教育", "酒店", "SMB中小企业", "企业", "医疗/康养",
+  "制造业", "交通", "能源", "运营商", "政府",
+  "公共事业", "渠道分销", "其它",
+];
 
 // Column definitions for resizable quotation table
 const Q_COLS = [
@@ -172,9 +179,9 @@ export default function QuotationDetail() {
 
   // Form state
   const [customerName, setCustomerName] = useState("");
-  const [customerContact, setCustomerContact] = useState("");
+  const [salesContact, setSalesContact] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
+  const [industry, setIndustry] = useState("");
   const [projectName, setProjectName] = useState("");
   const [discountRate, setDiscountRate] = useState(0);
   const [notes, setNotes] = useState("");
@@ -193,9 +200,9 @@ export default function QuotationDetail() {
     if (quotationQuery.data) {
       const q = quotationQuery.data;
       setCustomerName(q.customerName || "");
-      setCustomerContact(q.customerContact || "");
+      setSalesContact(q.customerContact || "");
       setCustomerPhone(q.customerPhone || "");
-      setCustomerEmail(q.customerEmail || "");
+      setIndustry(q.industry || "");
       setProjectName(q.projectName || "");
       setDiscountRate(Number(q.discountRate) || 0);
       setNotes(q.notes || "");
@@ -265,6 +272,14 @@ export default function QuotationDetail() {
       toast.error("请输入客户名称");
       return;
     }
+    if (!projectName.trim()) {
+      toast.error("请输入项目名称");
+      return;
+    }
+    if (!salesContact.trim()) {
+      toast.error("请输入销售联系人");
+      return;
+    }
     if (items.length === 0) {
       toast.error("请添加至少一个产品");
       return;
@@ -272,10 +287,10 @@ export default function QuotationDetail() {
 
     const payload = {
       customerName: customerName.trim(),
-      customerContact: customerContact.trim() || undefined,
+      customerContact: salesContact.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
-      customerEmail: customerEmail.trim() || undefined,
-      projectName: projectName.trim() || undefined,
+      industry: industry || undefined,
+      projectName: projectName.trim(),
       discountRate,
       notes: notes.trim() || undefined,
       validUntil: validUntil || undefined,
@@ -425,28 +440,37 @@ export default function QuotationDetail() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">客户名称 *</Label>
+                <Label className="text-xs">客户名称 <span className="text-destructive">*</span></Label>
                 <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="请输入客户名称" className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">联系人</Label>
-                <Input value={customerContact} onChange={e => setCustomerContact(e.target.value)} placeholder="可选" className="h-9 text-sm" />
+                <Label className="text-xs">项目名称 <span className="text-destructive">*</span></Label>
+                <Input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="请输入项目名称" className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">电话</Label>
-                <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="可选" className="h-9 text-sm" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">邮箱</Label>
-                <Input value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="可选" className="h-9 text-sm" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">项目名称</Label>
-                <Input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="可选" className="h-9 text-sm" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">有效期</Label>
+                <Label className="text-xs">报价有效期</Label>
                 <Input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="h-9 text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">销售联系人 <span className="text-destructive">*</span></Label>
+                <Input value={salesContact} onChange={e => setSalesContact(e.target.value)} placeholder="请输入销售联系人" className="h-9 text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">行业</Label>
+                <Select value={industry} onValueChange={setIndustry}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="请选择行业" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INDUSTRY_OPTIONS.map(opt => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">联系电话</Label>
+                <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="可选" className="h-9 text-sm" />
               </div>
             </div>
           </CardContent>
