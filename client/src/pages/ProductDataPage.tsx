@@ -768,7 +768,7 @@ export default function ProductDataPage() {
                       key={product.id}
                       onClick={() => setSelectedRowId(selectedRowId === product.id ? null : product.id)}
                       className={`group cursor-pointer border-b border-border/50 last:border-b-0 transition-colors ${
-                        selectedRowId === product.id
+                        selectedRows.has(product.id.toString())
                           ? 'bg-primary/15 hover:bg-primary/20'
                           : 'hover:bg-accent/30'
                       }`}
