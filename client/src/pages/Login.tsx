@@ -169,41 +169,46 @@ export default function Login() {
         {/* Right login panel */}
         <div className="w-full lg:w-[480px] xl:w-[520px] flex items-center justify-center p-6 sm:p-12">
           <div className="w-full max-w-[380px]">
-            {/* Glassmorphism card */}
-            <div className="bg-white/[0.07] backdrop-blur-xl border border-white/[0.12] rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/20">
+            {/* White card with purple border - Scheme 1 */}
+            <div className="relative bg-white rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 border-2 border-transparent bg-clip-padding"
+              style={{
+                backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #a78bfa, #8b5cf6, #7c3aed)',
+                backgroundOrigin: 'border-box',
+                backgroundClip: 'padding-box, border-box',
+              }}>
               {/* Mobile logo */}
               <div className="lg:hidden mb-8 text-center">
                 <div className="inline-flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center">
-                    <span className="text-white font-bold text-xs">D</span>
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 border border-purple-300 flex items-center justify-center">
+                    <span className="text-purple-600 font-bold text-xs">D</span>
                   </div>
-                  <span className="text-white/90 font-medium">DAN CPL</span>
+                  <span className="text-gray-900 font-medium">DAN CPL</span>
                 </div>
               </div>
 
               <div className="space-y-1 mb-8">
-                <h2 className="text-2xl font-semibold text-white tracking-tight">
+                <h2 className="text-2xl font-semibold text-gray-900 tracking-tight">
                   欢迎登录
                 </h2>
-                <p className="text-sm text-white/50">
+                <p className="text-sm text-gray-500">
                   请输入您的账号信息以访问系统
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium text-white/70">
+                  <Label htmlFor="username" className="text-sm font-medium text-gray-700">
                     用户名
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       id="username"
                       type="text"
                       placeholder="请输入用户名"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="pl-11 h-12 bg-white/[0.06] border-white/[0.12] text-white placeholder:text-white/30 rounded-xl focus:bg-white/[0.1] focus:border-white/25 transition-all"
+                      className="pl-11 h-12 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                       autoComplete="username"
                       autoFocus
                     />
@@ -211,32 +216,32 @@ export default function Login() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-white/70">
+                  <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                     密码
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       id="password"
                       type="password"
                       placeholder="请输入密码"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-11 h-12 bg-white/[0.06] border-white/[0.12] text-white placeholder:text-white/30 rounded-xl focus:bg-white/[0.1] focus:border-white/25 transition-all"
+                      className="pl-11 h-12 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                       autoComplete="current-password"
                     />
                   </div>
                 </div>
 
                 {error && (
-                  <div className="text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                  <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
                     {error}
                   </div>
                 )}
 
                 <Button
                   type="submit"
-                  className="w-full h-12 text-sm font-medium rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-0 shadow-lg shadow-purple-900/30 transition-all active:scale-[0.98]"
+                  className="w-full h-12 text-sm font-medium rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-purple-900/30 transition-all active:scale-[0.98]"
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? (
@@ -250,8 +255,8 @@ export default function Login() {
                 </Button>
               </form>
 
-              <div className="mt-8 pt-6 border-t border-white/[0.08]">
-                <p className="text-xs text-white/30 text-center">
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <p className="text-xs text-gray-400 text-center">
                   DAN CPL 系统 · 仅限授权用户访问
                 </p>
               </div>
