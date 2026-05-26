@@ -1,12 +1,13 @@
 import * as XLSX from "xlsx";
+import { toast } from "sonner";
 
-export function exportQuotationToExcel(quotation: any, items: any[]) {
+export async function exportQuotationToExcel(quotation: any, items: any[]) {
   const wb = XLSX.utils.book_new();
 
   const rows: any[][] = [];
 
   // Title
-  rows.push(["ALE 报价单"]);
+  rows.push(["DAN 报价单"]);
   rows.push([]);
   rows.push(["报价编号", quotation.quotationNo || "", "", "客户名称", quotation.customerName || ""]);
   rows.push(["项目名称", quotation.projectName || "", "", "联系人", quotation.customerContact || ""]);
@@ -67,5 +68,37 @@ export function exportQuotationToExcel(quotation: any, items: any[]) {
   XLSX.utils.book_append_sheet(wb, ws, "报价单");
 
   const dateStr = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `报价单_${quotation.quotationNo || "new"}_${dateStr}.xlsx`);
+  const fileName = `报价单_${quotation.quotationNo || "new"}_${dateStr}.xlsx`;
+
+  // Try to use File System Access API if available (Chrome, Edge)
+  if ("showSaveFilePicker" in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: fileName,
+        types: [
+          {
+            description: "Excel Files",
+            accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] },
+          },
+        ],
+      });
+
+      const writable = await handle.createWritable();
+      const blob = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      await writable.write(blob);
+      await writable.close();
+
+      toast.success("报价单已保存");
+      return;
+    } catch (err: any) {
+      // User cancelled or error occurred, fall back to direct download
+      if (err.name !== "AbortError") {
+        console.error("File save error:", err);
+      }
+    }
+  }
+
+  // Fallback: Direct download (for browsers that don't support File System Access API)
+  XLSX.writeFile(wb, fileName);
+  toast.success("报价单已下载");
 }

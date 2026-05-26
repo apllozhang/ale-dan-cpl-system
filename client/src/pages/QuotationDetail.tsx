@@ -333,9 +333,9 @@ export default function QuotationDetail() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!quotationQuery.data) return;
-    exportQuotationToExcel(quotationQuery.data, items);
+    await exportQuotationToExcel(quotationQuery.data, items);
   };
 
   const handleShare = async () => {
@@ -426,7 +426,7 @@ export default function QuotationDetail() {
           <Button size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
             <Save className="w-4 h-4 mr-1" />
-            {isNew ? "创建" : "保存"}
+            保存
           </Button>
         </div>
       </div>
