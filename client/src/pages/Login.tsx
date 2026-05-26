@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Lock, User, Loader2 } from "lucide-react";
 
@@ -18,8 +18,30 @@ function FullScreenCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nextIndex, setNextIndex] = useState(1);
   const [transitioning, setTransitioning] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState<boolean[]>([false, false, false, false]);
+
+  // Preload images progressively: first image immediately, others after first loads
+  useEffect(() => {
+    // Load first image immediately
+    const firstImg = new Image();
+    firstImg.onload = () => {
+      setImagesLoaded(prev => { const n = [...prev]; n[0] = true; return n; });
+      // After first image loads, preload the rest
+      CAROUSEL_IMAGES.slice(1).forEach((src, i) => {
+        const img = new Image();
+        img.onload = () => {
+          setImagesLoaded(prev => { const n = [...prev]; n[i + 1] = true; return n; });
+        };
+        img.src = src;
+      });
+    };
+    firstImg.src = CAROUSEL_IMAGES[0];
+  }, []);
 
   useEffect(() => {
+    // Only start carousel after first image is loaded
+    if (!imagesLoaded[0]) return;
+
     const timer = setInterval(() => {
       setTransitioning(true);
       const next = (currentIndex + 1) % CAROUSEL_IMAGES.length;
@@ -32,23 +54,28 @@ function FullScreenCarousel() {
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [currentIndex]);
+  }, [currentIndex, imagesLoaded]);
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Current image */}
+      {/* Fallback gradient background (shows while images load) */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#1a0533] via-[#2d1b4e] to-[#0f1b3d]" />
+
+      {/* Current image - only show when loaded */}
       <div
-        className="absolute inset-0 bg-cover bg-center transition-transform duration-[8000ms] ease-linear"
+        className={`absolute inset-0 bg-cover bg-center transition-all duration-[1500ms] ${
+          imagesLoaded[currentIndex] ? "opacity-100" : "opacity-0"
+        }`}
         style={{
           backgroundImage: `url(${CAROUSEL_IMAGES[currentIndex]})`,
-          transform: "scale(1.05)",
+          transform: "scale(1.03)",
         }}
       />
       
       {/* Next image (fades in during transition) */}
       <div
-        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1200 ${
-          transitioning ? "opacity-100" : "opacity-0"
+        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-[1200ms] ${
+          transitioning && imagesLoaded[nextIndex] ? "opacity-100" : "opacity-0"
         }`}
         style={{
           backgroundImage: `url(${CAROUSEL_IMAGES[nextIndex]})`,
@@ -59,7 +86,7 @@ function FullScreenCarousel() {
       <div className="absolute inset-0 bg-gradient-to-r from-[#1a0533]/85 via-[#1a0533]/50 to-[#1a0533]/30" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0d001a]/60 via-transparent to-[#1a0533]/40" />
       
-      {/* Subtle animated grain texture */}
+      {/* Subtle grain texture */}
       <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
 
       {/* Carousel indicators */}
@@ -118,7 +145,7 @@ export default function Login() {
             <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
               <span className="text-white font-bold text-sm">D</span>
             </div>
-            <span className="text-white/90 text-lg font-medium tracking-wider">Digital Age Network</span>
+            <span className="text-white/90 text-lg font-medium tracking-wider">Digital Age Networking</span>
           </div>
 
           {/* Center - Main headline */}
@@ -135,7 +162,7 @@ export default function Login() {
 
           {/* Bottom - Copyright */}
           <div className="text-white/30 text-sm">
-            &copy; {new Date().getFullYear()} Digital Age Network
+            &copy; {new Date().getFullYear()} Digital Age Networking
           </div>
         </div>
 
