@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Lock, User, Shield, Loader2, RefreshCw } from "lucide-react";
+import { Lock, User, Shield, Loader2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 
 function randomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -134,6 +134,101 @@ function CaptchaImage({ chars, width, height, onRefresh }: {
   );
 }
 
+// ==================== Image Carousel ====================
+function ImageCarousel() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoPlay, setIsAutoPlay] = useState(true);
+  
+  const images = [
+    "/manus-storage/image102_9ac478c6.png",
+    "/manus-storage/image12_9242e19b.png",
+    "/manus-storage/image21_3b5a74fc.png",
+    "/manus-storage/image20_7c78e030.png",
+    "/manus-storage/image16_a648fc49.jpeg",
+    "/manus-storage/image110_1d47266b.jpeg",
+  ];
+
+  useEffect(() => {
+    if (!isAutoPlay) return;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [isAutoPlay, images.length]);
+
+  const handlePrev = () => {
+    setIsAutoPlay(false);
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const handleNext = () => {
+    setIsAutoPlay(false);
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const handleDotClick = (index: number) => {
+    setIsAutoPlay(false);
+    setCurrentIndex(index);
+  };
+
+  return (
+    <div className="relative w-full h-full overflow-hidden bg-gray-900">
+      {/* Carousel container */}
+      <div className="relative w-full h-full">
+        {images.map((img, idx) => (
+          <div
+            key={idx}
+            className={`absolute inset-0 transition-opacity duration-1000 ${
+              idx === currentIndex ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <img
+              src={img}
+              alt={`Slide ${idx + 1}`}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/40 pointer-events-none" />
+
+      {/* Navigation arrows */}
+      <button
+        onClick={handlePrev}
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all"
+        aria-label="Previous slide"
+      >
+        <ChevronLeft className="w-6 h-6" />
+      </button>
+      <button
+        onClick={handleNext}
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all"
+        aria-label="Next slide"
+      >
+        <ChevronRight className="w-6 h-6" />
+      </button>
+
+      {/* Dot indicators */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+        {images.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => handleDotClick(idx)}
+            className={`w-2 h-2 rounded-full transition-all ${
+              idx === currentIndex
+                ? "bg-white w-8"
+                : "bg-white/50 hover:bg-white/70"
+            }`}
+            aria-label={`Go to slide ${idx + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -183,36 +278,30 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel - decorative */}
-      <div className="hidden lg:flex lg:w-[480px] xl:w-[560px] relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, oklch(0.35 0.18 280) 0%, oklch(0.45 0.20 290) 50%, oklch(0.40 0.16 270) 100%)",
-        }}
-      >
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-10 w-64 h-64 rounded-full border border-white/30" />
-          <div className="absolute bottom-32 right-8 w-48 h-48 rounded-full border border-white/20" />
-          <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full border border-white/15" />
-        </div>
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
+      {/* Left panel - carousel */}
+      <div className="hidden lg:flex lg:w-[480px] xl:w-[560px] relative overflow-hidden">
+        <ImageCarousel />
+        
+        {/* Content overlay on carousel */}
+        <div className="absolute inset-0 flex flex-col justify-between p-12 text-white z-10">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center">
                 <Shield className="w-5 h-5" />
               </div>
-              <span className="text-lg font-semibold tracking-wide opacity-90">ALE</span>
+              <span className="text-lg font-semibold tracking-wide opacity-90">DAN</span>
             </div>
           </div>
           <div className="space-y-6">
-            <h1 className="text-4xl font-bold leading-tight tracking-tight">
+            <h1 className="text-4xl font-bold leading-tight tracking-tight drop-shadow-lg">
               DAN CPL<br />管理系统
             </h1>
-            <p className="text-base text-white/70 leading-relaxed max-w-sm">
-              Alcatel-Lucent Enterprise 产品价格表管理平台，提供数据查询、筛选与导入功能。
+            <p className="text-base text-white/80 leading-relaxed max-w-sm drop-shadow-md">
+              DAN 产品价格表管理平台，提供数据查询、筛选与导入功能。
             </p>
           </div>
-          <div className="text-xs text-white/40">
-            &copy; {new Date().getFullYear()} Alcatel-Lucent Enterprise
+          <div className="text-xs text-white/60 drop-shadow-md">
+            &copy; {new Date().getFullYear()} Digital Age Network
           </div>
         </div>
       </div>
@@ -226,7 +315,7 @@ export default function Login() {
               <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
                 <Shield className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-semibold text-foreground">ALE</span>
+              <span className="text-lg font-semibold text-foreground">DAN</span>
             </div>
             <h1 className="text-2xl font-bold text-foreground">DAN CPL 管理系统</h1>
           </div>
@@ -337,7 +426,7 @@ export default function Login() {
 
           <div className="mt-8 pt-6 border-t border-border/40">
             <p className="text-xs text-muted-foreground text-center">
-              ALE DAN CPL 系统 · 仅限授权用户访问
+              DAN CPL 系统 · 仅限授权用户访问
             </p>
           </div>
         </div>
