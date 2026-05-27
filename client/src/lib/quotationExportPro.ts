@@ -7,110 +7,72 @@ import { toast } from "sonner";
 export async function exportQuotationToExcelPro(quotation: any, items: any[]) {
   const wb = XLSX.utils.book_new();
 
-  // Create worksheet with proper initialization
-  const ws: any = {};
-
-  // Set column widths (in characters)
-  ws["!cols"] = [
-    { wch: 3 },    // A - 序号
-    { wch: 20 },   // B - 产品型号
-    { wch: 45 },   // C - 产品说明
-    { wch: 15 },   // D - 单价(¥)
-    { wch: 8 },    // E - 数量
-    { wch: 12 },   // F - 折扣率(%)
-    { wch: 15 },   // G - 小计(¥)
-    { wch: 15 },   // H - 媒体价(¥)
-  ];
-
-  // Set default row height
-  const rows: any[] = [];
-  const merges: any[] = [];
-
-  let rowIndex = 0;
+  // Build data array for AOA (Array of Arrays)
+  const rows: any[][] = [];
 
   // Row 1-2: Empty rows for logo space
-  ws[`A${rowIndex + 1}`] = { t: "s", v: "" };
-  ws[`A${rowIndex + 2}`] = { t: "s", v: "" };
-  rowIndex += 2;
+  rows.push([]);
+  rows.push([]);
 
   // Row 3: Title - 报价单
-  const titleCell = `A${rowIndex + 1}`;
-  ws[titleCell] = { t: "s", v: "DAN 产品报价单" };
-  merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 7 } });
-  
-  // Format title cell
-  ws[titleCell].s = {
-    font: { name: "黑体", sz: 20, bold: true, color: { rgb: "FF1F1F1F" } },
-    alignment: { horizontal: "left", vertical: "center", wrapText: true },
-    fill: { fgColor: { rgb: "FFFFFFFF" } },
-  };
-  rows[rowIndex] = { hpx: 40 };
-  rowIndex++;
+  rows.push(["DAN 产品报价单"]);
 
   // Row 4: Empty
-  rowIndex++;
+  rows.push([]);
 
   // Row 5: Customer Info Header
-  const infoHeaderRow = rowIndex;
-  ws[`A${rowIndex + 1}`] = { t: "s", v: "客户信息", s: { font: { name: "黑体", sz: 11, bold: true } } };
-  rows[rowIndex] = { hpx: 22 };
-  rowIndex++;
+  rows.push(["客户信息"]);
 
   // Row 6: Customer Details - Line 1
-  const details1Row = rowIndex;
-  ws[`A${rowIndex + 1}`] = { t: "s", v: "报价编号" };
-  ws[`B${rowIndex + 1}`] = { t: "s", v: quotation.quotationNo || "" };
-  ws[`D${rowIndex + 1}`] = { t: "s", v: "客户名称" };
-  ws[`E${rowIndex + 1}`] = { t: "s", v: quotation.customerName || "" };
-  rows[rowIndex] = { hpx: 22 };
-  rowIndex++;
+  rows.push([
+    "报价编号",
+    quotation.quotationNo || "",
+    "",
+    "客户名称",
+    quotation.customerName || "",
+  ]);
 
   // Row 7: Customer Details - Line 2
-  ws[`A${rowIndex + 1}`] = { t: "s", v: "项目名称" };
-  ws[`B${rowIndex + 1}`] = { t: "s", v: quotation.projectName || "" };
-  ws[`D${rowIndex + 1}`] = { t: "s", v: "联系人" };
-  ws[`E${rowIndex + 1}`] = { t: "s", v: quotation.customerContact || "" };
-  rows[rowIndex] = { hpx: 22 };
-  rowIndex++;
+  rows.push([
+    "项目名称",
+    quotation.projectName || "",
+    "",
+    "联系人",
+    quotation.customerContact || "",
+  ]);
 
   // Row 8: Customer Details - Line 3
-  ws[`A${rowIndex + 1}`] = { t: "s", v: "电话" };
-  ws[`B${rowIndex + 1}`] = { t: "s", v: quotation.customerPhone || "" };
-  ws[`D${rowIndex + 1}`] = { t: "s", v: "邮箱" };
-  ws[`E${rowIndex + 1}`] = { t: "s", v: quotation.customerEmail || "" };
-  rows[rowIndex] = { hpx: 22 };
-  rowIndex++;
+  rows.push([
+    "电话",
+    quotation.customerPhone || "",
+    "",
+    "邮箱",
+    quotation.customerEmail || "",
+  ]);
 
   // Row 9: Customer Details - Line 4
-  ws[`A${rowIndex + 1}`] = { t: "s", v: "创建日期" };
-  ws[`B${rowIndex + 1}`] = { t: "s", v: quotation.createdAt ? new Date(quotation.createdAt).toLocaleDateString("zh-CN") : "" };
-  ws[`D${rowIndex + 1}`] = { t: "s", v: "有效期" };
-  ws[`E${rowIndex + 1}`] = { t: "s", v: quotation.validUntil ? new Date(quotation.validUntil).toLocaleDateString("zh-CN") : "" };
-  rows[rowIndex] = { hpx: 22 };
-  rowIndex++;
+  rows.push([
+    "创建日期",
+    quotation.createdAt ? new Date(quotation.createdAt).toLocaleDateString("zh-CN") : "",
+    "",
+    "有效期",
+    quotation.validUntil ? new Date(quotation.validUntil).toLocaleDateString("zh-CN") : "",
+  ]);
 
   // Row 10: Empty
-  rowIndex++;
+  rows.push([]);
 
   // Row 11: Product Details Header
-  const headerRow = rowIndex;
-  const headers = ["序号", "产品型号", "产品说明", "单价(¥)", "数量", "折扣率(%)", "小计(¥)", "媒体价(¥)"];
-  headers.forEach((header, colIndex) => {
-    const cellRef = XLSX.utils.encode_col(colIndex) + (rowIndex + 1);
-    ws[cellRef] = { t: "s", v: header };
-    ws[cellRef].s = {
-      font: { name: "黑体", sz: 11, bold: true, color: { rgb: "FFFFFFFF" } },
-      alignment: { horizontal: "center", vertical: "center" },
-      fill: { fgColor: { rgb: "FF7C3AED" } }, // Purple background
-      border: {
-        top: { style: "thin", color: { rgb: "FF7C3AED" } },
-        bottom: { style: "thin", color: { rgb: "FF7C3AED" } },
-        left: { style: "thin", color: { rgb: "FF7C3AED" } },
-        right: { style: "thin", color: { rgb: "FF7C3AED" } },
-      },
-    };
-  });  rows[headerRow] = { hpx: 40 };
-  rowIndex++;
+  rows.push([
+    "序号",
+    "产品型号",
+    "产品说明",
+    "单价(¥)",
+    "数量",
+    "折扣率(%)",
+    "小计(¥)",
+    "媒体价(¥)",
+  ]);
 
   // Rows 12+: Product items
   let total = 0;
@@ -122,8 +84,7 @@ export async function exportQuotationToExcelPro(quotation: any, items: any[]) {
     const subtotal = unitPrice * qty;
     total += subtotal;
 
-    const dataRow = rowIndex;
-    const rowData = [
+    rows.push([
       idx + 1,
       item.productModel || "",
       item.productDesc || "",
@@ -132,86 +93,144 @@ export async function exportQuotationToExcelPro(quotation: any, items: any[]) {
       discount,
       subtotal.toFixed(2),
       listPrice ? listPrice.toFixed(2) : "",
-    ];
-
-    rowData.forEach((value, colIndex) => {
-      const cellRef = XLSX.utils.encode_col(colIndex) + (rowIndex + 1);
-      const isNumericCol = colIndex >= 3; // Columns D onwards are numeric
-
-      ws[cellRef] = {
-        t: isNumericCol ? "n" : "s",
-        v: value,
-      };
-
-      // Apply cell styling
-      ws[cellRef].s = {
-        font: { name: colIndex >= 3 ? "Trebuchet MS" : "黑体", sz: 10 },
-        alignment: {
-          horizontal: isNumericCol ? "right" : "left",
-          vertical: "center",
-          wrapText: colIndex === 2, // Wrap text in product description
-        },
-        border: {
-          top: { style: "thin", color: { rgb: "FFE0E0E0" } },
-          bottom: { style: "thin", color: { rgb: "FFE0E0E0" } },
-          left: { style: "thin", color: { rgb: "FFE0E0E0" } },
-          right: { style: "thin", color: { rgb: "FFE0E0E0" } },
-        },
-        fill: idx % 2 === 0 ? { fgColor: { rgb: "FFFAFAFA" } } : { fgColor: { rgb: "FFFFFFFF" } },
-      };
-    });
-
-    rows[rowIndex] = { hpx: 22 };
-    rowIndex++;
+    ]);
   });
 
   // Empty row before total
-  rowIndex++;
+  rows.push([]);
 
   // Total row
-  ws[`A${rowIndex + 1}`] = { t: "s", v: "合计" };
-  ws[`G${rowIndex + 1}`] = { t: "n", v: total.toFixed(2) };
-  
-  // Format total cells
-  ["A", "G"].forEach((col) => {
-    const cellRef = col + (rowIndex + 1);
-    ws[cellRef].s = {
-      font: { name: col === "G" ? "Trebuchet MS" : "黑体", sz: 11, bold: true, color: { rgb: "FF1F1F1F" } },
-      alignment: { horizontal: col === "G" ? "right" : "left", vertical: "center" },
+  rows.push([
+    "合计",
+    "",
+    "",
+    "",
+    "",
+    "",
+    total.toFixed(2),
+    "",
+  ]);
+
+  // Empty row
+  rows.push([]);
+
+  // Notes section (if exists)
+  if (quotation.notes) {
+    rows.push(["备注", quotation.notes]);
+  }
+
+  // Create worksheet from AOA (this ensures !ref is set correctly)
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Set column widths
+  ws["!cols"] = [
+    { wch: 3 },    // A - 序号
+    { wch: 20 },   // B - 产品型号
+    { wch: 45 },   // C - 产品说明
+    { wch: 15 },   // D - 单价(¥)
+    { wch: 8 },    // E - 数量
+    { wch: 12 },   // F - 折扣率(%)
+    { wch: 15 },   // G - 小计(¥)
+    { wch: 15 },   // H - 媒体价(¥)
+  ];
+
+  // Apply formatting to specific cells
+  // Title row (row 3)
+  const titleCell = ws["A3"];
+  if (titleCell) {
+    titleCell.s = {
+      font: { name: "黑体", sz: 20, bold: true, color: { rgb: "FF1F1F1F" } },
+      alignment: { horizontal: "left", vertical: "center", wrapText: true },
+    };
+  }
+
+  // Customer Info Header (row 5)
+  const infoHeaderCell = ws["A5"];
+  if (infoHeaderCell) {
+    infoHeaderCell.s = {
+      font: { name: "黑体", sz: 11, bold: true },
+      alignment: { horizontal: "left", vertical: "center" },
+    };
+  }
+
+  // Product header row (row 11)
+  const headerRowStart = 11;
+  for (let col = 0; col < 8; col++) {
+    const cellRef = XLSX.utils.encode_col(col) + headerRowStart;
+    const cell = ws[cellRef];
+    if (cell) {
+      cell.s = {
+        font: { name: "黑体", sz: 11, bold: true, color: { rgb: "FFFFFFFF" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        fill: { fgColor: { rgb: "FF7C3AED" } }, // Purple background
+        border: {
+          top: { style: "thin", color: { rgb: "FF7C3AED" } },
+          bottom: { style: "thin", color: { rgb: "FF7C3AED" } },
+          left: { style: "thin", color: { rgb: "FF7C3AED" } },
+          right: { style: "thin", color: { rgb: "FF7C3AED" } },
+        },
+      };
+    }
+  }
+
+  // Product data rows (rows 12 to 12+items.length-1)
+  const dataRowStart = 12;
+  items.forEach((item, idx) => {
+    const rowNum = dataRowStart + idx;
+    for (let col = 0; col < 8; col++) {
+      const cellRef = XLSX.utils.encode_col(col) + rowNum;
+      const cell = ws[cellRef];
+      if (cell) {
+        const isNumericCol = col >= 3;
+        cell.s = {
+          font: { name: col >= 3 ? "Trebuchet MS" : "黑体", sz: 10 },
+          alignment: {
+            horizontal: isNumericCol ? "right" : "left",
+            vertical: "center",
+            wrapText: col === 2,
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "FFE0E0E0" } },
+            bottom: { style: "thin", color: { rgb: "FFE0E0E0" } },
+            left: { style: "thin", color: { rgb: "FFE0E0E0" } },
+            right: { style: "thin", color: { rgb: "FFE0E0E0" } },
+          },
+          fill: idx % 2 === 0 ? { fgColor: { rgb: "FFFAFAFA" } } : { fgColor: { rgb: "FFFFFFFF" } },
+        };
+      }
+    }
+  });
+
+  // Total row formatting
+  const totalRowNum = dataRowStart + items.length + 1;
+  const totalCell = ws[`A${totalRowNum}`];
+  const totalValueCell = ws[`G${totalRowNum}`];
+  if (totalCell) {
+    totalCell.s = {
+      font: { name: "黑体", sz: 11, bold: true, color: { rgb: "FF1F1F1F" } },
+      alignment: { horizontal: "left", vertical: "center" },
       fill: { fgColor: { rgb: "FFECFDF5" } },
       border: {
         top: { style: "medium", color: { rgb: "FF7C3AED" } },
         bottom: { style: "medium", color: { rgb: "FF7C3AED" } },
       },
-      numFmt: col === "G" ? "¥#,##0.00" : undefined,
     };
-  });
-
-  rows[rowIndex] = { hpx: 28 };
-  rowIndex++;
-
-  // Empty row
-  rowIndex++;
-
-  // Notes section (if exists)
-  if (quotation.notes) {
-    ws[`A${rowIndex + 1}`] = { t: "s", v: "备注" };
-    ws[`B${rowIndex + 1}`] = { t: "s", v: quotation.notes };
-    merges.push({ s: { r: rowIndex, c: 1 }, e: { r: rowIndex, c: 7 } });
-    ws[`B${rowIndex + 1}`].s = {
-      font: { name: "黑体", sz: 10 },
-      alignment: { horizontal: "left", vertical: "top", wrapText: true },
+  }
+  if (totalValueCell) {
+    totalValueCell.s = {
+      font: { name: "Trebuchet MS", sz: 11, bold: true, color: { rgb: "FF1F1F1F" } },
+      alignment: { horizontal: "right", vertical: "center" },
+      fill: { fgColor: { rgb: "FFECFDF5" } },
+      border: {
+        top: { style: "medium", color: { rgb: "FF7C3AED" } },
+        bottom: { style: "medium", color: { rgb: "FF7C3AED" } },
+      },
+      numFmt: "¥#,##0.00",
     };
-    rows[rowIndex] = { hpx: 22 };
-    rowIndex++;
   }
 
-  // Apply rows and merges
-  ws["!rows"] = rows;
-  ws["!merges"] = merges;
-
-  // Freeze panes (freeze header row)
-  ws["!freeze"] = { xSplit: 0, ySplit: 11 }; // Freeze rows 1-11
+  // Freeze panes
+  ws["!freeze"] = { xSplit: 0, ySplit: 11 };
 
   XLSX.utils.book_append_sheet(wb, ws, "报价单");
 
