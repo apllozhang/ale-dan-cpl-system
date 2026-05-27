@@ -7,8 +7,8 @@ import { toast } from "sonner";
 export async function exportQuotationToExcelPro(quotation: any, items: any[]) {
   const wb = XLSX.utils.book_new();
 
-  // Create worksheet
-  const ws = XLSX.utils.aoa_to_sheet([]);
+  // Create worksheet with proper initialization
+  const ws: any = {};
 
   // Set column widths (in characters)
   ws["!cols"] = [
@@ -24,6 +24,7 @@ export async function exportQuotationToExcelPro(quotation: any, items: any[]) {
 
   // Set default row height
   const rows: any[] = [];
+  const merges: any[] = [];
 
   let rowIndex = 0;
 
@@ -35,7 +36,6 @@ export async function exportQuotationToExcelPro(quotation: any, items: any[]) {
   // Row 3: Title - 报价单
   const titleCell = `A${rowIndex + 1}`;
   ws[titleCell] = { t: "s", v: "DAN 产品报价单" };
-  const merges: any[] = [];
   merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 7 } });
   
   // Format title cell
@@ -100,13 +100,13 @@ export async function exportQuotationToExcelPro(quotation: any, items: any[]) {
     ws[cellRef] = { t: "s", v: header };
     ws[cellRef].s = {
       font: { name: "黑体", sz: 11, bold: true, color: { rgb: "FFFFFFFF" } },
-      fill: { fgColor: { rgb: "FF6B5CF6" } }, // Purple header
-      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      alignment: { horizontal: "center", vertical: "center" },
+      fill: { fgColor: { rgb: "FF7C3AED" } }, // Purple background
       border: {
-        top: { style: "thin", color: { rgb: "FFE0E0E0" } },
-        bottom: { style: "thin", color: { rgb: "FFE0E0E0" } },
-        left: { style: "thin", color: { rgb: "FFE0E0E0" } },
-        right: { style: "thin", color: { rgb: "FFE0E0E0" } },
+        top: { style: "thin", color: { rgb: "FF7C3AED" } },
+        bottom: { style: "thin", color: { rgb: "FF7C3AED" } },
+        left: { style: "thin", color: { rgb: "FF7C3AED" } },
+        right: { style: "thin", color: { rgb: "FF7C3AED" } },
       },
     };
   });  rows[headerRow] = { hpx: 40 };
@@ -169,28 +169,21 @@ export async function exportQuotationToExcelPro(quotation: any, items: any[]) {
   rowIndex++;
 
   // Total row
-  const totalRow = rowIndex;
-  ws[`F${rowIndex + 1}`] = { t: "s", v: "合计：" };
-  ws[`G${rowIndex + 1}`] = { t: "n", v: total };
-  ws[`H${rowIndex + 1}`] = { t: "s", v: "" };
-
-  // Format total row
-  [
-    { col: "F", val: "合计：" },
-    { col: "G", val: total },
-  ].forEach(({ col }) => {
+  ws[`A${rowIndex + 1}`] = { t: "s", v: "合计" };
+  ws[`G${rowIndex + 1}`] = { t: "n", v: total.toFixed(2) };
+  
+  // Format total cells
+  ["A", "G"].forEach((col) => {
     const cellRef = col + (rowIndex + 1);
     ws[cellRef].s = {
-      font: { name: "黑体", sz: 11, bold: true, color: { rgb: "FF1F1F1F" } },
-      fill: { fgColor: { rgb: "FFF0F0F0" } },
-      alignment: { horizontal: col === "G" ? "right" : "right", vertical: "center" },
+      font: { name: col === "G" ? "Trebuchet MS" : "黑体", sz: 11, bold: true, color: { rgb: "FF1F1F1F" } },
+      alignment: { horizontal: col === "G" ? "right" : "left", vertical: "center" },
+      fill: { fgColor: { rgb: "FFECFDF5" } },
       border: {
-        top: { style: "medium", color: { rgb: "FF6B5CF6" } },
-        bottom: { style: "medium", color: { rgb: "FF6B5CF6" } },
-        left: { style: "thin", color: { rgb: "FFE0E0E0" } },
-        right: { style: "thin", color: { rgb: "FFE0E0E0" } },
+        top: { style: "medium", color: { rgb: "FF7C3AED" } },
+        bottom: { style: "medium", color: { rgb: "FF7C3AED" } },
       },
-      numFmt: "¥#,##0.00",
+      numFmt: col === "G" ? "¥#,##0.00" : undefined,
     };
   });
 
@@ -225,34 +218,33 @@ export async function exportQuotationToExcelPro(quotation: any, items: any[]) {
   const dateStr = new Date().toISOString().slice(0, 10);
   const fileName = `DAN_报价单_${quotation.quotationNo || "new"}_${dateStr}.xlsx`;
 
-  // Try to use File System Access API if available
-  if ("showSaveFilePicker" in window) {
-    try {
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName: fileName,
-        types: [
-          {
-            description: "Excel Files",
-            accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] },
-          },
-        ],
-      });
-
-      const writable = await handle.createWritable();
-      const blob = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      await writable.write(blob);
-      await writable.close();
-
-      toast.success("报价单已保存");
-      return;
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        console.error("File save error:", err);
+  try {
+    // Try to use File System Access API for file save dialog
+    if ("showSaveFilePicker" in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{ description: "Excel Files", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] } }],
+        });
+        const writable = await handle.createWritable();
+        const blob = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        await writable.write(new Blob([blob], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+        await writable.close();
+        toast.success("报价单已导出");
+      } catch (err: any) {
+        // User cancelled or error occurred, fallback to direct download
+        if (err.name !== "AbortError") {
+          XLSX.writeFile(wb, fileName);
+          toast.success("报价单已导出");
+        }
       }
+    } else {
+      // Fallback for browsers that don't support File System Access API
+      XLSX.writeFile(wb, fileName);
+      toast.success("报价单已导出");
     }
+  } catch (err) {
+    console.error("Export error:", err);
+    toast.error("导出失败，请重试");
   }
-
-  // Fallback: Direct download
-  XLSX.writeFile(wb, fileName);
-  toast.success("报价单已下载");
 }
