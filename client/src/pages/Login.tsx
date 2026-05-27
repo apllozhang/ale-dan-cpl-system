@@ -8,10 +8,10 @@ import { Lock, User, Loader2 } from "lucide-react";
 
 // ==================== Full-screen Immersive Carousel ====================
 const CAROUSEL_IMAGES = [
-  "/manus-storage/image16_4734f983.jpeg",  // Data center
-  "/manus-storage/image15_38a00973.jpeg",  // Network management
-  "/manus-storage/image17_5f6d8f10.jpeg",  // Office collaboration
-  "/manus-storage/image18_7be7816e.jpeg",  // Reception
+  "/carousel-1.jpg",  // Data center infrastructure
+  "/carousel-2.jpg",  // Global manufacturing & delivery
+  "/carousel-3.jpg",  // Scalable performance
+  "/carousel-4.jpg",  // Digital transformation
 ];
 
 function FullScreenCarousel() {
