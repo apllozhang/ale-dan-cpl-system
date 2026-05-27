@@ -38,6 +38,7 @@ import {
   Users,
   Activity,
   BarChart3,
+  TrendingUp,
   Sun,
   Moon,
   Globe,
@@ -56,7 +57,7 @@ gsap.registerPlugin(useGSAP);
 const menuItems = [
   { icon: LayoutDashboard, labelKey: "menu.dashboard", path: "/" },
   { icon: Database, labelKey: "menu.products", path: "/data" },
-  { icon: BarChart3, labelKey: "menu.stats", path: "/stats" },
+  { icon: TrendingUp, labelKey: "menu.stats", path: "/stats" },
   { icon: FileText, labelKey: "menu.summary", path: "/summary" },
   { icon: HardDriveUpload, labelKey: "menu.import", path: "/import", permission: PERMISSIONS.IMPORT_DATA },
   { icon: FileSpreadsheet, labelKey: "menu.quotations", path: "/quotations" },

@@ -279,6 +279,11 @@ export default function QuotationDetail() {
   const shareMutation = trpc.sharing.share.useMutation();
   const templateCreateMutation = trpc.templates.create.useMutation();
 
+  const versionsQuery = trpc.versions.list.useQuery(
+    { quotationId: quotationId! },
+    { enabled: !isNew && !!quotationId }
+  );
+
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   const handleSave = async () => {
@@ -567,6 +572,161 @@ export default function QuotationDetail() {
         discountRate={discountRate}
         existingProductIds={existingProductIds}
       />
+
+      {/* Version Timeline */}
+      {!isNew && versionsQuery.data && versionsQuery.data.length > 0 && (
+        <VersionTimeline
+          versions={versionsQuery.data}
+          quotationId={quotationId!}
+        />
+      )}
     </div>
+  );
+}
+
+// ==================== Version Timeline Component ====================
+function VersionTimeline({ versions, quotationId }: { versions: any[]; quotationId: number }) {
+  const { t } = useTranslation();
+  const [diffData, setDiffData] = useState<any>(null);
+  const [comparing, setComparing] = useState(false);
+  const [selectedFrom, setSelectedFrom] = useState<number | null>(null);
+  const [selectedTo, setSelectedTo] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  const handleCompare = async () => {
+    if (!selectedFrom || !selectedTo) return;
+    setComparing(true);
+    try {
+      const from = Math.min(selectedFrom, selectedTo);
+      const to = Math.max(selectedFrom, selectedTo);
+      const trpcUrl = `/api/trpc/versions.diff?input=${encodeURIComponent(JSON.stringify({ json: { quotationId, fromVersion: from, toVersion: to } }))}`;
+      const res = await fetch(trpcUrl);
+      const data = await res.json();
+      setDiffData(data?.result?.data?.json ?? null);
+    } catch {
+      setDiffData(null);
+    }
+    setComparing(false);
+  };
+
+  const displayed = expanded ? versions : versions.slice(0, 3);
+
+  return (
+    <Card className="border-dashed">
+      <CardHeader className="pb-2 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <svg className="w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+            版本记录 (共{versions.length}个版本)
+          </CardTitle>
+          <svg className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </CardHeader>
+      {expanded && (
+        <CardContent className="pt-0">
+          <div className="relative ml-4 pl-6 border-l-2 border-muted">
+            {displayed.map((v: any, i: number) => (
+              <div key={v.id} className="relative pb-4 last:pb-0">
+                <div className={`absolute -left-[29px] top-1 w-3 h-3 rounded-full border-2 ${i === 0 ? "bg-primary border-primary" : "bg-background border-muted-foreground/40"}`} />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">V{v.version}</span>
+                      <span className="text-xs text-muted-foreground">{v.createdAt ? new Date(v.createdAt).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</span>
+                      {v.itemCount > 0 && <span className="text-xs text-muted-foreground">{v.itemCount}项</span>}
+                      {v.totalAmount && <span className="text-xs font-medium">¥{Number(v.totalAmount).toLocaleString()}</span>}
+                    </div>
+                    {v.changeSummary && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{v.changeSummary}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <input type="radio" name="fromVersion" checked={selectedFrom === v.version}
+                      onChange={() => { setSelectedFrom(v.version); if (!selectedTo || selectedTo === v.version) setSelectedTo(null); }}
+                      className="w-3 h-3 cursor-pointer" title="起始版本" />
+                    <input type="radio" name="toVersion" checked={selectedTo === v.version}
+                      onChange={() => { setSelectedTo(v.version); if (!selectedFrom || selectedFrom === v.version) setSelectedFrom(null); }}
+                      className="w-3 h-3 cursor-pointer" title="目标版本" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {selectedFrom && selectedTo && (
+            <div className="mt-3 pt-3 border-t flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">对比 V{Math.min(selectedFrom, selectedTo)} → V{Math.max(selectedFrom, selectedTo)}</span>
+              <Button size="sm" onClick={handleCompare} disabled={comparing} className="h-7 text-xs gap-1">
+                {comparing ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                查看差异
+              </Button>
+            </div>
+          )}
+
+          {diffData && (
+            <div className="mt-3 pt-3 border-t">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">V{diffData.fromVersion} → V{diffData.toVersion} 变更明细</span>
+                <button onClick={() => setDiffData(null)} className="text-xs text-muted-foreground hover:text-foreground">关闭</button>
+              </div>
+              <div className="flex items-center gap-4 mb-2 text-xs">
+                <span>V{diffData.fromVersion}: ¥{Number(diffData.fromTotal).toLocaleString()}</span>
+                <span>→</span>
+                <span>V{diffData.toVersion}: ¥{Number(diffData.toTotal).toLocaleString()}</span>
+                {diffData.fromTotal !== diffData.toTotal && (
+                  <span className={Number(diffData.toTotal) > Number(diffData.fromTotal) ? "text-green-600" : "text-red-600"}>
+                    {Number(diffData.toTotal) > Number(diffData.fromTotal) ? "+" : ""}¥{(Number(diffData.toTotal) - Number(diffData.fromTotal)).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              <div className="overflow-auto max-h-[300px]">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="px-2 py-1.5 text-left font-semibold">状态</th>
+                      <th className="px-2 py-1.5 text-left font-semibold">产品型号</th>
+                      <th className="px-2 py-1.5 text-right font-semibold">数量</th>
+                      <th className="px-2 py-1.5 text-right font-semibold">折扣</th>
+                      <th className="px-2 py-1.5 text-right font-semibold">小计</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {diffData.items.map((item: any, i: number) => {
+                      const cs: Record<string, string> = {
+                        added: "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400",
+                        removed: "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400",
+                        modified: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
+                        unchanged: "",
+                      };
+                      const cl: Record<string, string> = { added: "新增", removed: "删除", modified: "变更", unchanged: "-" };
+                      return (
+                        <tr key={i} className={`border-b border-border/50 ${cs[item.change]}`}>
+                          <td className="px-2 py-1 font-medium">{cl[item.change]}</td>
+                          <td className="px-2 py-1">{item.productModel}</td>
+                          <td className="px-2 py-1 text-right tabular-nums">
+                            {item.before?.quantity ?? "-"}{item.change === "modified" && item.before?.quantity !== item.after?.quantity ? `→${item.after?.quantity}` : ""}
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums">
+                            {item.before?.discountRate ?? "-"}{item.change === "modified" ? `→${item.after?.discountRate ?? "-"}` : ""}
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums">
+                            {item.before?.subtotal ? `¥${Number(item.before.subtotal).toLocaleString()}` : "-"}
+                            {item.change === "modified" ? `→¥${Number(item.after?.subtotal ?? 0).toLocaleString()}` : item.after?.subtotal ? `¥${Number(item.after.subtotal).toLocaleString()}` : ""}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
   );
 }

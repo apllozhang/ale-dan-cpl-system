@@ -14,7 +14,7 @@ import QuotationList from "./pages/QuotationList";
 import QuotationDetail from "./pages/QuotationDetail";
 import UserManagement from "./pages/UserManagement";
 import ActivityLog from "./pages/ActivityLog";
-import CategoryStats from "./pages/CategoryStats";
+import BusinessAnalysis from "./pages/BusinessAnalysis";
 
 function DashboardRoutes() {
   return (
@@ -29,7 +29,7 @@ function DashboardRoutes() {
         <Route path="/quotations/:id" component={QuotationDetail} />
         <Route path="/users" component={UserManagement} />
         <Route path="/activity" component={ActivityLog} />
-        <Route path="/stats" component={CategoryStats} />
+        <Route path="/stats" component={BusinessAnalysis} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>
