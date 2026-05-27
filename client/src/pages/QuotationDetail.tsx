@@ -189,11 +189,14 @@ export default function QuotationDetail() {
   const [items, setItems] = useState<ItemRow[]>([]);
   const [productSearchOpen, setProductSearchOpen] = useState(false);
 
-  // Load existing quotation
+   // Load quotation data
   const quotationQuery = trpc.quotations.getById.useQuery(
     { id: quotationId! },
     { enabled: !!quotationId }
   );
+
+  // Export Excel mutation - moved to top level to fix Hook usage
+  const exportExcelMutation = trpc.quotations.exportExcel.useMutation();
 
   // Load quotation data
   useEffect(() => {
@@ -336,7 +339,7 @@ export default function QuotationDetail() {
   const handleExport = async () => {
     if (!quotationId) return;
     try {
-      const result = await trpc.quotations.exportExcel.useMutation().mutateAsync({ id: quotationId });
+      const result = await exportExcelMutation.mutateAsync({ id: quotationId });
       
       // Decode base64 to Blob
       const binaryString = atob(result.data);
