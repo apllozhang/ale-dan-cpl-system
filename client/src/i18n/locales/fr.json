@@ -1,0 +1,82 @@
+{
+  "menu": {
+    "dashboard": "Tableau de Bord",
+    "products": "Données Produit",
+    "stats": "Statistiques",
+    "summary": "Journal des Modifications",
+    "import": "Importation",
+    "quotations": "Devis",
+    "users": "Gestion des Utilisateurs",
+    "activity": "Journal d'Activité"
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "export": "Exporter",
+    "search": "Rechercher",
+    "loading": "Chargement...",
+    "noData": "Aucune donnée",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "submit": "Soumettre",
+    "close": "Fermer",
+    "add": "Ajouter",
+    "total": "Total",
+    "notes": "Remarques",
+    "selectAll": "Tout sélectionner",
+    "actions": "Actions",
+    "status": "Statut",
+    "date": "Date",
+    "created": "Créé",
+    "updated": "Mis à jour",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "quotation": {
+    "title": "Gestion des Devis",
+    "detail": "Détail du Devis",
+    "no": "N° de Devis",
+    "customerName": "Nom du Client",
+    "customerContact": "Contact Commercial",
+    "customerPhone": "Téléphone",
+    "industry": "Secteur",
+    "projectName": "Nom du Projet",
+    "discountRate": "Remise(%)",
+    "listPrice": "Prix Catalogue",
+    "unitPrice": "Prix Unitaire",
+    "quantity": "Quantité",
+    "subtotal": "Sous-total",
+    "totalAmount": "Montant Total",
+    "validUntil": "Valide jusqu'au",
+    "quotationDate": "Date du Devis",
+    "status": "Statut",
+    "notes": "Remarques",
+    "exportExcel": "Exporter Excel",
+    "newQuotation": "Nouveau Devis",
+    "draft": "Brouillon",
+    "submitted": "Soumis",
+    "approved": "Approuvé",
+    "sent": "Envoyé",
+    "completed": "Terminé",
+    "cancelled": "Annulé"
+  },
+  "theme": {
+    "light": "Passer en mode clair",
+    "dark": "Passer en mode sombre"
+  },
+  "lang": {
+    "label": "Langue",
+    "zh": "中文",
+    "zhTW": "繁體中文",
+    "en": "English",
+    "ja": "日本語",
+    "es": "Español",
+    "fr": "Français"
+  },
+  "user": {
+    "logout": "Déconnexion",
+    "profile": "Profil"
+  }
+}

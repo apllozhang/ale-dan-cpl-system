@@ -1,0 +1,82 @@
+{
+  "menu": {
+    "dashboard": "Panel",
+    "products": "Datos de Producto",
+    "stats": "Estadísticas",
+    "summary": "Registro de Cambios",
+    "import": "Importar Datos",
+    "quotations": "Cotizaciones",
+    "users": "Gestión de Usuarios",
+    "activity": "Registro de Actividad"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "export": "Exportar",
+    "search": "Buscar",
+    "loading": "Cargando...",
+    "noData": "Sin datos",
+    "confirm": "Confirmar",
+    "back": "Volver",
+    "submit": "Enviar",
+    "close": "Cerrar",
+    "add": "Agregar",
+    "total": "Total",
+    "notes": "Notas",
+    "selectAll": "Seleccionar todo",
+    "actions": "Acciones",
+    "status": "Estado",
+    "date": "Fecha",
+    "created": "Creado",
+    "updated": "Actualizado",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "quotation": {
+    "title": "Gestión de Cotizaciones",
+    "detail": "Detalle de Cotización",
+    "no": "Nº de Cotización",
+    "customerName": "Nombre del Cliente",
+    "customerContact": "Contacto de Ventas",
+    "customerPhone": "Teléfono",
+    "industry": "Industria",
+    "projectName": "Nombre del Proyecto",
+    "discountRate": "Descuento(%)",
+    "listPrice": "Precio Lista",
+    "unitPrice": "Precio Unitario",
+    "quantity": "Cantidad",
+    "subtotal": "Subtotal",
+    "totalAmount": "Monto Total",
+    "validUntil": "Válido Hasta",
+    "quotationDate": "Fecha de Cotización",
+    "status": "Estado",
+    "notes": "Notas",
+    "exportExcel": "Exportar Excel",
+    "newQuotation": "Nueva Cotización",
+    "draft": "Borrador",
+    "submitted": "Enviado",
+    "approved": "Aprobado",
+    "sent": "Enviado",
+    "completed": "Completado",
+    "cancelled": "Cancelado"
+  },
+  "theme": {
+    "light": "Cambiar a modo claro",
+    "dark": "Cambiar a modo oscuro"
+  },
+  "lang": {
+    "label": "Idioma",
+    "zh": "中文",
+    "zhTW": "繁體中文",
+    "en": "English",
+    "ja": "日本語",
+    "es": "Español",
+    "fr": "Français"
+  },
+  "user": {
+    "logout": "Cerrar Sesión",
+    "profile": "Perfil"
+  }
+}

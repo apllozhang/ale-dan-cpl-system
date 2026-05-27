@@ -7,6 +7,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -36,22 +40,24 @@ import {
   BarChart3,
   Sun,
   Moon,
+  Globe,
   Maximize2,
   Minimize2,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "仪表盘", path: "/" },
-  { icon: Database, label: "产品数据", path: "/data" },
-  { icon: BarChart3, label: "分类统计", path: "/stats" },
-  { icon: FileText, label: "变更记录", path: "/summary" },
-  { icon: HardDriveUpload, label: "数据导入", path: "/import", permission: PERMISSIONS.IMPORT_DATA },
-  { icon: FileSpreadsheet, label: "报价管理", path: "/quotations" },
-  { icon: Users, label: "用户管理", path: "/users", permission: PERMISSIONS.MANAGE_USERS },
-  { icon: Activity, label: "操作日志", path: "/activity", permission: PERMISSIONS.VIEW_ACTIVITY_LOGS },
+  { icon: LayoutDashboard, labelKey: "menu.dashboard", path: "/" },
+  { icon: Database, labelKey: "menu.products", path: "/data" },
+  { icon: BarChart3, labelKey: "menu.stats", path: "/stats" },
+  { icon: FileText, labelKey: "menu.summary", path: "/summary" },
+  { icon: HardDriveUpload, labelKey: "menu.import", path: "/import", permission: PERMISSIONS.IMPORT_DATA },
+  { icon: FileSpreadsheet, labelKey: "menu.quotations", path: "/quotations" },
+  { icon: Users, labelKey: "menu.users", path: "/users", permission: PERMISSIONS.MANAGE_USERS },
+  { icon: Activity, labelKey: "menu.activity", path: "/activity", permission: PERMISSIONS.VIEW_ACTIVITY_LOGS },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -111,14 +117,17 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, setTheme } = useTheme();
+  const { t, i18n } = useTranslation();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find((item) => item.path === location);
+  const activeLabel = activeMenuItem ? t(activeMenuItem.labelKey) : "";
   const visibleMenuItems = menuItems.filter((item: any) => {
     if (item.permission && !hasPermission(user!, item.permission)) return false;
     return true;
@@ -193,18 +202,19 @@ function DashboardLayoutContent({
             <SidebarMenu className="px-2 py-1 space-y-0.5">
               {visibleMenuItems.map((item) => {
                 const isActive = location === item.path;
+                const label = t(item.labelKey);
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
+                      tooltip={label}
                       className="h-10 transition-all font-normal"
                     >
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
                       />
-                      <span className="text-sm">{item.label}</span>
+                      <span className="text-sm">{label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -234,7 +244,7 @@ function DashboardLayoutContent({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem
-                    onClick={logout}
+                    onClick={() => setLogoutOpen(true)}
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
@@ -242,21 +252,22 @@ function DashboardLayoutContent({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {toggleTheme && (
-                <button
-                  onClick={toggleTheme}
-                  className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-accent/50 transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={theme === "dark" ? "切换亮色模式" : "切换暗色模式"}
-                >
-                  {theme === "dark" ? (
-                    <Sun className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Moon className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </button>
-              )}
             </div>
           </SidebarFooter>
+
+          {/* Logout Confirmation */}
+          <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认退出</AlertDialogTitle>
+                <AlertDialogDescription>确定要退出登录吗？未保存的数据可能会丢失。</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction onClick={logout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">确认退出</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </Sidebar>
         <div
           className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
@@ -280,9 +291,57 @@ function DashboardLayoutContent({
                 <Minimize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
             )}
-            <span className="text-xs text-muted-foreground font-medium">{activeMenuItem?.label ?? ""}</span>
+            <span className="text-xs text-muted-foreground font-medium">{activeLabel}</span>
           </div>
           <div className="flex items-center gap-1">
+            {/* Language Switcher */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
+                  title={t('lang.label')}
+                >
+                  <Globe className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("zh")} className="cursor-pointer">
+                  <span className={i18n.language === "zh" ? "font-bold text-primary" : ""}>中文</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("zh-TW")} className="cursor-pointer">
+                  <span className={i18n.language === "zh-TW" ? "font-bold text-primary" : ""}>繁體中文</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("en")} className="cursor-pointer">
+                  <span className={i18n.language === "en" ? "font-bold text-primary" : ""}>English</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("ja")} className="cursor-pointer">
+                  <span className={i18n.language === "ja" ? "font-bold text-primary" : ""}>日本語</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("es")} className="cursor-pointer">
+                  <span className={i18n.language === "es" ? "font-bold text-primary" : ""}>Español</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("fr")} className="cursor-pointer">
+                  <span className={i18n.language === "fr" ? "font-bold text-primary" : ""}>Français</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Theme Toggle */}
+            {toggleTheme && (
+              <button
+                onClick={toggleTheme}
+                className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
+                title={theme === "dark" ? t('theme.light') : t('theme.dark')}
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                ) : (
+                  <Moon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                )}
+              </button>
+            )}
+
+            {/* Maximize/Minimize */}
             {isMaximized ? (
               <button
                 onClick={() => { setIsMaximized(false); if (state === "collapsed") toggleSidebar(); }}

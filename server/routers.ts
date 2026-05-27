@@ -346,7 +346,7 @@ export const appRouter = router({
         const processedItems = items.map(item => {
           const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
           const discount = item.discountRate ?? input.discountRate ?? 0;
-          const subtotal = unitPrice * item.quantity * (1 - discount / 100);
+          const subtotal = unitPrice * item.quantity * (discount / 100);
           return {
             quotationId: createdQuotation.id,
             productId: item.productId ?? null,
@@ -394,7 +394,7 @@ export const appRouter = router({
           processedItems = items.map(item => {
             const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
             const discount = item.discountRate ?? input.discountRate ?? 0;
-            const subtotal = unitPrice * item.quantity * (1 - discount / 100);
+            const subtotal = unitPrice * item.quantity * (discount / 100);
             return {
               quotationId: id,
               productId: item.productId ?? null,

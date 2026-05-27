@@ -14,7 +14,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import {
   ArrowLeft, Save, Plus, Trash2, Loader2, Download,
-  Send, CheckCircle, CheckCircle2, Mail, XCircle, Share2, Copy,
+  Send, CheckCircle, CheckCircle2, Mail, XCircle, Share2, Copy, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
@@ -182,6 +182,7 @@ export default function QuotationDetail() {
   const [salesContact, setSalesContact] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [industry, setIndustry] = useState("");
+  const [editingIndustry, setEditingIndustry] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [discountRate, setDiscountRate] = useState(0);
   const [notes, setNotes] = useState("");
@@ -249,7 +250,7 @@ export default function QuotationDetail() {
       listPrice: product.listPrice || "",
       quantity,
       discountRate: discountRate,
-      subtotal: parseFloat(product.listPrice || "0") * quantity * (1 - discountRate / 100),
+      subtotal: parseFloat(product.listPrice || "0") * quantity * (discountRate / 100),
     }));
     setItems(prev => [...prev, ...newItems]);
   };
@@ -457,16 +458,25 @@ export default function QuotationDetail() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">行业</Label>
-                <Select value={industry} onValueChange={setIndustry}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="请选择行业" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INDUSTRY_OPTIONS.map(opt => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {industry && !editingIndustry ? (
+                  <div className="flex items-center gap-1.5 h-9">
+                    <span className="flex-1 px-3 py-1.5 bg-muted rounded-md text-sm font-medium">{industry}</span>
+                    <Button variant="ghost" size="sm" className="h-9 px-2 text-muted-foreground hover:text-primary" onClick={() => setEditingIndustry(true)} title="修改行业">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Select value={industry} onValueChange={v => { setIndustry(v); setEditingIndustry(false); }}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="请选择行业" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDUSTRY_OPTIONS.map(opt => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">联系电话</Label>

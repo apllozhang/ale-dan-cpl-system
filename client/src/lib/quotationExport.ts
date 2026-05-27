@@ -170,7 +170,7 @@ export async function exportQuotationToExcel(quotation: any, items: any[]) {
   items.forEach((item, idx) => {
     const listPrice = parseFloat(item.listPrice) || 0;
     const discount = Number(item.discountRate) || 0;
-    const unitPrice = listPrice * (1 - discount / 100);
+    const unitPrice = listPrice * (discount / 100);
     const qty = item.quantity || 1;
     const subtotal = unitPrice * qty;
     total += subtotal;

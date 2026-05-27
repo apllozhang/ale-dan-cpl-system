@@ -6,6 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useState, useMemo } from "react";
 import {
   Activity, Users, FileText, Search, Loader2, Trash2, Download,
@@ -83,6 +87,7 @@ export default function ActivityLog() {
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
+  const [clearOpen, setClearOpen] = useState(false);
   const pageSize = 20;
 
   const { data: stats } = trpc.activityLogs.stats.useQuery();
@@ -107,7 +112,7 @@ export default function ActivityLog() {
           <Activity className="w-5 h-5" />
           操作日志
         </h1>
-        <Button variant="outline" size="sm" onClick={() => clearMutation.mutate()} disabled={clearMutation.isPending} className="text-destructive hover:text-destructive">
+        <Button variant="outline" size="sm" onClick={() => setClearOpen(true)} disabled={clearMutation.isPending} className="text-destructive hover:text-destructive">
           <Trash2 className="w-3.5 h-3.5 mr-1" />
           清除日志
         </Button>
@@ -231,6 +236,19 @@ export default function ActivityLog() {
           </div>
         </div>
       )}
+
+      <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认清除日志</AlertDialogTitle>
+            <AlertDialogDescription>清除后将删除所有操作日志，此操作不可恢复。确定要继续吗？</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { clearMutation.mutate(); setClearOpen(false); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">确认清除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

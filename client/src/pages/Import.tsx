@@ -139,9 +139,14 @@ export default function Import() {
 
       {/* Import button */}
       {file && (
-        <Button onClick={handleStartImport} disabled={importMutation.isPending} className="w-full h-11 gap-2 shadow-sm">
-          {importMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" />导入中...</> : <><Upload className="w-4 h-4" />开始导入</>}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleStartImport} disabled={importMutation.isPending} className="flex-1 h-11 gap-2 shadow-sm">
+            {importMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" />导入中...</> : <><Upload className="w-4 h-4" />开始导入</>}
+          </Button>
+          <Button variant="outline" onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} disabled={importMutation.isPending} className="h-11 gap-2">
+            <X className="w-4 h-4" />取消导入
+          </Button>
+        </div>
       )}
 
       {/* Confirmation Dialog */}

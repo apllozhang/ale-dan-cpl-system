@@ -5,6 +5,7 @@ type Theme = "light" | "dark";
 interface ThemeContextType {
   theme: Theme;
   toggleTheme?: () => void;
+  setTheme?: (theme: Theme) => void;
   switchable: boolean;
 }
 
@@ -48,8 +49,12 @@ export function ThemeProvider({
       }
     : undefined;
 
+  const handleSetTheme = switchable
+    ? (t: Theme) => { setTheme(t); }
+    : undefined;
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, switchable }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme: handleSetTheme, switchable }}>
       {children}
     </ThemeContext.Provider>
   );
