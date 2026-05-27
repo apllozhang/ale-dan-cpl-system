@@ -48,6 +48,10 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(useGSAP);
 
 const menuItems = [
   { icon: LayoutDashboard, labelKey: "menu.dashboard", path: "/" },
@@ -107,6 +111,25 @@ export default function DashboardLayout({
   );
 }
 
+function PageTransition({ children, location }: { children: React.ReactNode; location: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    if (!ref.current) return;
+    gsap.fromTo(ref.current,
+      { opacity: 0, y: 16 },
+      { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }
+    );
+    // Stagger-animate child cards/sections
+    gsap.fromTo(ref.current.querySelectorAll(".stagger-in"),
+      { opacity: 0, y: 12 },
+      { opacity: 1, y: 0, stagger: 0.06, duration: 0.35, ease: "power2.out", delay: 0.1 }
+    );
+  }, { dependencies: [location], scope: ref });
+
+  return <div ref={ref}>{children}</div>;
+}
+
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
   setSidebarWidth: (width: number) => void;
@@ -133,6 +156,31 @@ function DashboardLayoutContent({
     return true;
   });
   const isMobile = useIsMobile();
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Initial menu items stagger animation
+  useGSAP(() => {
+    gsap.from(".menu-item", {
+      x: -20,
+      opacity: 0,
+      stagger: 0.06,
+      duration: 0.5,
+      ease: "power2.out",
+      delay: 0.2,
+    });
+  }, { scope: menuRef });
+
+  // Animate menu items when sidebar expands from collapsed
+  const prevStateRef = useRef(state);
+  useGSAP(() => {
+    if (prevStateRef.current === "collapsed" && state === "expanded") {
+      gsap.fromTo(".menu-item span",
+        { opacity: 0, x: -10 },
+        { opacity: 1, x: 0, stagger: 0.04, duration: 0.3, ease: "power2.out", delay: 0.15 }
+      );
+    }
+    prevStateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -198,13 +246,13 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0 pt-2">
+          <SidebarContent className="gap-0 pt-2" ref={menuRef}>
             <SidebarMenu className="px-2 py-1 space-y-0.5">
               {visibleMenuItems.map((item) => {
                 const isActive = location === item.path;
                 const label = t(item.labelKey);
                 return (
-                  <SidebarMenuItem key={item.path}>
+                  <SidebarMenuItem key={item.path} className="menu-item">
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
@@ -361,7 +409,9 @@ function DashboardLayoutContent({
             )}
           </div>
         </div>
-        <main className="flex-1 p-5 lg:p-6">{children}</main>
+        <main className="flex-1 p-5 lg:p-6">
+          <PageTransition location={location}>{children}</PageTransition>
+        </main>
       </SidebarInset>
     </>
   );

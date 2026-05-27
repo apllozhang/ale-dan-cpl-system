@@ -17,6 +17,7 @@ import {
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
 import QuotationCompare from "@/components/QuotationCompare";
 import { useTranslation } from "react-i18next";
+import { useStaggerIn } from "@/hooks/useStaggerIn";
 
 function generatePageNumbers(current: number, total: number): (number | "...")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -76,6 +77,7 @@ export default function QuotationList() {
   const items = quotationsQuery.data?.items ?? [];
   const total = quotationsQuery.data?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);
+  const tableRef = useStaggerIn<HTMLTableSectionElement>(items.length > 0 && !quotationsQuery.isLoading);
 
   return (
     <div className="h-full flex flex-col gap-4">
@@ -163,7 +165,7 @@ export default function QuotationList() {
               <TableHead className="text-xs font-semibold">{t("quotation.createDate")}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody ref={tableRef}>
             {quotationsQuery.isLoading ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-48 text-center">
@@ -192,8 +194,8 @@ export default function QuotationList() {
               items.map((q: any) => (
                 <TableRow
                   key={q.id}
+                  className="stagger-child cursor-pointer hover:bg-accent/30 transition-colors"
                   onClick={() => setLocation(`/quotations/${q.id}`)}
-                  className="cursor-pointer hover:bg-accent/30 transition-colors"
                 >
                   <TableCell onClick={e => e.stopPropagation()}>
                     <input

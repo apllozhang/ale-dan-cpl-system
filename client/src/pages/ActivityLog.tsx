@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useStaggerIn } from "@/hooks/useStaggerIn";
 
 function formatDetail(action: string, detail: string | null, t: (key: string, options?: Record<string, any>) => string): string {
   if (!detail) return "-";
@@ -108,6 +109,7 @@ export default function ActivityLog() {
   });
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0;
+  const tableRef = useStaggerIn<HTMLTableSectionElement>(!!data?.items?.length && !isLoading);
 
   return (
     <div className="h-full flex flex-col gap-4">
@@ -202,13 +204,13 @@ export default function ActivityLog() {
                 <th className="text-xs font-semibold px-4 py-2.5 text-left">{t('activity.detail')}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody ref={tableRef}>
               {isLoading ? (
                 <tr><td colSpan={5} className="h-32 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
               ) : !data?.items?.length ? (
                 <tr><td colSpan={5} className="h-32 text-center text-muted-foreground text-sm">{t('activity.noLogs')}</td></tr>
               ) : data.items.map((log: any) => (
-                <tr key={log.id} className="border-b border-border/50 hover:bg-accent/20">
+                <tr key={log.id} className="stagger-child border-b border-border/50 hover:bg-accent/20">
                   <td className="px-4 py-2 text-xs text-muted-foreground">
                     {new Date(log.createdAt).toLocaleString("zh-CN")}
                   </td>

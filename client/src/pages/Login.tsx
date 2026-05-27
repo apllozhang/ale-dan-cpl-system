@@ -2,9 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Lock, User, Loader2 } from "lucide-react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(useGSAP);
 
 // ==================== Full-screen Immersive Carousel ====================
 const CAROUSEL_IMAGES = [
@@ -16,77 +20,102 @@ const CAROUSEL_IMAGES = [
 
 function FullScreenCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [nextIndex, setNextIndex] = useState(1);
-  const [transitioning, setTransitioning] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState<boolean[]>([false, false, false, false]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const layersRef = useRef<(HTMLDivElement | null)[]>([]);
+  const indicatorsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const kenBurnsRef = useRef<gsap.core.Tween | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Preload images progressively: first image immediately, others after first loads
+  // Preload images
   useEffect(() => {
-    // Load first image immediately
-    const firstImg = new Image();
-    firstImg.onload = () => {
-      setImagesLoaded(prev => { const n = [...prev]; n[0] = true; return n; });
-      // After first image loads, preload the rest
-      CAROUSEL_IMAGES.slice(1).forEach((src, i) => {
-        const img = new Image();
-        img.onload = () => {
-          setImagesLoaded(prev => { const n = [...prev]; n[i + 1] = true; return n; });
-        };
-        img.src = src;
-      });
-    };
-    firstImg.src = CAROUSEL_IMAGES[0];
+    CAROUSEL_IMAGES.forEach((src, i) => {
+      const img = new Image();
+      img.onload = () => {
+        setImagesLoaded(prev => { const n = [...prev]; n[i] = true; return n; });
+      };
+      img.src = src;
+    });
   }, []);
 
+  // Ken Burns effect on current image (slow zoom + pan)
+  const startKenBurns = useCallback((layerIdx: number) => {
+    if (kenBurnsRef.current) kenBurnsRef.current.kill();
+    const el = layersRef.current[layerIdx];
+    if (!el) return;
+    // Randomize direction for variety
+    const xShift = layerIdx % 2 === 0 ? -15 : 15;
+    kenBurnsRef.current = gsap.fromTo(el,
+      { scale: 1.0, x: 0 },
+      { scale: 1.12, x: xShift, duration: 8, ease: "none" }
+    );
+  }, []);
+
+  // Carousel transition with GSAP
   useEffect(() => {
-    // Only start carousel after first image is loaded
     if (!imagesLoaded[0]) return;
 
-    const timer = setInterval(() => {
-      setTransitioning(true);
-      const next = (currentIndex + 1) % CAROUSEL_IMAGES.length;
-      setNextIndex(next);
-      
-      setTimeout(() => {
-        setCurrentIndex(next);
-        setTransitioning(false);
-      }, 1200);
-    }, 5000);
+    // Start Ken Burns on first image
+    startKenBurns(0);
 
-    return () => clearInterval(timer);
-  }, [currentIndex, imagesLoaded]);
+    timerRef.current = setInterval(() => {
+      const next = (currentIndex + 1) % CAROUSEL_IMAGES.length;
+      const currentLayer = layersRef.current[currentIndex];
+      const nextLayer = layersRef.current[next];
+      const currentDot = indicatorsRef.current[currentIndex];
+      const nextDot = indicatorsRef.current[next];
+
+      if (!currentLayer || !nextLayer) return;
+
+      // Kill previous Ken Burns
+      if (kenBurnsRef.current) kenBurnsRef.current.kill();
+
+      // Prepare next image
+      gsap.set(nextLayer, { opacity: 0, scale: 1.0, x: 0 });
+
+      // Crossfade + Ken Burns on new image
+      const tl = gsap.timeline();
+      tl.to(currentLayer, { opacity: 0, duration: 1.4, ease: "power2.inOut" }, 0);
+      tl.to(nextLayer, { opacity: 1, duration: 1.4, ease: "power2.inOut" }, 0);
+      tl.call(() => {
+        startKenBurns(next);
+        setCurrentIndex(next);
+      }, undefined, 0.7);
+
+      // Indicator animation
+      if (currentDot) gsap.to(currentDot, { width: 8, backgroundColor: "rgba(255,255,255,0.3)", duration: 0.5, ease: "power2.out" });
+      if (nextDot) gsap.to(nextDot, { width: 32, backgroundColor: "rgba(255,255,255,0.8)", duration: 0.5, ease: "power2.out" });
+    }, 6000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (kenBurnsRef.current) kenBurnsRef.current.kill();
+    };
+  }, [currentIndex, imagesLoaded, startKenBurns]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      {/* Fallback gradient background (shows while images load) */}
+    <div className="absolute inset-0 overflow-hidden" ref={containerRef}>
+      {/* Fallback gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#1a0533] via-[#2d1b4e] to-[#0f1b3d]" />
 
-      {/* Current image - only show when loaded */}
-      <div
-        className={`absolute inset-0 bg-cover bg-center transition-all duration-[1500ms] ${
-          imagesLoaded[currentIndex] ? "opacity-100" : "opacity-0"
-        }`}
-        style={{
-          backgroundImage: `url(${CAROUSEL_IMAGES[currentIndex]})`,
-          transform: "scale(1.03)",
-        }}
-      />
-      
-      {/* Next image (fades in during transition) */}
-      <div
-        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-[1200ms] ${
-          transitioning && imagesLoaded[nextIndex] ? "opacity-100" : "opacity-0"
-        }`}
-        style={{
-          backgroundImage: `url(${CAROUSEL_IMAGES[nextIndex]})`,
-        }}
-      />
+      {/* Image layers */}
+      {CAROUSEL_IMAGES.map((src, i) => (
+        <div
+          key={i}
+          ref={el => { layersRef.current[i] = el; }}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url(${src})`,
+            opacity: i === 0 && imagesLoaded[0] ? 1 : 0,
+          }}
+        />
+      ))}
 
-      {/* Gradient overlays for depth and readability */}
+      {/* Gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#1a0533]/85 via-[#1a0533]/50 to-[#1a0533]/30" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0d001a]/60 via-transparent to-[#1a0533]/40" />
-      
-      {/* Subtle grain texture */}
+
+      {/* Grain texture */}
       <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
 
       {/* Carousel indicators */}
@@ -94,11 +123,12 @@ function FullScreenCarousel() {
         {CAROUSEL_IMAGES.map((_, idx) => (
           <div
             key={idx}
-            className={`h-1 rounded-full transition-all duration-700 ${
-              idx === currentIndex
-                ? "w-8 bg-white/80"
-                : "w-2 bg-white/30"
-            }`}
+            ref={el => { indicatorsRef.current[idx] = el; }}
+            className="h-1 rounded-full"
+            style={{
+              width: idx === 0 ? 32 : 8,
+              backgroundColor: idx === 0 ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)",
+            }}
           />
         ))}
       </div>
@@ -111,6 +141,15 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [, setLocation] = useLocation();
+  const loginRef = useRef<HTMLDivElement>(null);
+
+  // Entrance animation
+  useGSAP(() => {
+    gsap.fromTo(".login-brand", { x: -60, opacity: 0 }, { x: 0, opacity: 1, duration: 1, ease: "power3.out", delay: 0.3 });
+    gsap.fromTo(".login-card", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: "power3.out", delay: 0.5 });
+    gsap.fromTo(".login-card .space-y-2", { y: 20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.12, duration: 0.7, ease: "power2.out", delay: 0.7 });
+    gsap.fromTo(".login-card .login-btn", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out", delay: 1.0 });
+  }, { scope: loginRef });
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
@@ -132,14 +171,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen relative flex">
+    <div className="min-h-screen relative flex" ref={loginRef}>
       {/* Full-screen background carousel */}
       <FullScreenCarousel />
 
       {/* Content layer */}
       <div className="relative z-10 flex w-full min-h-screen">
         {/* Left branding area */}
-        <div className="hidden lg:flex lg:flex-1 flex-col justify-between p-16">
+        <div className="login-brand hidden lg:flex lg:flex-1 flex-col justify-between p-16">
           {/* Top - Logo */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
@@ -169,13 +208,8 @@ export default function Login() {
         {/* Right login panel */}
         <div className="w-full lg:w-[480px] xl:w-[520px] flex items-center justify-center p-6 sm:p-12">
           <div className="w-full max-w-[380px]">
-            {/* White card with purple border - Scheme 1 */}
-            <div className="relative bg-white rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 border-2 border-transparent bg-clip-padding"
-              style={{
-                backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #a78bfa, #8b5cf6, #7c3aed)',
-                backgroundOrigin: 'border-box',
-                backgroundClip: 'padding-box, border-box',
-              }}>
+            {/* Glassmorphism card */}
+            <div className="login-card relative rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 border border-white/20 bg-white/90 backdrop-blur-xl">
               {/* Mobile logo */}
               <div className="lg:hidden mb-8 text-center">
                 <div className="inline-flex items-center gap-2 mb-3">
@@ -208,7 +242,7 @@ export default function Login() {
                       placeholder="请输入用户名"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="pl-11 h-12 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                      className="pl-11 h-12 bg-white/60 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                       autoComplete="username"
                       autoFocus
                     />
@@ -227,7 +261,7 @@ export default function Login() {
                       placeholder="请输入密码"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-11 h-12 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                      className="pl-11 h-12 bg-white/60 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                       autoComplete="current-password"
                     />
                   </div>
@@ -241,7 +275,7 @@ export default function Login() {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 text-sm font-medium rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-purple-900/30 transition-all active:scale-[0.98]"
+                  className="login-btn w-full h-12 text-sm font-medium rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-purple-900/30 transition-all active:scale-[0.98]"
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? (
