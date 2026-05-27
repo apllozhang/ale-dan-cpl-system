@@ -865,23 +865,29 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
     }).from(quotations).where(where),
 
     // 2. By Industry
-    db.select({
-      industry: sql<string>`coalesce(${quotations.industry}, '未指定')`,
-      count: sql<number>`count(*)`,
-      totalAmount: sql<number>`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`,
-    }).from(quotations).where(where)
-      .groupBy(sql`coalesce(${quotations.industry}, '未指定')`)
-      .orderBy(desc(sql`count(*)`)),
+    db.execute(sql`
+      SELECT
+        COALESCE(industry, '未指定') as industry,
+        COUNT(*) as \`count\`,
+        COALESCE(SUM(CAST(totalAmount AS DECIMAL(14,2))), 0) as totalAmount
+      FROM quotations
+      ${where ? sql`WHERE ${where}` : sql``}
+      GROUP BY COALESCE(industry, '未指定')
+      ORDER BY COUNT(*) DESC
+    `),
 
     // 3. Top Customers
-    db.select({
-      customerName: quotations.customerName,
-      count: sql<number>`count(*)`,
-      totalAmount: sql<number>`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`,
-    }).from(quotations).where(where)
-      .groupBy(quotations.customerName)
-      .orderBy(desc(sql`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`))
-      .limit(20),
+    db.execute(sql`
+      SELECT
+        customerName,
+        COUNT(*) as \`count\`,
+        COALESCE(SUM(CAST(totalAmount AS DECIMAL(14,2))), 0) as totalAmount
+      FROM quotations
+      ${where ? sql`WHERE ${where}` : sql``}
+      GROUP BY customerName
+      ORDER BY totalAmount DESC
+      LIMIT 20
+    `),
 
     // 4. By Sales Rep — use raw SQL for JOIN
     db.execute(sql`
@@ -894,32 +900,38 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       FROM quotations q
       LEFT JOIN users u ON q.createdBy = u.id
       ${where ? sql`WHERE ${and(
-        params.startDate ? gte(quotations.createdAt, params.startDate) : sql`TRUE`,
-        params.endDate ? lte(quotations.createdAt, params.endDate) : sql`TRUE`,
-        params.userId ? eq(quotations.createdBy, params.userId) : sql`TRUE`,
+        params.startDate ? gte(sql`q.createdAt`, params.startDate) : sql`TRUE`,
+        params.endDate ? lte(sql`q.createdAt`, params.endDate) : sql`TRUE`,
+        params.userId ? eq(sql`q.createdBy`, params.userId) : sql`TRUE`,
       )}` : sql``}
       GROUP BY q.createdBy, u.name, u.username
       ORDER BY totalAmount DESC
     `),
 
     // 5. Monthly Trend
-    db.select({
-      month: sql<string>`DATE_FORMAT(${quotations.createdAt}, '%Y-%m')`,
-      count: sql<number>`count(*)`,
-      totalAmount: sql<number>`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`,
-    }).from(quotations).where(where)
-      .groupBy(sql`DATE_FORMAT(${quotations.createdAt}, '%Y-%m')`)
-      .orderBy(asc(sql`DATE_FORMAT(${quotations.createdAt}, '%Y-%m')`))
-      .limit(24),
+    db.execute(sql`
+      SELECT
+        DATE_FORMAT(createdAt, '%Y-%m') as month,
+        COUNT(*) as \`count\`,
+        COALESCE(SUM(CAST(totalAmount AS DECIMAL(14,2))), 0) as totalAmount
+      FROM quotations
+      ${where ? sql`WHERE ${where}` : sql``}
+      GROUP BY DATE_FORMAT(createdAt, '%Y-%m')
+      ORDER BY DATE_FORMAT(createdAt, '%Y-%m') ASC
+      LIMIT 24
+    `),
 
     // 6. By Status
-    db.select({
-      status: quotations.status,
-      count: sql<number>`count(*)`,
-      totalAmount: sql<number>`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`,
-    }).from(quotations).where(where)
-      .groupBy(quotations.status)
-      .orderBy(desc(sql`count(*)`)),
+    db.execute(sql`
+      SELECT
+        status,
+        COUNT(*) as \`count\`,
+        COALESCE(SUM(CAST(totalAmount AS DECIMAL(14,2))), 0) as totalAmount
+      FROM quotations
+      ${where ? sql`WHERE ${where}` : sql``}
+      GROUP BY status
+      ORDER BY COUNT(*) DESC
+    `),
 
     // 7. Top Products — JOIN needs raw SQL
     db.execute(sql`
@@ -931,7 +943,11 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
         COALESCE(SUM(CAST(qi.subtotal AS DECIMAL(14,2))), 0) as totalRevenue
       FROM quotation_items qi
       INNER JOIN quotations q ON qi.quotationId = q.id
-      ${productWhere ? sql`WHERE ${productWhere}` : sql``}
+      ${productWhere ? sql`WHERE ${and(
+        params.startDate ? gte(sql`q.createdAt`, params.startDate) : sql`TRUE`,
+        params.endDate ? lte(sql`q.createdAt`, params.endDate) : sql`TRUE`,
+        params.userId ? eq(sql`q.createdBy`, params.userId) : sql`TRUE`,
+      )}` : sql``}
       GROUP BY qi.productModel, qi.productDesc
       ORDER BY quotationCount DESC
       LIMIT 20
@@ -939,9 +955,13 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
   ]);
 
   const summary = summaryRows[0] ?? { totalQuotations: 0, completedRevenue: 0, avgAmount: 0, conversionRate: 0 };
-  // bySalesRepRows comes from db.execute() which returns [rows, fields]
-  const salesRepRows = Array.isArray(bySalesRepRows) ? (Array.isArray(bySalesRepRows[0]) ? bySalesRepRows[0] : bySalesRepRows) : [];
-  const productRows = Array.isArray(topProducts) ? (Array.isArray(topProducts[0]) ? topProducts[0] : topProducts) : [];
+  // db.execute() returns [rows, fields] tuple, extract rows
+  const industryRows = Array.isArray(byIndustry) && Array.isArray(byIndustry[0]) ? byIndustry[0] : (Array.isArray(byIndustry) ? byIndustry : []);
+  const customerRows = Array.isArray(byCustomer) && Array.isArray(byCustomer[0]) ? byCustomer[0] : (Array.isArray(byCustomer) ? byCustomer : []);
+  const salesRepRows = Array.isArray(bySalesRepRows) && Array.isArray(bySalesRepRows[0]) ? bySalesRepRows[0] : (Array.isArray(bySalesRepRows) ? bySalesRepRows : []);
+  const timeRows = Array.isArray(byTime) && Array.isArray(byTime[0]) ? byTime[0] : (Array.isArray(byTime) ? byTime : []);
+  const statusRows = Array.isArray(byStatus) && Array.isArray(byStatus[0]) ? byStatus[0] : (Array.isArray(byStatus) ? byStatus : []);
+  const productRows = Array.isArray(topProducts) && Array.isArray(topProducts[0]) ? topProducts[0] : (Array.isArray(topProducts) ? topProducts : []);
 
   return {
     summary: {
@@ -950,11 +970,11 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       avgAmount: Number(summary.avgAmount ?? 0),
       conversionRate: Number(summary.conversionRate ?? 0),
     },
-    byIndustry,
-    byCustomer,
+    byIndustry: industryRows as any[],
+    byCustomer: customerRows as any[],
     bySalesRep: salesRepRows as any[],
-    byTime,
-    byStatus,
+    byTime: timeRows as any[],
+    byStatus: statusRows as any[],
     topProducts: productRows as any[],
   };
 }

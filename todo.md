@@ -182,3 +182,12 @@
 - [x] 创建性能监控工具（performanceMonitor.ts）
 - [x] 创建图片预加载工具（imagePreloader.ts）
 - [x] 添加单元测试验证性能优化
+
+
+## 业务分析页面修复
+
+- [x] 修复 getQuotationAnalytics SQL GROUP BY 错误
+- [x] 将所有 Drizzle ORM GROUP BY 查询改为原生 SQL（db.execute）
+- [x] 修复表别名在 WHERE 子句中的使用
+- [x] 添加单元测试验证 analytics API
+- [x] 测试业务分析页面数据加载
