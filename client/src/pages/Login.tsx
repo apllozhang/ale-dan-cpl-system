@@ -2,11 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 import { useLocation } from "wouter";
 import { Lock, User, Loader2 } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 gsap.registerPlugin(useGSAP);
 
@@ -21,21 +22,50 @@ const CAROUSEL_IMAGES = [
 function FullScreenCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imagesLoaded, setImagesLoaded] = useState<boolean[]>([false, false, false, false]);
+  const [animationsReady, setAnimationsReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const layersRef = useRef<(HTMLDivElement | null)[]>([]);
   const indicatorsRef = useRef<(HTMLDivElement | null)[]>([]);
   const kenBurnsRef = useRef<gsap.core.Tween | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Preload images
+  // Lazy load images using Intersection Observer
   useEffect(() => {
-    CAROUSEL_IMAGES.forEach((src, i) => {
-      const img = new Image();
-      img.onload = () => {
-        setImagesLoaded(prev => { const n = [...prev]; n[i] = true; return n; });
-      };
-      img.src = src;
-    });
+    // Only load first image immediately, others on demand
+    const img = new Image();
+    img.onload = () => {
+      setImagesLoaded(prev => { const n = [...prev]; n[0] = true; return n; });
+      setAnimationsReady(true);
+    };
+    img.src = CAROUSEL_IMAGES[0];
+
+    // Setup Intersection Observer for lazy loading remaining images
+    if (containerRef.current) {
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              // Container is visible, preload remaining images
+              CAROUSEL_IMAGES.slice(1).forEach((src, i) => {
+                const img = new Image();
+                img.onload = () => {
+                  setImagesLoaded(prev => { const n = [...prev]; n[i + 1] = true; return n; });
+                };
+                img.src = src;
+              });
+              observerRef.current?.disconnect();
+            }
+          });
+        },
+        { threshold: 0.1 }
+      );
+      observerRef.current.observe(containerRef.current);
+    }
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
   }, []);
 
   // Ken Burns effect on current image (slow zoom + pan)
@@ -51,9 +81,9 @@ function FullScreenCarousel() {
     );
   }, []);
 
-  // Carousel transition with GSAP
+  // Carousel transition with GSAP - only start when animations are ready
   useEffect(() => {
-    if (!imagesLoaded[0]) return;
+    if (!animationsReady) return;
 
     // Start Ken Burns on first image
     startKenBurns(0);
@@ -91,14 +121,14 @@ function FullScreenCarousel() {
       if (timerRef.current) clearInterval(timerRef.current);
       if (kenBurnsRef.current) kenBurnsRef.current.kill();
     };
-  }, [currentIndex, imagesLoaded, startKenBurns]);
+  }, [currentIndex, animationsReady, startKenBurns]);
 
   return (
     <div className="absolute inset-0 overflow-hidden" ref={containerRef}>
       {/* Fallback gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#1a0533] via-[#2d1b4e] to-[#0f1b3d]" />
 
-      {/* Image layers */}
+      {/* Image layers with will-change optimization */}
       {CAROUSEL_IMAGES.map((src, i) => (
         <div
           key={i}
@@ -107,6 +137,8 @@ function FullScreenCarousel() {
           style={{
             backgroundImage: `url(${src})`,
             opacity: i === 0 && imagesLoaded[0] ? 1 : 0,
+            willChange: i === currentIndex || i === (currentIndex + 1) % CAROUSEL_IMAGES.length ? "transform, opacity" : "auto",
+            transform: "translate3d(0, 0, 0)", // GPU acceleration
           }}
         />
       ))}
@@ -124,10 +156,11 @@ function FullScreenCarousel() {
           <div
             key={idx}
             ref={el => { indicatorsRef.current[idx] = el; }}
-            className="h-1 rounded-full"
+            className="h-1 rounded-full transition-all"
             style={{
               width: idx === 0 ? 32 : 8,
               backgroundColor: idx === 0 ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)",
+              willChange: "width, background-color",
             }}
           />
         ))}
@@ -142,14 +175,68 @@ export default function Login() {
   const [error, setError] = useState("");
   const [, setLocation] = useLocation();
   const loginRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const visibilityRef = useRef<HTMLDivElement>(null);
+  const animationsInitializedRef = useRef(false);
 
-  // Entrance animation
-  useGSAP(() => {
-    gsap.fromTo(".login-brand", { x: -60, opacity: 0 }, { x: 0, opacity: 1, duration: 1, ease: "power3.out", delay: 0.3 });
-    gsap.fromTo(".login-card", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: "power3.out", delay: 0.5 });
-    gsap.fromTo(".login-card .space-y-2", { y: 20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.12, duration: 0.7, ease: "power2.out", delay: 0.7 });
-    gsap.fromTo(".login-card .login-btn", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out", delay: 1.0 });
-  }, { scope: loginRef });
+  // Detect when login form is visible to trigger entrance animations
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !animationsInitializedRef.current) {
+            setIsVisible(true);
+            animationsInitializedRef.current = true;
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    if (visibilityRef.current) {
+      observer.observe(visibilityRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Entrance animation - only runs when visible
+  useLayoutEffect(() => {
+    if (!isVisible || !loginRef.current) return;
+
+    // Use requestAnimationFrame to ensure DOM is ready
+    const rafId = requestAnimationFrame(() => {
+      const ctx = gsap.context(() => {
+        // Stagger entrance animations for better performance
+        gsap.fromTo(".login-brand", 
+          { x: -60, opacity: 0 }, 
+          { x: 0, opacity: 1, duration: 0.8, ease: "power3.out", delay: 0.2 }
+        );
+        
+        gsap.fromTo(".login-card", 
+          { y: 40, opacity: 0 }, 
+          { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", delay: 0.3 }
+        );
+        
+        gsap.fromTo(".login-card .space-y-2", 
+          { y: 20, opacity: 0 }, 
+          { y: 0, opacity: 1, stagger: 0.08, duration: 0.6, ease: "power2.out", delay: 0.4 }
+        );
+        
+        gsap.fromTo(".login-card .login-btn", 
+          { y: 15, opacity: 0 }, 
+          { y: 0, opacity: 1, duration: 0.5, ease: "power2.out", delay: 0.6 }
+        );
+      }, loginRef);
+
+      return () => ctx.revert();
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [isVisible]);
+
+  const { loading } = useAuth();
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
@@ -206,10 +293,10 @@ export default function Login() {
         </div>
 
         {/* Right login panel */}
-        <div className="w-full lg:w-[480px] xl:w-[520px] flex items-center justify-center p-6 sm:p-12">
+        <div className="w-full lg:w-[480px] xl:w-[520px] flex items-center justify-center p-6 sm:p-12" ref={visibilityRef}>
           <div className="w-full max-w-[380px]">
             {/* Glassmorphism card */}
-            <div className="login-card relative rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 border border-white/20 bg-white/90 backdrop-blur-xl">
+            <div className="login-card relative rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 border border-white/20 bg-white/90 backdrop-blur-xl" style={{ willChange: "transform, opacity" }}>
               {/* Mobile logo */}
               <div className="lg:hidden mb-8 text-center">
                 <div className="inline-flex items-center gap-2 mb-3">
@@ -276,7 +363,7 @@ export default function Login() {
                 <Button
                   type="submit"
                   className="login-btn w-full h-12 text-sm font-medium rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-purple-900/30 transition-all active:scale-[0.98]"
-                  disabled={loginMutation.isPending}
+                  disabled={loginMutation.isPending || loading}
                 >
                   {loginMutation.isPending ? (
                     <>
@@ -289,10 +376,9 @@ export default function Login() {
                 </Button>
               </form>
 
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <p className="text-xs text-gray-400 text-center">
-                  DAN CPL 系统 · 仅限授权用户访问
-                </p>
+              {/* Footer */}
+              <div className="mt-8 text-center text-xs text-gray-500">
+                DAN CPL 系统 - 仅授权用户访问
               </div>
             </div>
           </div>

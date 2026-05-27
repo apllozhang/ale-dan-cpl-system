@@ -171,3 +171,14 @@
 - [x] 实现自动播放和手动导航
 - [x] 更新文字内容（DAN 相关）
 - [x] 添加圆点指示器和左右箭头
+
+
+## GSAP 动画性能优化
+
+- [x] 实现登录页面 GSAP 动画的延迟加载
+- [x] 使用 Intersection Observer 检测入场动画触发
+- [x] 优化轮播图片预加载策略（仅预加载第一张，其他按需加载）
+- [x] 添加 GPU 加速（transform3d 和 will-change）
+- [x] 创建性能监控工具（performanceMonitor.ts）
+- [x] 创建图片预加载工具（imagePreloader.ts）
+- [x] 添加单元测试验证性能优化
