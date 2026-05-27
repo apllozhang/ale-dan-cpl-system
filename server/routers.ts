@@ -429,6 +429,26 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return db.deleteQuotation(input.id);
       }),
+    exportExcel: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const quotation = await db.getQuotationById(input.id);
+        if (!quotation) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
+        }
+        
+        // Generate Excel using Python backend
+        const { generateQuotationExcelFile } = await import("./quotationExcelGenerator");
+        const excelBuffer = await generateQuotationExcelFile(quotation, quotation.items || []);
+        
+        // Return base64 encoded Excel file
+        return {
+          fileName: `DAN_报价单_${quotation.quotationNo || "new"}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+          data: excelBuffer.toString("base64"),
+        };
+      }),
   }),
 
   cpl: router({
