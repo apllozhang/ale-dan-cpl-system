@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Lock, User, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // ==================== Full-screen Immersive Carousel ====================
 const CAROUSEL_IMAGES = [
@@ -46,7 +47,7 @@ function FullScreenCarousel() {
       setTransitioning(true);
       const next = (currentIndex + 1) % CAROUSEL_IMAGES.length;
       setNextIndex(next);
-      
+
       setTimeout(() => {
         setCurrentIndex(next);
         setTransitioning(false);
@@ -71,7 +72,7 @@ function FullScreenCarousel() {
           transform: "scale(1.03)",
         }}
       />
-      
+
       {/* Next image (fades in during transition) */}
       <div
         className={`absolute inset-0 bg-cover bg-center transition-opacity duration-[1200ms] ${
@@ -85,7 +86,7 @@ function FullScreenCarousel() {
       {/* Gradient overlays for depth and readability */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#1a0533]/85 via-[#1a0533]/50 to-[#1a0533]/30" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0d001a]/60 via-transparent to-[#1a0533]/40" />
-      
+
       {/* Subtle grain texture */}
       <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
 
@@ -107,6 +108,7 @@ function FullScreenCarousel() {
 }
 
 export default function Login() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -117,7 +119,7 @@ export default function Login() {
       window.location.href = "/";
     },
     onError: (err) => {
-      setError(err.message || "登录失败，请重试");
+      setError(err.message || t("login.failed"));
     },
   });
 
@@ -125,7 +127,7 @@ export default function Login() {
     e.preventDefault();
     setError("");
     if (!username.trim() || !password.trim()) {
-      setError("请输入用户名和密码");
+      setError(t("login.emptyFields"));
       return;
     }
     loginMutation.mutate({ username: username.trim(), password });
@@ -153,10 +155,10 @@ export default function Login() {
             <h1 className="text-5xl font-bold text-white leading-tight mb-6 tracking-tight">
               DAN CPL
               <br />
-              <span className="text-white/70 text-3xl font-light">管理系统</span>
+              <span className="text-white/70 text-3xl font-light">{t("login.system")}</span>
             </h1>
             <p className="text-white/50 text-lg leading-relaxed">
-              DAN 产品价格表管理平台，提供数据查询、筛选与导入功能。
+              {t("login.description")}
             </p>
           </div>
 
@@ -188,24 +190,24 @@ export default function Login() {
 
               <div className="space-y-1 mb-8">
                 <h2 className="text-2xl font-semibold text-gray-900 tracking-tight">
-                  欢迎登录
+                  {t("login.title")}
                 </h2>
                 <p className="text-sm text-gray-500">
-                  请输入您的账号信息以访问系统
+                  {t("login.subtitle")}
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="username" className="text-sm font-medium text-gray-700">
-                    用户名
+                    {t("user.username")}
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       id="username"
                       type="text"
-                      placeholder="请输入用户名"
+                      placeholder={t("user.usernamePlaceholder")}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="pl-11 h-12 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
@@ -217,14 +219,14 @@ export default function Login() {
 
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                    密码
+                    {t("user.password")}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       id="password"
                       type="password"
-                      placeholder="请输入密码"
+                      placeholder={t("user.passwordPlaceholder")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-11 h-12 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
@@ -247,17 +249,17 @@ export default function Login() {
                   {loginMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      登录中...
+                      {t("login.logging")}
                     </>
                   ) : (
-                    "登 录"
+                    t("login.loginButton")
                   )}
                 </Button>
               </form>
 
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <p className="text-xs text-gray-400 text-center">
-                  DAN CPL 系统 · 仅限授权用户访问
+                  {t("login.footer")}
                 </p>
               </div>
             </div>

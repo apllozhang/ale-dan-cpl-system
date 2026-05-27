@@ -191,7 +191,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold tracking-tight truncate text-sm">
-                    ALE DAN CPL 系统
+                    {t('layout.systemName')}
                   </span>
                 </div>
               ) : null}
@@ -234,10 +234,10 @@ function DashboardLayoutContent({
                     </Avatar>
                     <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
                       <p className="text-sm font-medium truncate leading-none">
-                        {user?.name || "用户"}
+                        {user?.name || t('user.defaultName')}
                       </p>
                       <p className="text-xs text-muted-foreground truncate mt-1.5">
-                        {user?.email || "管理员"}
+                        {user?.email || t('user.defaultRole')}
                       </p>
                     </div>
                   </button>
@@ -248,7 +248,7 @@ function DashboardLayoutContent({
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>退出登录</span>
+                    <span>{t('user.logout')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -259,12 +259,12 @@ function DashboardLayoutContent({
           <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>确认退出</AlertDialogTitle>
-                <AlertDialogDescription>确定要退出登录吗？未保存的数据可能会丢失。</AlertDialogDescription>
+                <AlertDialogTitle>{t('user.confirmLogout')}</AlertDialogTitle>
+                <AlertDialogDescription>{t('user.logoutWarning')}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction onClick={logout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">确认退出</AlertDialogAction>
+                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                <AlertDialogAction onClick={logout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('user.confirmExit')}</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -286,7 +286,7 @@ function DashboardLayoutContent({
               <button
                 onClick={() => { setIsMaximized(false); if (state === "collapsed") toggleSidebar(); }}
                 className="group h-9 w-9 flex items-center justify-center rounded-md hover:bg-primary/10 hover:text-primary transition-colors"
-                title="还原侧边栏"
+                title={t('layout.restoreSidebar')}
               >
                 <Minimize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
@@ -346,7 +346,7 @@ function DashboardLayoutContent({
               <button
                 onClick={() => { setIsMaximized(false); if (state === "collapsed") toggleSidebar(); }}
                 className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
-                title="还原侧边栏"
+                title={t('layout.restoreSidebar')}
               >
                 <Minimize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
@@ -354,7 +354,7 @@ function DashboardLayoutContent({
               <button
                 onClick={() => { setIsMaximized(true); if (state !== "collapsed") toggleSidebar(); }}
                 className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
-                title="全屏查看（折叠侧边栏）"
+                title={t('layout.maximize')}
               >
                 <Maximize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>

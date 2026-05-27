@@ -14,20 +14,22 @@ import {
   Search, X, Loader2, ChevronRight, Network, Wifi, Monitor, ShieldCheck, Cable, Package,
   PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // Column definitions with default widths
 interface ColDef {
   key: string;
   label: string;
+  labelKey: string;
   width: number;
   minWidth: number;
 }
 
 const PRODUCT_COLS: ColDef[] = [
-  { key: "model", label: "产品型号", width: 160, minWidth: 80 },
-  { key: "desc", label: "产品说明", width: 280, minWidth: 100 },
-  { key: "price", label: "媒体价", width: 110, minWidth: 70 },
-  { key: "qty", label: "数量", width: 90, minWidth: 60 },
+  { key: "model", label: "产品型号", labelKey: "data.columns.productModel", width: 160, minWidth: 80 },
+  { key: "desc", label: "产品说明", labelKey: "data.columns.productDesc", width: 280, minWidth: 100 },
+  { key: "price", label: "媒体价", labelKey: "data.columns.listPrice", width: 110, minWidth: 70 },
+  { key: "qty", label: "数量", labelKey: "quotation.quantity", width: 90, minWidth: 60 },
 ];
 
 function useColumnWidths(cols: ColDef[]) {
@@ -89,6 +91,7 @@ interface ProductSelectorDialogProps {
 export default function ProductSelectorDialog({
   open, onOpenChange, onAddProducts, discountRate, existingProductIds,
 }: ProductSelectorDialogProps) {
+  const { t } = useTranslation();
   const [activeNav, setActiveNav] = useState<CategoryNavItem | null>(null);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -276,7 +279,7 @@ export default function ProductSelectorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-3">
-          <DialogTitle>添加产品到报价单</DialogTitle>
+          <DialogTitle>{t('productSelector.title')}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-1 min-h-0 border-t overflow-hidden">
@@ -356,7 +359,7 @@ export default function ProductSelectorDialog({
           <button
             onClick={() => setSidebarCollapsed(v => !v)}
             className="w-5 flex items-center justify-center border-r bg-muted/10 hover:bg-accent/30 transition-colors shrink-0"
-            title={sidebarCollapsed ? "展开分类导航" : "收起分类导航"}
+            title={sidebarCollapsed ? t('productSelector.expandNav') : t('productSelector.collapseNav')}
           >
             {sidebarCollapsed
               ? <PanelLeftOpen className="w-3.5 h-3.5 text-muted-foreground" />
@@ -400,7 +403,7 @@ export default function ProductSelectorDialog({
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="搜索产品型号、说明..."
+                  placeholder={t('productSelector.searchPlaceholder')}
                   value={searchText}
                   onChange={e => handleSearchChange(e.target.value)}
                   className="pl-8 h-8 text-sm"
@@ -435,7 +438,7 @@ export default function ProductSelectorDialog({
                         className="relative text-xs font-semibold px-3 py-2 text-left border-l border-border"
                         style={{ width: colWidths[i] }}
                       >
-                        {col.label}
+                        {t(col.labelKey)}
                         <span
                           className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 z-10"
                           onMouseDown={e => startResize(i, e)}
@@ -454,13 +457,13 @@ export default function ProductSelectorDialog({
                   ) : !(isSubcategorySelected || isSimpleCategorySelected) ? (
                     <tr>
                       <td colSpan={5} className="h-32 text-center text-muted-foreground text-sm">
-                        请选择左侧分类查看产品数据
+                        {t('productSelector.selectCategory')}
                       </td>
                     </tr>
                   ) : filteredProducts.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="h-32 text-center text-muted-foreground text-sm">
-                        {debouncedSearch ? "未找到匹配产品" : "该分类下暂无产品"}
+                        {debouncedSearch ? t('productSelector.noMatch') : t('productSelector.noProductsInCategory')}
                       </td>
                     </tr>
                   ) : (
@@ -508,7 +511,7 @@ export default function ProductSelectorDialog({
                                 className="h-7 w-16 text-xs text-right"
                               />
                             ) : isExisting ? (
-                              <span className="text-[10px] text-muted-foreground">已添加</span>
+                              <span className="text-[10px] text-muted-foreground">{t('productSelector.added')}</span>
                             ) : (
                               <span className="text-xs text-muted-foreground">-</span>
                             )}
@@ -526,12 +529,12 @@ export default function ProductSelectorDialog({
         {/* Footer */}
         <DialogFooter className="px-6 py-4 border-t bg-background shrink-0 gap-3">
           <span className="text-xs text-muted-foreground">
-            已选择 {totalSelected} 个产品{totalQuantity > totalSelected && `，共 ${totalQuantity} 件`}
+            {t('productSelector.selectedSummary', { count: totalSelected })}{totalQuantity > totalSelected && ` (${totalQuantity})`}
           </span>
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs">取消</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs">{t('common.cancel')}</Button>
             <Button onClick={handleAddProducts} disabled={totalSelected === 0} className="text-xs">
-              添加到报价单
+              {t('productSelector.addToQuotation')}
             </Button>
           </div>
         </DialogFooter>

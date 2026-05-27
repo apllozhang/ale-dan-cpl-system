@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
 import { exportQuotationToExcel } from "@/lib/quotationExport";
 import ProductSelectorDialog from "@/components/ProductSelectorDialog";
+import { useTranslation } from "react-i18next";
 
 type ItemRow = {
   productId?: number;
@@ -95,7 +96,18 @@ function QuotationItemsTable({
   onUpdate: (index: number, field: keyof ItemRow, value: any) => void;
   onRemove: (index: number) => void;
 }) {
+  const { t } = useTranslation();
   const { widths, startResize } = useColWidths(Q_COLS);
+
+  const renderColLabel = useCallback((key: string, defaultLabel: string): string => {
+    switch (key) {
+      case "price": return t('quotation.listPrice');
+      case "qty": return t('quotation.quantity');
+      case "disc": return t('quotation.discountRate');
+      case "sub": return t('quotation.subtotal');
+      default: return defaultLabel;
+    }
+  }, [t]);
 
   return (
     <div className="overflow-x-auto">
@@ -108,7 +120,7 @@ function QuotationItemsTable({
                 className={`relative text-xs font-semibold px-3 py-2 text-left border-l border-border ${col.key === "sub" ? "text-right" : ""}`}
                 style={{ width: widths[i] }}
               >
-                {col.label}
+                {renderColLabel(col.key, col.label)}
                 {col.key !== "act" && (
                   <span
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 z-10"
@@ -170,6 +182,7 @@ function QuotationItemsTable({
 }
 
 export default function QuotationDetail() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/quotations/:id");
   const { user } = useAuth();
@@ -270,19 +283,19 @@ export default function QuotationDetail() {
 
   const handleSave = async () => {
     if (!customerName.trim()) {
-      toast.error("请输入客户名称");
+      toast.error(t('quotation.validateCustomer'));
       return;
     }
     if (!projectName.trim()) {
-      toast.error("请输入项目名称");
+      toast.error(t('quotation.validateProject'));
       return;
     }
     if (!salesContact.trim()) {
-      toast.error("请输入销售联系人");
+      toast.error(t('quotation.validateContact'));
       return;
     }
     if (items.length === 0) {
-      toast.error("请添加至少一个产品");
+      toast.error(t('quotation.validateItems'));
       return;
     }
 
@@ -309,17 +322,17 @@ export default function QuotationDetail() {
     try {
       if (isNew) {
         const result = await createMutation.mutateAsync(payload) as any;
-        toast.success("报价单已创建");
+        toast.success(t('quotation.createSuccess'));
         if (result?.id) {
           setLocation(`/quotations/${result.id}`);
         }
       } else {
         await updateMutation.mutateAsync({ id: quotationId!, ...payload });
-        toast.success("报价单已更新");
+        toast.success(t('quotation.updateSuccess'));
         quotationQuery.refetch();
       }
     } catch (err: any) {
-      toast.error(err.message || "保存失败");
+      toast.error(err.message || t('quotation.saveFailed'));
     }
   };
 
@@ -327,10 +340,10 @@ export default function QuotationDetail() {
     if (!quotationId) return;
     try {
       await statusMutation.mutateAsync({ id: quotationId, status: newStatus as any });
-      toast.success(`状态已更新为 ${QUOTATION_STATUS_LABELS[newStatus]}`);
+      toast.success(t('quotation.statusUpdated', { status: QUOTATION_STATUS_LABELS[newStatus] }));
       quotationQuery.refetch();
     } catch (err: any) {
-      toast.error(err.message || "状态更新失败");
+      toast.error(err.message || t('quotation.statusUpdateFailed'));
     }
   };
 
@@ -345,14 +358,14 @@ export default function QuotationDetail() {
       const result = await shareMutation.mutateAsync({ id: quotationId });
       const url = `${window.location.origin}/share/${result.shareToken}`;
       await navigator.clipboard.writeText(url);
-      toast.success("分享链接已复制到剪贴板");
+      toast.success(t('quotation.shareCopied'));
     } catch (err: any) {
-      toast.error(err.message || "分享失败");
+      toast.error(err.message || t('quotation.shareFailed'));
     }
   };
 
   const handleSaveTemplate = async () => {
-    const name = prompt("请输入模板名称:");
+    const name = prompt(t('quotation.templateNamePrompt'));
     if (!name) return;
     try {
       await templateCreateMutation.mutateAsync({
@@ -361,9 +374,9 @@ export default function QuotationDetail() {
         discountRate,
         notes,
       });
-      toast.success("模板已保存");
+      toast.success(t('quotation.templateSaved'));
     } catch (err: any) {
-      toast.error(err.message || "保存模板失败");
+      toast.error(err.message || t('quotation.templateSaveFailed'));
     }
   };
 
@@ -388,7 +401,7 @@ export default function QuotationDetail() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <h1 className="text-lg font-semibold text-foreground">
-            {isNew ? "新建报价单" : `报价单 ${quotationQuery.data?.quotationNo || ""}`}
+            {isNew ? t('quotation.newTitle') : t('quotation.detailTitle', { no: quotationQuery.data?.quotationNo || "" })}
           </h1>
           {!isNew && (
             <Badge variant="outline" className={`text-xs ${QUOTATION_STATUS_COLORS[currentStatus]}`}>
@@ -409,25 +422,25 @@ export default function QuotationDetail() {
           {!isNew && (
             <Button size="sm" variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-1" />
-              导出 Excel
+              {t('quotation.exportExcel')}
             </Button>
           )}
           {!isNew && (
             <Button size="sm" variant="outline" onClick={handleShare} disabled={shareMutation.isPending}>
               <Share2 className="w-4 h-4 mr-1" />
-              分享
+              {t('quotation.share')}
             </Button>
           )}
           {items.length > 0 && (
             <Button size="sm" variant="outline" onClick={handleSaveTemplate} disabled={templateCreateMutation.isPending}>
               <Copy className="w-4 h-4 mr-1" />
-              存为模板
+              {t('quotation.saveTemplate')}
             </Button>
           )}
           <Button size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
             <Save className="w-4 h-4 mr-1" />
-            保存
+            {t('quotation.save')}
           </Button>
         </div>
       </div>
@@ -436,28 +449,28 @@ export default function QuotationDetail() {
         {/* Customer Info */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">客户信息</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('quotation.customerInfo')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">客户名称 <span className="text-destructive">*</span></Label>
-                <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="请输入客户名称" className="h-9 text-sm" />
+                <Label className="text-xs">{t('quotation.customerName')} <span className="text-destructive">*</span></Label>
+                <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder={t('quotation.customerNamePlaceholder')} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">项目名称 <span className="text-destructive">*</span></Label>
-                <Input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="请输入项目名称" className="h-9 text-sm" />
+                <Label className="text-xs">{t('quotation.projectName')} <span className="text-destructive">*</span></Label>
+                <Input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder={t('quotation.projectNamePlaceholder')} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">报价有效期</Label>
+                <Label className="text-xs">{t('quotation.validUntil')}</Label>
                 <Input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">销售联系人 <span className="text-destructive">*</span></Label>
-                <Input value={salesContact} onChange={e => setSalesContact(e.target.value)} placeholder="请输入销售联系人" className="h-9 text-sm" />
+                <Label className="text-xs">{t('quotation.customerContact')} <span className="text-destructive">*</span></Label>
+                <Input value={salesContact} onChange={e => setSalesContact(e.target.value)} placeholder={t('quotation.salesContactPlaceholder')} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">行业</Label>
+                <Label className="text-xs">{t('quotation.industry')}</Label>
                 {industry && !editingIndustry ? (
                   <div className="flex items-center gap-1.5 h-9">
                     <span className="flex-1 px-3 py-1.5 bg-muted rounded-md text-sm font-medium">{industry}</span>
@@ -468,7 +481,7 @@ export default function QuotationDetail() {
                 ) : (
                   <Select value={industry} onValueChange={v => { setIndustry(v); setEditingIndustry(false); }}>
                     <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="请选择行业" />
+                      <SelectValue placeholder={t('quotation.industryPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {INDUSTRY_OPTIONS.map(opt => (
@@ -479,8 +492,8 @@ export default function QuotationDetail() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">联系电话</Label>
-                <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="可选" className="h-9 text-sm" />
+                <Label className="text-xs">{t('quotation.customerPhone')}</Label>
+                <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder={t('quotation.phoneOptional')} className="h-9 text-sm" />
               </div>
             </div>
           </CardContent>
@@ -490,18 +503,18 @@ export default function QuotationDetail() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">报价明细</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('quotation.items')}</CardTitle>
               <Button size="sm" variant="outline" onClick={() => setProductSearchOpen(true)} className="gap-1.5 h-8">
                 <Plus className="w-3.5 h-3.5" />
-                添加产品
+                {t('quotation.addProduct')}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             {items.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">
-                <p className="text-sm">暂无产品</p>
-                <p className="text-xs mt-1">点击"添加产品"从产品目录中选择</p>
+                <p className="text-sm">{t('quotation.noItems')}</p>
+                <p className="text-xs mt-1">{t('quotation.noItemsHint')}</p>
               </div>
             ) : (
               <QuotationItemsTable
@@ -516,12 +529,12 @@ export default function QuotationDetail() {
         {/* Summary */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">汇总信息</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('quotation.summary')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">整单折扣率(%)</Label>
+                <Label className="text-xs">{t('quotation.overallDiscount')}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -532,14 +545,14 @@ export default function QuotationDetail() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">合计金额</Label>
+                <Label className="text-xs">{t('quotation.totalAmount')}</Label>
                 <div className="h-9 flex items-center text-lg font-bold tabular-nums text-primary">
                   ¥{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">备注</Label>
-                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="可选" className="min-h-[36px] text-sm" rows={1} />
+                <Label className="text-xs">{t('quotation.notes')}</Label>
+                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('common.optional')} className="min-h-[36px] text-sm" rows={1} />
               </div>
             </div>
           </CardContent>

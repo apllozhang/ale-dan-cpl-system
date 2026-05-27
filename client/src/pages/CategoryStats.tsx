@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 const CHART_COLORS = [
   "#3b82f6", // 蓝
@@ -27,6 +28,7 @@ const CHART_COLORS = [
 ];
 
 export default function CategoryStats() {
+  const { t } = useTranslation();
   const { data: stats, isLoading } = trpc.cpl.stats.useQuery();
 
   const sheetData = useMemo(() => {
@@ -41,7 +43,7 @@ export default function CategoryStats() {
   const statusData = useMemo(() => {
     if (!stats?.byStatus) return [];
     return stats.byStatus.map((s: any) => ({
-      name: s.status || "未知",
+      name: s.status || t('stats.unknown'),
       count: Number(s.count),
     }));
   }, [stats]);
@@ -49,14 +51,14 @@ export default function CategoryStats() {
   const salesCatData = useMemo(() => {
     if (!stats?.bySalesCategory) return [];
     return stats.bySalesCategory.map((s: any) => ({
-      name: s.category || "未知",
+      name: s.category || t('stats.unknown'),
       count: Number(s.count),
     }));
   }, [stats]);
 
-  const chartConfig = {
-    count: { label: "产品数量", color: "var(--chart-1)" },
-  };
+  const chartConfig = useMemo(() => ({
+    count: { label: t('stats.productCount'), color: "var(--chart-1)" },
+  }), [t]);
 
   if (isLoading) {
     return (
@@ -70,7 +72,7 @@ export default function CategoryStats() {
     <div className="h-full flex flex-col gap-4 overflow-auto">
       <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
         <BarChart3 className="w-5 h-5" />
-        分类统计
+        {t('stats.title')}
       </h1>
 
       {/* Summary cards */}
@@ -83,7 +85,7 @@ export default function CategoryStats() {
               </div>
               <div>
                 <div className="text-xl font-bold tabular-nums">{(stats?.total ?? 0).toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">产品总数</p>
+                <p className="text-xs text-muted-foreground">{t('stats.totalProducts')}</p>
               </div>
             </div>
           </CardContent>
@@ -96,7 +98,7 @@ export default function CategoryStats() {
               </div>
               <div>
                 <div className="text-xl font-bold tabular-nums">{stats?.bySheet?.length ?? 0}</div>
-                <p className="text-xs text-muted-foreground">产品系列</p>
+                <p className="text-xs text-muted-foreground">{t('stats.productSeries')}</p>
               </div>
             </div>
           </CardContent>
@@ -109,7 +111,7 @@ export default function CategoryStats() {
               </div>
               <div>
                 <div className="text-xl font-bold tabular-nums">{stats?.byStatus?.length ?? 0}</div>
-                <p className="text-xs text-muted-foreground">产品状态种类</p>
+                <p className="text-xs text-muted-foreground">{t('stats.statusTypes')}</p>
               </div>
             </div>
           </CardContent>
@@ -120,7 +122,7 @@ export default function CategoryStats() {
         {/* Products per sheet - Bar chart */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">各系列产品数量</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('stats.seriesChart')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[350px] w-full">
@@ -138,7 +140,7 @@ export default function CategoryStats() {
         {/* Product status distribution - Pie chart */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">产品状态分布</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('stats.statusChart')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[350px] w-full">
@@ -176,7 +178,7 @@ export default function CategoryStats() {
       {salesCatData.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">销售类别分布</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('stats.salesChart')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -195,16 +197,16 @@ export default function CategoryStats() {
       {/* Sheet detail table */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">各系列产品详情</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('stats.seriesDetail')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  <th className="text-xs font-semibold px-4 py-2 text-left">系列名称</th>
-                  <th className="text-xs font-semibold px-4 py-2 text-right">产品数量</th>
-                  <th className="text-xs font-semibold px-4 py-2 text-right">占比</th>
+                  <th className="text-xs font-semibold px-4 py-2 text-left">{t('stats.seriesName')}</th>
+                  <th className="text-xs font-semibold px-4 py-2 text-right">{t('stats.productCount')}</th>
+                  <th className="text-xs font-semibold px-4 py-2 text-right">{t('stats.proportion')}</th>
                 </tr>
               </thead>
               <tbody>

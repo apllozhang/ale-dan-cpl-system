@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { Users, Plus, Pencil, Trash2, Loader2, Shield, Building2, Group } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 type UserForm = {
   username: string;
@@ -55,6 +56,7 @@ function roleBadgeStyle(role: string): string {
 }
 
 export default function UserManagement() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isSuperAdmin = user?.isSuperAdmin === true;
   const canManageUsers = user ? hasPermission(user, PERMISSIONS.MANAGE_USERS) : false;
@@ -64,8 +66,8 @@ export default function UserManagement() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <Shield className="w-12 h-12 text-muted-foreground/30" />
-        <p className="text-sm font-medium text-foreground">无权限访问</p>
-        <p className="text-xs text-muted-foreground">仅管理员可访问此页面</p>
+        <p className="text-sm font-medium text-foreground">{t('common.noPermission')}</p>
+        <p className="text-xs text-muted-foreground">{t('user.noPermission')}</p>
       </div>
     );
   }
@@ -74,7 +76,7 @@ export default function UserManagement() {
     <div className="h-full flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <Users className="w-5 h-5 text-primary" />
-        <h1 className="text-lg font-semibold text-foreground">用户管理</h1>
+        <h1 className="text-lg font-semibold text-foreground">{t('user.title')}</h1>
       </div>
 
       <Tabs defaultValue="users" className="flex-1 flex flex-col">
@@ -83,17 +85,17 @@ export default function UserManagement() {
             <>
               <TabsTrigger value="organizations" className="gap-1.5 text-xs">
                 <Building2 className="w-3.5 h-3.5" />
-                组织
+                {t('user.orgTab')}
               </TabsTrigger>
               <TabsTrigger value="groups" className="gap-1.5 text-xs">
                 <Group className="w-3.5 h-3.5" />
-                用户组
+                {t('user.groupTab')}
               </TabsTrigger>
             </>
           )}
           <TabsTrigger value="users" className="gap-1.5 text-xs">
             <Users className="w-3.5 h-3.5" />
-            用户
+            {t('user.userTab')}
           </TabsTrigger>
         </TabsList>
 
@@ -117,6 +119,7 @@ export default function UserManagement() {
 
 // ==================== Organization Management ====================
 function OrgManagement() {
+  const { t } = useTranslation();
   const orgsQuery = trpc.organizations.list.useQuery();
   const createMut = trpc.organizations.create.useMutation();
   const updateMut = trpc.organizations.update.useMutation();
@@ -133,51 +136,51 @@ function OrgManagement() {
   const openEdit = (o: any) => { setEditingId(o.id); setName(o.name); setDialogOpen(true); };
 
   const handleSave = async () => {
-    if (!name.trim()) { toast.error("请输入组织名称"); return; }
+    if (!name.trim()) { toast.error(t('user.validationOrgName')); return; }
     try {
       if (editingId) {
         await updateMut.mutateAsync({ id: editingId, name: name.trim() });
-        toast.success("组织已更新");
+        toast.success(t('user.orgUpdated'));
       } else {
         await createMut.mutateAsync({ name: name.trim() });
-        toast.success("组织已创建");
+        toast.success(t('user.orgCreated'));
       }
       setDialogOpen(false);
       orgsQuery.refetch();
-    } catch (err: any) { toast.error(err.message || "操作失败"); }
+    } catch (err: any) { toast.error(err.message || t('common.operationFailed')); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       await deleteMut.mutateAsync({ id: deleteId });
-      toast.success("组织已删除");
+      toast.success(t('user.orgDeleted'));
       setDeleteId(null);
       orgsQuery.refetch();
-    } catch (err: any) { toast.error(err.message || "删除失败"); }
+    } catch (err: any) { toast.error(err.message || t('user.deleteFailed')); }
   };
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <Badge variant="secondary" className="font-normal text-xs">{orgs.length} 个组织</Badge>
-        <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus className="w-4 h-4" />创建组织</Button>
+        <Badge variant="secondary" className="font-normal text-xs">{t('user.orgCount', { count: orgs.length })}</Badge>
+        <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus className="w-4 h-4" />{t('user.createOrg')}</Button>
       </div>
       <div className="flex-1 border rounded-lg bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-xs font-semibold">ID</TableHead>
-              <TableHead className="text-xs font-semibold">名称</TableHead>
-              <TableHead className="text-xs font-semibold">创建时间</TableHead>
-              <TableHead className="text-xs font-semibold w-24">操作</TableHead>
+              <TableHead className="text-xs font-semibold">{t('common.id')}</TableHead>
+              <TableHead className="text-xs font-semibold">{t('common.name')}</TableHead>
+              <TableHead className="text-xs font-semibold">{t('common.created')}</TableHead>
+              <TableHead className="text-xs font-semibold w-24">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orgsQuery.isLoading ? (
               <TableRow><TableCell colSpan={4} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
             ) : orgs.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="h-32 text-center text-muted-foreground text-sm">暂无组织</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="h-32 text-center text-muted-foreground text-sm">{t('user.noOrgs')}</TableCell></TableRow>
             ) : orgs.map((o: any) => (
               <TableRow key={o.id} className="hover:bg-accent/30">
                 <TableCell className="text-sm">{o.id}</TableCell>
@@ -197,15 +200,15 @@ function OrgManagement() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editingId ? "编辑组织" : "创建组织"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? t('user.editOrg') : t('user.createOrg')}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2"><Label>名称 *</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="组织名称" /></div>
+            <div className="space-y-2"><Label>{t('common.name')} *</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder={t('user.orgNamePlaceholder')} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
               {(createMut.isPending || updateMut.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-              {editingId ? "保存" : "创建"}
+              {editingId ? t('common.save') : t('user.createOrg')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -213,8 +216,8 @@ function OrgManagement() {
 
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>确认删除</AlertDialogTitle><AlertDialogDescription>删除组织将同时影响关联的用户组和用户。确定要删除吗？</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>取消</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">删除</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>{t('common.confirmDelete')}</AlertDialogTitle><AlertDialogDescription>{t('user.deleteOrgWarning')}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">{t('common.delete')}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
@@ -223,6 +226,7 @@ function OrgManagement() {
 
 // ==================== User Group Management ====================
 function GroupManagement() {
+  const { t } = useTranslation();
   const groupsQuery = trpc.userGroups.list.useQuery();
   const orgsQuery = trpc.organizations.list.useQuery();
   const createMut = trpc.userGroups.create.useMutation();
@@ -244,53 +248,53 @@ function GroupManagement() {
   const openEdit = (g: any) => { setEditingId(g.id); setName(g.name); setOrgId(g.organizationId); setDialogOpen(true); };
 
   const handleSave = async () => {
-    if (!name.trim()) { toast.error("请输入用户组名称"); return; }
-    if (!orgId) { toast.error("请选择组织"); return; }
+    if (!name.trim()) { toast.error(t('user.validationGroupName')); return; }
+    if (!orgId) { toast.error(t('user.validationGroupOrg')); return; }
     try {
       if (editingId) {
         await updateMut.mutateAsync({ id: editingId, name: name.trim(), organizationId: orgId });
-        toast.success("用户组已更新");
+        toast.success(t('user.groupUpdated'));
       } else {
         await createMut.mutateAsync({ name: name.trim(), organizationId: orgId });
-        toast.success("用户组已创建");
+        toast.success(t('user.groupCreated'));
       }
       setDialogOpen(false);
       groupsQuery.refetch();
-    } catch (err: any) { toast.error(err.message || "操作失败"); }
+    } catch (err: any) { toast.error(err.message || t('common.operationFailed')); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       await deleteMut.mutateAsync({ id: deleteId });
-      toast.success("用户组已删除");
+      toast.success(t('user.groupDeleted'));
       setDeleteId(null);
       groupsQuery.refetch();
-    } catch (err: any) { toast.error(err.message || "删除失败"); }
+    } catch (err: any) { toast.error(err.message || t('user.deleteFailed')); }
   };
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <Badge variant="secondary" className="font-normal text-xs">{groups.length} 个用户组</Badge>
-        <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus className="w-4 h-4" />创建用户组</Button>
+        <Badge variant="secondary" className="font-normal text-xs">{t('user.groupCount', { count: groups.length })}</Badge>
+        <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus className="w-4 h-4" />{t('user.createGroup')}</Button>
       </div>
       <div className="flex-1 border rounded-lg bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-xs font-semibold">ID</TableHead>
-              <TableHead className="text-xs font-semibold">名称</TableHead>
-              <TableHead className="text-xs font-semibold">所属组织</TableHead>
-              <TableHead className="text-xs font-semibold">创建时间</TableHead>
-              <TableHead className="text-xs font-semibold w-24">操作</TableHead>
+              <TableHead className="text-xs font-semibold">{t('common.id')}</TableHead>
+              <TableHead className="text-xs font-semibold">{t('common.name')}</TableHead>
+              <TableHead className="text-xs font-semibold">{t('user.groupOrg')}</TableHead>
+              <TableHead className="text-xs font-semibold">{t('common.created')}</TableHead>
+              <TableHead className="text-xs font-semibold w-24">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {groupsQuery.isLoading ? (
               <TableRow><TableCell colSpan={5} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
             ) : groups.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground text-sm">暂无用户组</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground text-sm">{t('user.noGroups')}</TableCell></TableRow>
             ) : groups.map((g: any) => (
               <TableRow key={g.id} className="hover:bg-accent/30">
                 <TableCell className="text-sm">{g.id}</TableCell>
@@ -311,10 +315,10 @@ function GroupManagement() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editingId ? "编辑用户组" : "创建用户组"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? t('user.editGroup') : t('user.createGroup')}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2"><Label>名称 *</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="用户组名称" /></div>
-            <div className="space-y-2"><Label>所属组织 *</Label>
+            <div className="space-y-2"><Label>{t('common.name')} *</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder={t('user.groupNamePlaceholder')} /></div>
+            <div className="space-y-2"><Label>{t('user.groupOrg')} *</Label>
               <Select value={String(orgId)} onValueChange={v => setOrgId(Number(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{orgs.map((o: any) => <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>)}</SelectContent>
@@ -322,10 +326,10 @@ function GroupManagement() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
               {(createMut.isPending || updateMut.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-              {editingId ? "保存" : "创建"}
+              {editingId ? t('common.save') : t('user.createGroup')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -333,8 +337,8 @@ function GroupManagement() {
 
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>确认删除</AlertDialogTitle><AlertDialogDescription>删除后无法恢复，确定要删除此用户组吗？</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>取消</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">删除</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>{t('common.confirmDelete')}</AlertDialogTitle><AlertDialogDescription>{t('user.deleteGroupWarning')}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">{t('common.delete')}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
@@ -343,6 +347,7 @@ function GroupManagement() {
 
 // ==================== User Management Tab ====================
 function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  const { t } = useTranslation();
   const usersQuery = trpc.users.list.useQuery();
   const orgsQuery = trpc.organizations.list.useQuery();
   const groupsQuery = trpc.userGroups.list.useQuery();
@@ -385,11 +390,11 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   };
 
   const handleSave = async () => {
-    if (!form.username || form.username.length < 3) { toast.error("用户名至少 3 个字符"); return; }
-    if (!editingId && (!form.password || form.password.length < 6)) { toast.error("密码至少 6 个字符"); return; }
-    if (editingId && form.password && form.password.length < 6) { toast.error("密码至少 6 个字符"); return; }
-    if (form.password && form.password !== form.password2) { toast.error("两次密码输入不一致"); return; }
-    if (!editingId && !form.password2) { toast.error("请确认密码"); return; }
+    if (!form.username || form.username.length < 3) { toast.error(t('user.usernameMin')); return; }
+    if (!editingId && (!form.password || form.password.length < 6)) { toast.error(t('user.passwordMin')); return; }
+    if (editingId && form.password && form.password.length < 6) { toast.error(t('user.passwordMin')); return; }
+    if (form.password && form.password !== form.password2) { toast.error(t('user.passwordMismatch')); return; }
+    if (!editingId && !form.password2) { toast.error(t('user.validationPasswordConfirm')); return; }
     try {
       if (editingId) {
         const { password2, ...raw }: any = { id: editingId, ...form };
@@ -398,27 +403,27 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         if (!raw.name) raw.name = undefined;
         if (!raw.email) raw.email = undefined;
         await updateMutation.mutateAsync(raw);
-        toast.success("用户已更新");
+        toast.success(t('user.userUpdated'));
       } else {
         const { password2, ...data }: any = form;
         if (!data.name) data.name = undefined;
         if (!data.email) data.email = undefined;
         await createMutation.mutateAsync(data);
-        toast.success("用户已创建");
+        toast.success(t('user.userCreated'));
       }
       setDialogOpen(false);
       usersQuery.refetch();
-    } catch (err: any) { toast.error(err.message || "操作失败"); }
+    } catch (err: any) { toast.error(err.message || t('common.operationFailed')); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       await deleteMutation.mutateAsync({ id: deleteId });
-      toast.success("用户已删除");
+      toast.success(t('user.userDeleted'));
       setDeleteId(null);
       usersQuery.refetch();
-    } catch (err: any) { toast.error(err.message || "删除失败"); }
+    } catch (err: any) { toast.error(err.message || t('user.deleteFailed')); }
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -426,31 +431,31 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <Badge variant="secondary" className="font-normal text-xs">{users.length} 个用户</Badge>
-        <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus className="w-4 h-4" />创建用户</Button>
+        <Badge variant="secondary" className="font-normal text-xs">{t('user.userCount', { count: users.length })}</Badge>
+        <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus className="w-4 h-4" />{t('user.createUser')}</Button>
       </div>
       <div className="flex-1 border rounded-lg bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-xs font-semibold">用户名</TableHead>
-              <TableHead className="text-xs font-semibold">姓名</TableHead>
-              <TableHead className="text-xs font-semibold">邮箱</TableHead>
-              {isSuperAdmin && <TableHead className="text-xs font-semibold">组织</TableHead>}
-              {isSuperAdmin && <TableHead className="text-xs font-semibold">用户组</TableHead>}
-              <TableHead className="text-xs font-semibold">角色</TableHead>
-              <TableHead className="text-xs font-semibold">最后登录</TableHead>
-              <TableHead className="text-xs font-semibold w-24">操作</TableHead>
+              <TableHead className="text-xs font-semibold">{t('common.username')}</TableHead>
+              <TableHead className="text-xs font-semibold">{t('common.name')}</TableHead>
+              <TableHead className="text-xs font-semibold">{t('common.email')}</TableHead>
+              {isSuperAdmin && <TableHead className="text-xs font-semibold">{t('common.organization')}</TableHead>}
+              {isSuperAdmin && <TableHead className="text-xs font-semibold">{t('common.group')}</TableHead>}
+              <TableHead className="text-xs font-semibold">{t('common.role')}</TableHead>
+              <TableHead className="text-xs font-semibold">{t('user.lastLogin')}</TableHead>
+              <TableHead className="text-xs font-semibold w-24">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {usersQuery.isLoading ? (
               <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 6} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
             ) : users.length === 0 ? (
-              <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 6} className="h-32 text-center text-muted-foreground text-sm">暂无用户</TableCell></TableRow>
+              <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 6} className="h-32 text-center text-muted-foreground text-sm">{t('user.noUsers')}</TableCell></TableRow>
             ) : users.map((u: any) => (
               <TableRow key={u.id} className="hover:bg-accent/30">
-                <TableCell className="text-sm font-medium">{u.username}{u.isSuperAdmin ? <Badge className="ml-1.5 text-[10px] h-4 px-1 bg-amber-500/10 text-amber-600 border-amber-200">超管</Badge> : null}</TableCell>
+                <TableCell className="text-sm font-medium">{u.username}{u.isSuperAdmin ? <Badge className="ml-1.5 text-[10px] h-4 px-1 bg-amber-500/10 text-amber-600 border-amber-200">{t('user.superAdminBadge')}</Badge> : null}</TableCell>
                 <TableCell className="text-sm">{u.name || "-"}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{u.email || "-"}</TableCell>
                 {isSuperAdmin && <TableCell className="text-xs">{getOrgName(u.organizationId)}</TableCell>}
@@ -472,42 +477,42 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
-          <DialogHeader><DialogTitle>{editingId ? "编辑用户" : "创建用户"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? t('user.editUser') : t('user.createUser')}</DialogTitle></DialogHeader>
           <div className="space-y-3 overflow-y-auto flex-1 px-1">
-            <div className="space-y-1.5"><Label>用户名 *</Label><Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="至少 3 个字符" disabled={!!editingId} /></div>
-            <div className="space-y-1.5"><Label>{editingId ? "新密码（留空不修改）" : "密码 *"}</Label><Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={editingId ? "留空则不修改" : "至少 6 个字符"} /></div>
+            <div className="space-y-1.5"><Label>{t('common.username')} *</Label><Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder={t('user.usernameMin')} disabled={!!editingId} /></div>
+            <div className="space-y-1.5"><Label>{editingId ? t('user.newPassword') : t('user.password') + ' *'}</Label><Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={editingId ? t('common.optional') : t('user.passwordMin')} /></div>
             {(form.password || !editingId) && (
-              <div className="space-y-1.5"><Label>确认密码 *</Label><Input type="password" value={form.password2} onChange={e => setForm(f => ({ ...f, password2: e.target.value }))} placeholder="再次输入密码" /></div>
+              <div className="space-y-1.5"><Label>{t('user.confirmPassword')} *</Label><Input type="password" value={form.password2} onChange={e => setForm(f => ({ ...f, password2: e.target.value }))} placeholder={t('user.passwordMin')} /></div>
             )}
-            <div className="space-y-1.5"><Label>姓名</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="可选" /></div>
-            <div className="space-y-1.5"><Label>邮箱</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="可选" /></div>
+            <div className="space-y-1.5"><Label>{t('common.name')}</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={t('common.optional')} /></div>
+            <div className="space-y-1.5"><Label>{t('common.email')}</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder={t('common.optional')} /></div>
             {isSuperAdmin && (
               <>
-                <div className="space-y-1.5"><Label>组织</Label>
+                <div className="space-y-1.5"><Label>{t('common.organization')}</Label>
                   <Select value={form.organizationId ? String(form.organizationId) : "none"} onValueChange={v => setForm(f => ({ ...f, organizationId: v === "none" ? undefined : Number(v) }))}>
-                    <SelectTrigger><SelectValue placeholder="选择组织" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t('user.selectOrg')} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">无</SelectItem>
+                      <SelectItem value="none">{t('common.no')}</SelectItem>
                       {orgs.map((o: any) => <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5"><Label>用户组</Label>
+                <div className="space-y-1.5"><Label>{t('common.group')}</Label>
                   <Select value={form.groupId ? String(form.groupId) : "none"} onValueChange={v => setForm(f => ({ ...f, groupId: v === "none" ? undefined : Number(v) }))}>
-                    <SelectTrigger><SelectValue placeholder="选择用户组" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t('user.selectGroup')} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">无</SelectItem>
+                      <SelectItem value="none">{t('common.no')}</SelectItem>
                       {groups.map((g: any) => <SelectItem key={g.id} value={String(g.id)}>{g.name} ({getOrgName(g.organizationId)})</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex items-center gap-2">
                   <Checkbox id="isSuperAdmin" checked={form.isSuperAdmin} onCheckedChange={v => setForm(f => ({ ...f, isSuperAdmin: !!v }))} />
-                  <Label htmlFor="isSuperAdmin" className="text-sm cursor-pointer">超级管理员（拥有全部权限）</Label>
+                  <Label htmlFor="isSuperAdmin" className="text-sm cursor-pointer">{t('user.superAdmin')}</Label>
                 </div>
               </>
             )}
-            <div className="space-y-1.5"><Label>角色</Label>
+            <div className="space-y-1.5"><Label>{t('common.role')}</Label>
               <Select value={form.role} onValueChange={(v: string) => setForm(f => ({ ...f, role: v as Role }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -519,16 +524,16 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
             </div>
           </div>
           <DialogFooter className="mt-2 pt-2 border-t shrink-0">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
-            <Button onClick={handleSave} disabled={isSaving}>{isSaving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}{editingId ? "保存" : "创建"}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handleSave} disabled={isSaving}>{isSaving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}{editingId ? t('common.save') : t('user.createUser')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>确认删除</AlertDialogTitle><AlertDialogDescription>删除后无法恢复，确定要删除此用户吗？</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>取消</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">删除</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>{t('common.confirmDelete')}</AlertDialogTitle><AlertDialogDescription>{t('user.deleteUserWarning')}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">{t('common.delete')}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

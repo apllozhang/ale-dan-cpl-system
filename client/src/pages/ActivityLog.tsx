@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -12,43 +12,38 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState, useMemo } from "react";
 import {
-  Activity, Users, FileText, Search, Loader2, Trash2, Download,
+  Activity, Users, FileText, Search, Loader2, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
-const RESOURCE_LABELS: Record<string, string> = {
-  quotation: "报价单",
-  user: "用户",
-  import: "数据导入",
-  product: "产品",
-  auth: "认证",
-};
-
-function formatDetail(action: string, detail: string | null): string {
+function formatDetail(action: string, detail: string | null, t: (key: string, options?: Record<string, any>) => string): string {
   if (!detail) return "-";
   try {
     const d = JSON.parse(detail);
     switch (action) {
       case "login":
-        return d.method === "local" ? "账号密码登录" : d.method === "oauth" ? "OAuth 登录" : "登录系统";
+        return t('activity.actionLogin');
       case "logout":
-        return "退出系统";
+        return t('activity.actionLogout');
       case "create_quotation":
-        return `创建报价单「${d.quotationNo || ""}」，客户：${d.customerName || ""}，${d.itemCount ?? 0} 个产品`;
+        return t('activity.createQuotationDetail', { no: d.quotationNo || "", customer: d.customerName || "", count: d.itemCount ?? 0 });
       case "update_quotation":
-        return `更新报价单「${d.quotationNo || ""}」`;
+        return t('activity.updateQuotationDetail', { no: d.quotationNo || "" });
       case "delete_quotation":
-        return `删除报价单「${d.quotationNo || ""}」，客户：${d.customerName || ""}`;
+        return t('activity.deleteQuotationDetail', { no: d.quotationNo || "", customer: d.customerName || "" });
       case "update_status":
-        return `报价单「${d.quotationNo || ""}」状态变更为「${d.newStatus || ""}」`;
+        return t('activity.updateStatusDetail', { no: d.quotationNo || "", status: d.newStatus || "" });
       case "import_data":
-        return `导入文件「${d.fileName || ""}」，${d.sheetsCount ?? 0} 个 Sheet，${d.productsCount ?? 0} 个产品`;
+        return t('activity.importDataDetail', { fileName: d.fileName || "", sheets: d.sheetsCount ?? 0, products: d.productsCount ?? 0 });
       case "create_user":
-        return `创建用户「${d.username || ""}」，角色：${d.role || ""}`;
-      case "update_user":
-        return `更新用户「${d.username || ""}」${d.changes ? "，变更：" + d.changes : ""}`;
+        return t('activity.createUserDetail', { username: d.username || "", role: d.role || "" });
+      case "update_user": {
+        const changes = d.changes ? `，变更：${d.changes}` : "";
+        return t('activity.updateUserDetail', { username: d.username || "", changes });
+      }
       case "delete_user":
-        return `删除用户「${d.username || ""}」`;
+        return t('activity.deleteUserDetail', { username: d.username || "" });
       default:
         return Object.entries(d).map(([k, v]) => `${k}: ${v}`).join("，");
     }
@@ -56,19 +51,6 @@ function formatDetail(action: string, detail: string | null): string {
     return detail.slice(0, 120);
   }
 }
-
-const ACTION_LABELS: Record<string, string> = {
-  login: "登录",
-  logout: "登出",
-  create_quotation: "创建报价",
-  update_quotation: "更新报价",
-  delete_quotation: "删除报价",
-  update_status: "更新状态",
-  import_data: "导入数据",
-  create_user: "创建用户",
-  update_user: "更新用户",
-  delete_user: "删除用户",
-};
 
 const ACTION_COLORS: Record<string, string> = {
   login: "bg-green-50 text-green-700",
@@ -84,11 +66,33 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 export default function ActivityLog() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [clearOpen, setClearOpen] = useState(false);
   const pageSize = 20;
+
+  const RESOURCE_LABELS: Record<string, string> = useMemo(() => ({
+    quotation: t('activity.resQuotation'),
+    user: t('activity.resUser'),
+    import: t('activity.resImport'),
+    product: t('activity.resProduct'),
+    auth: t('activity.resAuth'),
+  }), [t]);
+
+  const ACTION_LABELS: Record<string, string> = useMemo(() => ({
+    login: t('activity.actionLogin'),
+    logout: t('activity.actionLogout'),
+    create_quotation: t('activity.actionCreateQuotation'),
+    update_quotation: t('activity.actionUpdateQuotation'),
+    delete_quotation: t('activity.actionDeleteQuotation'),
+    update_status: t('activity.actionUpdateStatus'),
+    import_data: t('activity.actionImportData'),
+    create_user: t('activity.actionCreateUser'),
+    update_user: t('activity.actionUpdateUser'),
+    delete_user: t('activity.actionDeleteUser'),
+  }), [t]);
 
   const { data: stats } = trpc.activityLogs.stats.useQuery();
   const { data, isLoading, refetch } = trpc.activityLogs.list.useQuery({
@@ -99,8 +103,8 @@ export default function ActivityLog() {
   });
 
   const clearMutation = trpc.activityLogs.clear.useMutation({
-    onSuccess: () => { toast.success("日志已清除"); refetch(); },
-    onError: (err: any) => toast.error(err.message || "清除失败"),
+    onSuccess: () => { toast.success(t('activity.logsCleared')); refetch(); },
+    onError: (err: any) => toast.error(err.message || t('activity.clearFailed')),
   });
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0;
@@ -110,11 +114,11 @@ export default function ActivityLog() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Activity className="w-5 h-5" />
-          操作日志
+          {t('activity.title')}
         </h1>
         <Button variant="outline" size="sm" onClick={() => setClearOpen(true)} disabled={clearMutation.isPending} className="text-destructive hover:text-destructive">
           <Trash2 className="w-3.5 h-3.5 mr-1" />
-          清除日志
+          {t('activity.clearLogs')}
         </Button>
       </div>
 
@@ -128,7 +132,7 @@ export default function ActivityLog() {
               </div>
               <div>
                 <div className="text-xl font-bold tabular-nums">{stats?.today ?? 0}</div>
-                <p className="text-xs text-muted-foreground">今日操作</p>
+                <p className="text-xs text-muted-foreground">{t('activity.todayOps')}</p>
               </div>
             </div>
           </CardContent>
@@ -141,7 +145,7 @@ export default function ActivityLog() {
               </div>
               <div>
                 <div className="text-xl font-bold tabular-nums">{stats?.week ?? 0}</div>
-                <p className="text-xs text-muted-foreground">近7天操作</p>
+                <p className="text-xs text-muted-foreground">{t('activity.weekOps')}</p>
               </div>
             </div>
           </CardContent>
@@ -154,7 +158,7 @@ export default function ActivityLog() {
               </div>
               <div>
                 <div className="text-xl font-bold tabular-nums">{stats?.byAction?.login ?? 0}</div>
-                <p className="text-xs text-muted-foreground">近7天登录</p>
+                <p className="text-xs text-muted-foreground">{t('activity.weekLogins')}</p>
               </div>
             </div>
           </CardContent>
@@ -166,7 +170,7 @@ export default function ActivityLog() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
-            placeholder="搜索用户、操作、详情..."
+            placeholder={t('activity.searchPlaceholder')}
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="pl-8 h-9 text-sm"
@@ -174,10 +178,10 @@ export default function ActivityLog() {
         </div>
         <Select value={actionFilter} onValueChange={v => { setActionFilter(v); setPage(1); }}>
           <SelectTrigger className="w-[140px] h-9 text-sm">
-            <SelectValue placeholder="操作类型" />
+            <SelectValue placeholder={t('activity.actionType')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部操作</SelectItem>
+            <SelectItem value="all">{t('activity.allActions')}</SelectItem>
             {Object.entries(ACTION_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key}>{label}</SelectItem>
             ))}
@@ -191,18 +195,18 @@ export default function ActivityLog() {
           <table className="w-full" style={{ tableLayout: "fixed" }}>
             <thead>
               <tr className="bg-muted/30 border-b">
-                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[160px]">时间</th>
-                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[100px]">用户</th>
-                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[120px]">操作</th>
-                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[100px]">资源类型</th>
-                <th className="text-xs font-semibold px-4 py-2.5 text-left">详情</th>
+                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[160px]">{t('activity.time')}</th>
+                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[100px]">{t('activity.user')}</th>
+                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[120px]">{t('activity.action')}</th>
+                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[100px]">{t('activity.resourceType')}</th>
+                <th className="text-xs font-semibold px-4 py-2.5 text-left">{t('activity.detail')}</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr><td colSpan={5} className="h-32 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
               ) : !data?.items?.length ? (
-                <tr><td colSpan={5} className="h-32 text-center text-muted-foreground text-sm">暂无操作日志</td></tr>
+                <tr><td colSpan={5} className="h-32 text-center text-muted-foreground text-sm">{t('activity.noLogs')}</td></tr>
               ) : data.items.map((log: any) => (
                 <tr key={log.id} className="border-b border-border/50 hover:bg-accent/20">
                   <td className="px-4 py-2 text-xs text-muted-foreground">
@@ -216,7 +220,7 @@ export default function ActivityLog() {
                   </td>
                   <td className="px-4 py-2 text-xs text-muted-foreground">{RESOURCE_LABELS[log.resourceType] || log.resourceType || "-"}</td>
                   <td className="px-4 py-2 text-xs text-muted-foreground" style={{ maxWidth: 400 }}>
-                    {formatDetail(log.action, log.detail)}
+                    {formatDetail(log.action, log.detail, t)}
                   </td>
                 </tr>
               ))}
@@ -228,11 +232,11 @@ export default function ActivityLog() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>共 {data?.total ?? 0} 条记录</span>
+          <span>{t('activity.totalRecords', { count: data?.total ?? 0 })}</span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="h-7 text-xs">上一页</Button>
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="h-7 text-xs">{t('common.previous')}</Button>
             <span>{page} / {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="h-7 text-xs">下一页</Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="h-7 text-xs">{t('common.next')}</Button>
           </div>
         </div>
       )}
@@ -240,12 +244,12 @@ export default function ActivityLog() {
       <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认清除日志</AlertDialogTitle>
-            <AlertDialogDescription>清除后将删除所有操作日志，此操作不可恢复。确定要继续吗？</AlertDialogDescription>
+            <AlertDialogTitle>{t('activity.confirmClear')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('activity.clearWarning')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { clearMutation.mutate(); setClearOpen(false); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">确认清除</AlertDialogAction>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { clearMutation.mutate(); setClearOpen(false); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('activity.confirmClearBtn')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

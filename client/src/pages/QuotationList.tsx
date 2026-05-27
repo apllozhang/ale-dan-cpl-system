@@ -16,16 +16,7 @@ import {
 } from "lucide-react";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
 import QuotationCompare from "@/components/QuotationCompare";
-
-const STATUS_OPTIONS = [
-  { value: "all", label: "全部状态" },
-  { value: "draft", label: "草稿" },
-  { value: "submitted", label: "已提交" },
-  { value: "approved", label: "已审批" },
-  { value: "sent", label: "已发送" },
-  { value: "completed", label: "已完成" },
-  { value: "cancelled", label: "已取消" },
-];
+import { useTranslation } from "react-i18next";
 
 function generatePageNumbers(current: number, total: number): (number | "...")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -43,6 +34,7 @@ function generatePageNumbers(current: number, total: number): (number | "...")[]
 }
 
 export default function QuotationList() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -52,6 +44,16 @@ export default function QuotationList() {
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showCompare, setShowCompare] = useState(false);
+
+  const STATUS_OPTIONS = [
+    { value: "all", label: t("common.all") },
+    { value: "draft", label: t("quotation.draft") },
+    { value: "submitted", label: t("quotation.submitted") },
+    { value: "approved", label: t("quotation.approved") },
+    { value: "sent", label: t("quotation.sent") },
+    { value: "completed", label: t("quotation.completed") },
+    { value: "cancelled", label: t("quotation.cancelled") },
+  ];
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -81,10 +83,10 @@ export default function QuotationList() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <FileSpreadsheet className="w-5 h-5 text-primary" />
-          <h1 className="text-lg font-semibold text-foreground">报价管理</h1>
+          <h1 className="text-lg font-semibold text-foreground">{t("quotation.title")}</h1>
           {total > 0 && (
             <Badge variant="secondary" className="font-normal text-xs">
-              {total.toLocaleString()} 条记录
+              {t("quotation.records", { count: total })}
             </Badge>
           )}
         </div>
@@ -92,7 +94,7 @@ export default function QuotationList() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="搜索报价单号、客户、项目..."
+              placeholder={t("quotation.searchPlaceholder")}
               value={search}
               onChange={e => handleSearchChange(e.target.value)}
               className="pl-9 w-64 h-9 text-sm bg-background"
@@ -118,12 +120,12 @@ export default function QuotationList() {
           </Select>
           <Button size="sm" onClick={() => setLocation("/quotations/new")} className="gap-1.5">
             <Plus className="w-4 h-4" />
-            新建报价
+            {t("quotation.newQuotation")}
           </Button>
           {selectedIds.size >= 2 && (
             <Button size="sm" variant="outline" onClick={() => setShowCompare(true)} className="gap-1.5">
               <GitCompare className="w-4 h-4" />
-              对比 ({selectedIds.size})
+              {t("quotation.compare", { count: selectedIds.size })}
             </Button>
           )}
         </div>
@@ -152,13 +154,13 @@ export default function QuotationList() {
                   className="w-4 h-4 cursor-pointer"
                 />
               </TableHead>
-              <TableHead className="text-xs font-semibold">报价编号</TableHead>
-              <TableHead className="text-xs font-semibold">客户名称</TableHead>
-              <TableHead className="text-xs font-semibold">项目名称</TableHead>
-              <TableHead className="text-xs font-semibold">状态</TableHead>
-              <TableHead className="text-xs font-semibold text-right">金额</TableHead>
-              <TableHead className="text-xs font-semibold">创建人</TableHead>
-              <TableHead className="text-xs font-semibold">创建日期</TableHead>
+              <TableHead className="text-xs font-semibold">{t("quotation.no")}</TableHead>
+              <TableHead className="text-xs font-semibold">{t("quotation.customerName")}</TableHead>
+              <TableHead className="text-xs font-semibold">{t("quotation.projectName")}</TableHead>
+              <TableHead className="text-xs font-semibold">{t("quotation.status")}</TableHead>
+              <TableHead className="text-xs font-semibold text-right">{t("quotation.amount")}</TableHead>
+              <TableHead className="text-xs font-semibold">{t("quotation.createdBy")}</TableHead>
+              <TableHead className="text-xs font-semibold">{t("quotation.createDate")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -167,7 +169,7 @@ export default function QuotationList() {
                 <TableCell colSpan={8} className="h-48 text-center">
                   <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">加载中...</span>
+                    <span className="text-sm">{t("common.loading")}</span>
                   </div>
                 </TableCell>
               </TableRow>
@@ -176,12 +178,12 @@ export default function QuotationList() {
                 <TableCell colSpan={8} className="h-48 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <FileSpreadsheet className="w-8 h-8 opacity-30" />
-                    <span className="text-sm">暂无报价单</span>
+                    <span className="text-sm">{t("quotation.noQuotations")}</span>
                     <button
                       onClick={() => setLocation("/quotations/new")}
                       className="text-xs text-primary hover:text-primary/80 font-medium"
                     >
-                      创建第一份报价单 →
+                      {t("quotation.createFirst")}
                     </button>
                   </div>
                 </TableCell>
@@ -234,7 +236,7 @@ export default function QuotationList() {
       {totalPages > 0 && (
         <div className="flex items-center justify-between py-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>每页</span>
+            <span>{t("data.perPage")}</span>
             <Select value={String(pageSize)} onValueChange={v => { setPageSize(Number(v)); setPage(1); }}>
               <SelectTrigger className="h-8 w-[70px] text-xs">
                 <SelectValue />
@@ -245,9 +247,13 @@ export default function QuotationList() {
                 <SelectItem value="50">50</SelectItem>
               </SelectContent>
             </Select>
-            <span>条</span>
+            <span>{t("data.items")}</span>
             <span className="ml-2 text-xs">
-              第 {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} 条，共 {total.toLocaleString()} 条
+              {t("data.range", {
+                start: (page - 1) * pageSize + 1,
+                end: Math.min(page * pageSize, total),
+                total: total.toLocaleString(),
+              })}
             </span>
           </div>
           <div className="flex items-center gap-1">
