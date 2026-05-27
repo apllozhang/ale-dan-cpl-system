@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
-// Backend Excel export is now handled by tRPC procedure
+import { exportQuotationToExcel } from "@/lib/quotationExport";
 import ProductSelectorDialog from "@/components/ProductSelectorDialog";
 
 type ItemRow = {
@@ -189,14 +189,11 @@ export default function QuotationDetail() {
   const [items, setItems] = useState<ItemRow[]>([]);
   const [productSearchOpen, setProductSearchOpen] = useState(false);
 
-   // Load quotation data
+  // Load existing quotation
   const quotationQuery = trpc.quotations.getById.useQuery(
     { id: quotationId! },
     { enabled: !!quotationId }
   );
-
-  // Export Excel mutation - moved to top level to fix Hook usage
-  const exportExcelMutation = trpc.quotations.exportExcel.useMutation();
 
   // Load quotation data
   useEffect(() => {
@@ -337,59 +334,8 @@ export default function QuotationDetail() {
   };
 
   const handleExport = async () => {
-    if (!quotationId) return;
-    try {
-      const result = await exportExcelMutation.mutateAsync({ id: quotationId });
-      
-      // Decode base64 to Blob
-      const binaryString = atob(result.data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      
-      // Try to use File System Access API
-      if ("showSaveFilePicker" in window) {
-        try {
-          const handle = await (window as any).showSaveFilePicker({
-            suggestedName: result.fileName,
-            types: [{ description: "Excel Files", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] } }],
-          });
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          toast.success("报价单已导出");
-        } catch (err: any) {
-          if (err.name !== "AbortError") {
-            // Fallback to direct download
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = result.fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            toast.success("报价单已导出");
-          }
-        }
-      } else {
-        // Fallback for browsers without File System Access API
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = result.fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        toast.success("报价单已导出");
-      }
-    } catch (err: any) {
-      console.error("Export error:", err);
-      toast.error(err.message || "导出失败");
-    }
+    if (!quotationQuery.data) return;
+    await exportQuotationToExcel(quotationQuery.data, items);
   };
 
   const handleShare = async () => {
