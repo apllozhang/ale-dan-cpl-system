@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
-import { exportQuotationToExcel } from "@/lib/quotationExport";
+import { exportQuotationToExcelPro } from "@/lib/quotationExportPro";
 import ProductSelectorDialog from "@/components/ProductSelectorDialog";
 
 type ItemRow = {
@@ -335,7 +335,7 @@ export default function QuotationDetail() {
 
   const handleExport = async () => {
     if (!quotationQuery.data) return;
-    await exportQuotationToExcel(quotationQuery.data, items);
+    await exportQuotationToExcelPro(quotationQuery.data, items);
   };
 
   const handleShare = async () => {
