@@ -64,6 +64,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { exportToExcel } from "@/lib/exportUtils";
+import { useTranslation } from "react-i18next";
 import {
   buildCategoryNav,
   getQuerySheetNames,
@@ -83,17 +84,17 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 const COLUMNS = [
-  { key: "productGroup", label: "产品组件", defaultWidth: 140 },
-  { key: "taxCategory", label: "税务小类", defaultWidth: 110 },
-  { key: "productModel", label: "产品型号", defaultWidth: 140 },
-  { key: "productDesc", label: "产品说明", defaultWidth: 280 },
-  { key: "salesCategory", label: "销售类别", defaultWidth: 90 },
-  { key: "serviceCategory", label: "服务类别", defaultWidth: 90 },
-  { key: "productStatus", label: "产品状态", defaultWidth: 90 },
-  { key: "listPrice", label: "媒体价", defaultWidth: 100 },
-  { key: "priceNote", label: "价格说明", defaultWidth: 110 },
-  { key: "isNew", label: "新品", defaultWidth: 60 },
-  { key: "remark", label: "备注", defaultWidth: 140 },
+  { key: "productGroup", label: "产品组件", labelKey: "data.columns.productGroup", defaultWidth: 140 },
+  { key: "taxCategory", label: "税务小类", labelKey: "data.columns.taxCategory", defaultWidth: 110 },
+  { key: "productModel", label: "产品型号", labelKey: "data.columns.productModel", defaultWidth: 140 },
+  { key: "productDesc", label: "产品说明", labelKey: "data.columns.productDesc", defaultWidth: 280 },
+  { key: "salesCategory", label: "销售类别", labelKey: "data.columns.salesCategory", defaultWidth: 90 },
+  { key: "serviceCategory", label: "服务类别", labelKey: "data.columns.serviceCategory", defaultWidth: 90 },
+  { key: "productStatus", label: "产品状态", labelKey: "data.columns.productStatus", defaultWidth: 90 },
+  { key: "listPrice", label: "媒体价", labelKey: "data.columns.listPrice", defaultWidth: 100 },
+  { key: "priceNote", label: "价格说明", labelKey: "data.columns.priceNote", defaultWidth: 110 },
+  { key: "isNew", label: "新品", labelKey: "data.columns.isNew", defaultWidth: 60 },
+  { key: "remark", label: "备注", labelKey: "data.columns.remark", defaultWidth: 140 },
 ] as const;
 
 type ColumnKey = (typeof COLUMNS)[number]["key"];
@@ -108,7 +109,8 @@ const STORAGE_KEY_COLUMNS = "ale-cpl-visible-columns";
 const STORAGE_KEY_WIDTHS = "ale-cpl-column-widths";
 
 export default function DataViewer() {
-  const [location, setLocation] = useLocation();
+  const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   const [activeNav, setActiveNav] = useState<CategoryNavItem | null>(null);
   const [wiredExpanded, setWiredExpanded] = useState(true);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
@@ -358,7 +360,7 @@ export default function DataViewer() {
       {/* Left category nav panel */}
       <div className="w-[220px] shrink-0 border rounded-lg bg-card overflow-hidden">
         <div className="px-3 py-2.5 border-b">
-          <h3 className="text-sm font-semibold text-foreground">产品分类</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('data.category')}</h3>
         </div>
         <ScrollArea className="h-[calc(100%-40px)]">
           <div className="p-2 space-y-0.5">
@@ -432,7 +434,7 @@ export default function DataViewer() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <Database className="w-5 h-5 text-primary" />
-            <h1 className="text-lg font-semibold text-foreground">产品数据</h1>
+            <h1 className="text-lg font-semibold text-foreground">{t('data.title')}</h1>
             {activeNav && (
               <Badge variant="outline" className="text-xs">
                 {activeNav.type === "subcategory" ? activeNav.subcategory.label : activeNav.category.label}
@@ -440,7 +442,7 @@ export default function DataViewer() {
             )}
             {total > 0 && (
               <Badge variant="secondary" className="font-normal text-xs">
-                {total.toLocaleString()} 条记录
+                {t('common.records', { count: total })}
               </Badge>
             )}
           </div>
@@ -448,7 +450,7 @@ export default function DataViewer() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="搜索所有字段..."
+                placeholder={t('data.searchPlaceholder')}
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9 w-64 h-9 text-sm bg-background"
@@ -469,7 +471,7 @@ export default function DataViewer() {
               className="h-9 gap-1.5"
             >
               <Filter className="w-3.5 h-3.5" />
-              筛选
+              {t('data.filter')}
               {activeFilterCount > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-primary-foreground text-primary">
                   {activeFilterCount}
@@ -480,11 +482,11 @@ export default function DataViewer() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 gap-1.5">
                   <Settings2 className="w-3.5 h-3.5" />
-                  列设置
+                  {t('data.columnSettings')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5 text-sm font-medium text-foreground">显示/隐藏列</div>
+                <div className="px-2 py-1.5 text-sm font-medium text-foreground">{t('data.showHideColumns')}</div>
                 <DropdownMenuSeparator />
                 {COLUMNS.map((col) => (
                   <DropdownMenuCheckboxItem
@@ -499,7 +501,7 @@ export default function DataViewer() {
                       ) : (
                         <EyeOff className="w-3.5 h-3.5" />
                       )}
-                      {col.label}
+                      {t(col.labelKey)}
                     </div>
                   </DropdownMenuCheckboxItem>
                 ))}
@@ -513,7 +515,7 @@ export default function DataViewer() {
           <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-foreground">
-                已选择 {selectedRows.size} 个产品
+                {t('data.selectedProducts', { count: selectedRows.size })}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -526,7 +528,7 @@ export default function DataViewer() {
                 }}
               >
                 <FileSpreadsheet className="w-4 h-4 mr-1" />
-                创建报价
+                {t('data.createQuotation')}
               </Button>
               <Button
                 size="sm"
@@ -536,7 +538,7 @@ export default function DataViewer() {
                   setSelectAll(false);
                 }}
               >
-                取消选择
+                {t('data.deselect')}
               </Button>
               <Button
                 size="sm"
@@ -544,7 +546,7 @@ export default function DataViewer() {
                 onClick={() => {
                   const selectedProducts = products.filter(p => selectedRows.has(String(p.id)));
                   if (selectedProducts.length === 0) {
-                    alert('请先选择产品');
+                    alert(t('data.selectProductsFirst'));
                     return;
                   }
 
@@ -559,13 +561,13 @@ export default function DataViewer() {
 
                   exportToExcel(
                     exportData,
-                    visibleCols.map(col => ({ key: col.key, label: col.label })),
+                    visibleCols.map(col => ({ key: col.key, label: t(col.labelKey) })),
                     `ALE_CPL_${currentSheets?.[0] || "data"}`
                   );
                 }}
               >
                 <Download className="w-4 h-4 mr-1" />
-                批量导出 Excel
+                {t('data.batchExport')}
               </Button>
             </div>
           </div>
@@ -575,10 +577,10 @@ export default function DataViewer() {
         {showFilters && (
           <div className="bg-card border rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">列筛选</span>
+              <span className="text-sm font-medium text-foreground">{t('data.columnFilter')}</span>
               {activeFilterCount > 0 && (
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs">
-                  清除所有
+                  {t('common.clearAll')}
                 </Button>
               )}
             </div>
@@ -586,7 +588,7 @@ export default function DataViewer() {
               {COLUMNS.map((col) => (
                 <div key={col.key}>
                   <Input
-                    placeholder={col.label}
+                    placeholder={t(col.labelKey)}
                     value={filters[col.key] || ""}
                     onChange={(e) => handleFilterChange(col.key, e.target.value)}
                     className="h-8 text-xs"
@@ -609,7 +611,7 @@ export default function DataViewer() {
                       checked={selectAll}
                       onChange={handleSelectAll}
                       className="w-4 h-4 cursor-pointer"
-                      title="全选/取消全选"
+                      title={t('common.selectAll')}
                     />
                   </TableHead>
                   {visibleColumnsList.map((col, idx) => (
@@ -620,13 +622,13 @@ export default function DataViewer() {
                       onClick={() => handleSort(col.key)}
                     >
                       <div className="flex items-center gap-1">
-                        {col.label}
+                        {t(col.labelKey)}
                         {getSortIcon(col.key)}
                       </div>
                       <div
                         onMouseDown={(e) => handleResizeStart(col.key, e)}
                         className="absolute right-0 top-0 bottom-0 w-1 bg-border/0 hover:bg-primary/50 cursor-col-resize transition-colors opacity-0 group-hover:opacity-100"
-                        title="拖动调整列宽"
+                        title={t('data.dragResize')}
                       />
                     </TableHead>
                   ))}
@@ -638,7 +640,7 @@ export default function DataViewer() {
                     <TableCell colSpan={visibleColumnsList.length + 1} className="h-48 text-center">
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">加载中...</span>
+                        <span className="text-sm">{t('common.loading')}</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -647,9 +649,9 @@ export default function DataViewer() {
                     <TableCell colSpan={visibleColumnsList.length + 1} className="h-48 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Database className="w-8 h-8 opacity-30" />
-                        <span className="text-sm">暂无数据</span>
+                        <span className="text-sm">{t('common.noData')}</span>
                         {(debouncedSearch || activeFilterCount > 0) && (
-                          <span className="text-xs">尝试调整搜索条件或筛选器</span>
+                          <span className="text-xs">{t('data.tryAdjust')}</span>
                         )}
                       </div>
                     </TableCell>
@@ -720,7 +722,7 @@ export default function DataViewer() {
         {totalPages > 0 && (
           <div className="flex items-center justify-between py-1">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>每页</span>
+              <span>{t('data.perPage')}</span>
               <Select
                 value={String(pageSize)}
                 onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}
@@ -735,9 +737,9 @@ export default function DataViewer() {
                   <SelectItem value="200">200</SelectItem>
                 </SelectContent>
               </Select>
-              <span>条</span>
+              <span>{t('data.items')}</span>
               <span className="ml-2 text-xs">
-                第 {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} 条，共 {total.toLocaleString()} 条
+                {t('data.range', { start: (page - 1) * pageSize + 1, end: Math.min(page * pageSize, total), total: total.toLocaleString() })}
               </span>
             </div>
             <div className="flex items-center gap-1">

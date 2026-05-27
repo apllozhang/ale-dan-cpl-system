@@ -1,4 +1,4 @@
-import { eq, like, or, and, sql, asc, desc, SQL, inArray } from "drizzle-orm";
+import { eq, like, or, and, sql, asc, desc, SQL, inArray, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users, cplProducts, cplSheets, cplSummary,
@@ -484,15 +484,28 @@ export async function createQuotation(data: InsertQuotation, items: InsertQuotat
   return { id: quotationId, quotationNo };
 }
 
-export async function updateQuotation(id: number, data: Partial<InsertQuotation>, items?: InsertQuotationItem[]) {
+export async function updateQuotation(id: number, data: Partial<InsertQuotation>, items?: InsertQuotationItem[], userId?: number) {
   const db = await getDb();
   if (!db) return;
+
+  // Snapshot current state BEFORE update (for version tracking)
+  let shouldCreateVersion = false;
+  const oldItems = await db.select().from(quotationItems).where(eq(quotationItems.quotationId, id));
+  const [oldQuotation] = await db.select({
+    version: quotations.version,
+    totalAmount: quotations.totalAmount,
+    customerName: quotations.customerName,
+    projectName: quotations.projectName,
+    status: quotations.status,
+    notes: quotations.notes,
+  }).from(quotations).where(eq(quotations.id, id)).limit(1);
 
   const updateSet: Record<string, unknown> = {};
   if (data.customerName !== undefined) updateSet.customerName = data.customerName;
   if (data.customerContact !== undefined) updateSet.customerContact = data.customerContact;
   if (data.customerPhone !== undefined) updateSet.customerPhone = data.customerPhone;
   if (data.customerEmail !== undefined) updateSet.customerEmail = data.customerEmail;
+  if (data.industry !== undefined) updateSet.industry = data.industry;
   if (data.projectName !== undefined) updateSet.projectName = data.projectName;
   if (data.discountRate !== undefined) updateSet.discountRate = data.discountRate;
   if (data.totalAmount !== undefined) updateSet.totalAmount = data.totalAmount;
@@ -501,10 +514,12 @@ export async function updateQuotation(id: number, data: Partial<InsertQuotation>
   if (data.status !== undefined) updateSet.status = data.status;
 
   if (Object.keys(updateSet).length > 0) {
+    shouldCreateVersion = true;
     await db.update(quotations).set(updateSet).where(eq(quotations.id, id));
   }
 
   if (items !== undefined) {
+    shouldCreateVersion = true;
     await db.delete(quotationItems).where(eq(quotationItems.quotationId, id));
     if (items.length > 0) {
       const itemsWithQId = items.map(item => ({ ...item, quotationId: id }));
@@ -514,6 +529,66 @@ export async function updateQuotation(id: number, data: Partial<InsertQuotation>
         await db.insert(quotationItems).values(batch);
       }
     }
+  }
+
+  // Auto-create version snapshot with change summary
+  if (shouldCreateVersion && oldQuotation) {
+    const newVersion = (oldQuotation.version ?? 1) + 1;
+    await db.update(quotations).set({ version: newVersion }).where(eq(quotations.id, id));
+
+    // Compute diff summary
+    const oldItemMap = new Map(oldItems.map(it => [it.productModel, it]));
+    const newItems = items ?? oldItems;
+    const added: string[] = [];
+    const removed: string[] = [];
+    const modified: string[] = [];
+
+    if (items !== undefined) {
+      for (const ni of newItems) {
+        const oi = oldItemMap.get(ni.productModel);
+        if (!oi) {
+          added.push(ni.productModel);
+        } else {
+          if (Number(oi.quantity) !== ni.quantity || oi.discountRate !== String(ni.discountRate ?? 0)) {
+            modified.push(ni.productModel);
+          }
+        }
+      }
+      const newItemSet = new Set(newItems.map(it => it.productModel));
+      for (const oi of oldItems) {
+        if (!newItemSet.has(oi.productModel)) removed.push(oi.productModel);
+      }
+    }
+
+    const changes: string[] = [];
+    if (added.length > 0) changes.push(`+${added.length}项: ${added.slice(0, 3).join(", ")}${added.length > 3 ? "..." : ""}`);
+    if (removed.length > 0) changes.push(`-${removed.length}项: ${removed.slice(0, 3).join(", ")}${removed.length > 3 ? "..." : ""}`);
+    if (modified.length > 0) changes.push(`改${modified.length}项: ${modified.slice(0, 3).join(", ")}${modified.length > 3 ? "..." : ""}`);
+    if (data.customerName && data.customerName !== oldQuotation.customerName) changes.push("客户名称变更");
+    if (data.projectName && data.projectName !== oldQuotation.projectName) changes.push("项目名称变更");
+    if (data.status && data.status !== oldQuotation.status) changes.push(`状态→${data.status}`);
+
+    const snapshot = JSON.stringify({
+      items: (items ?? oldItems).map(it => ({
+        productModel: it.productModel,
+        productDesc: it.productDesc,
+        listPrice: it.listPrice,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        discountRate: it.discountRate,
+        subtotal: it.subtotal,
+      })),
+      totalAmount: data.totalAmount ?? oldQuotation.totalAmount,
+      changeSummary: changes.length > 0 ? changes.join("; ") : "信息更新",
+      diff: { added, removed, modified },
+    });
+
+    await db.insert(quotationVersions).values({
+      quotationId: id,
+      version: newVersion,
+      snapshot,
+      createdBy: userId ?? 0,
+    });
   }
 }
 
@@ -757,6 +832,131 @@ export async function getCplStats() {
   }).from(cplProducts);
 
   return { bySheet, byStatus, bySalesCategory, total: totalRow?.count ?? 0 };
+}
+
+// ==================== Quotation Analytics ====================
+export async function getQuotationAnalytics(params: { startDate?: Date; endDate?: Date; userId?: number }) {
+  const db = await getDb();
+  const empty = { summary: { totalQuotations: 0, completedRevenue: 0, avgAmount: 0, conversionRate: 0 }, byIndustry: [], byCustomer: [], bySalesRep: [], byTime: [], byStatus: [], topProducts: [] };
+  if (!db) return empty;
+
+  const conditions: SQL[] = [];
+  if (params.startDate) conditions.push(gte(quotations.createdAt, params.startDate));
+  if (params.endDate) conditions.push(lte(quotations.createdAt, params.endDate));
+  if (params.userId) conditions.push(eq(quotations.createdBy, params.userId));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const productConditions: SQL[] = [];
+  if (params.startDate) productConditions.push(gte(quotations.createdAt, params.startDate));
+  if (params.endDate) productConditions.push(lte(quotations.createdAt, params.endDate));
+  if (params.userId) productConditions.push(eq(quotations.createdBy, params.userId));
+  const productWhere = productConditions.length > 0 ? and(...productConditions) : undefined;
+
+  const [
+    summaryRows, byIndustry, byCustomer, bySalesRepRows,
+    byTime, byStatus, topProducts,
+  ] = await Promise.all([
+    // 1. Summary KPI
+    db.select({
+      totalQuotations: sql<number>`count(*)`,
+      completedRevenue: sql<number>`coalesce(sum(case when ${quotations.status} = 'completed' then cast(${quotations.totalAmount} as decimal(14,2)) else 0 end), 0)`,
+      avgAmount: sql<number>`coalesce(avg(cast(${quotations.totalAmount} as decimal(14,2))), 0)`,
+      conversionRate: sql<number>`coalesce(sum(case when ${quotations.status} = 'completed' then 1 else 0 end) / nullif(sum(case when ${quotations.status} in ('submitted','approved','sent','completed') then 1 else 0 end), 0), 0)`,
+    }).from(quotations).where(where),
+
+    // 2. By Industry
+    db.select({
+      industry: sql<string>`coalesce(${quotations.industry}, '未指定')`,
+      count: sql<number>`count(*)`,
+      totalAmount: sql<number>`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`,
+    }).from(quotations).where(where)
+      .groupBy(sql`coalesce(${quotations.industry}, '未指定')`)
+      .orderBy(desc(sql`count(*)`)),
+
+    // 3. Top Customers
+    db.select({
+      customerName: quotations.customerName,
+      count: sql<number>`count(*)`,
+      totalAmount: sql<number>`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`,
+    }).from(quotations).where(where)
+      .groupBy(quotations.customerName)
+      .orderBy(desc(sql`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`))
+      .limit(20),
+
+    // 4. By Sales Rep — use raw SQL for JOIN
+    db.execute(sql`
+      SELECT
+        COALESCE(u.name, u.username, 'Unknown') as repName,
+        COUNT(*) as \`count\`,
+        COALESCE(SUM(CAST(q.totalAmount AS DECIMAL(14,2))), 0) as totalAmount,
+        SUM(CASE WHEN q.status = 'completed' THEN 1 ELSE 0 END) as completedCount,
+        SUM(CASE WHEN q.status IN ('submitted','approved','sent','completed') THEN 1 ELSE 0 END) as submittedCount
+      FROM quotations q
+      LEFT JOIN users u ON q.createdBy = u.id
+      ${where ? sql`WHERE ${and(
+        params.startDate ? gte(quotations.createdAt, params.startDate) : sql`TRUE`,
+        params.endDate ? lte(quotations.createdAt, params.endDate) : sql`TRUE`,
+        params.userId ? eq(quotations.createdBy, params.userId) : sql`TRUE`,
+      )}` : sql``}
+      GROUP BY q.createdBy, u.name, u.username
+      ORDER BY totalAmount DESC
+    `),
+
+    // 5. Monthly Trend
+    db.select({
+      month: sql<string>`DATE_FORMAT(${quotations.createdAt}, '%Y-%m')`,
+      count: sql<number>`count(*)`,
+      totalAmount: sql<number>`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`,
+    }).from(quotations).where(where)
+      .groupBy(sql`DATE_FORMAT(${quotations.createdAt}, '%Y-%m')`)
+      .orderBy(asc(sql`DATE_FORMAT(${quotations.createdAt}, '%Y-%m')`))
+      .limit(24),
+
+    // 6. By Status
+    db.select({
+      status: quotations.status,
+      count: sql<number>`count(*)`,
+      totalAmount: sql<number>`coalesce(sum(cast(${quotations.totalAmount} as decimal(14,2))), 0)`,
+    }).from(quotations).where(where)
+      .groupBy(quotations.status)
+      .orderBy(desc(sql`count(*)`)),
+
+    // 7. Top Products — JOIN needs raw SQL
+    db.execute(sql`
+      SELECT
+        qi.productModel,
+        qi.productDesc,
+        COUNT(DISTINCT qi.quotationId) as quotationCount,
+        COALESCE(SUM(qi.quantity), 0) as totalQuantity,
+        COALESCE(SUM(CAST(qi.subtotal AS DECIMAL(14,2))), 0) as totalRevenue
+      FROM quotation_items qi
+      INNER JOIN quotations q ON qi.quotationId = q.id
+      ${productWhere ? sql`WHERE ${productWhere}` : sql``}
+      GROUP BY qi.productModel, qi.productDesc
+      ORDER BY quotationCount DESC
+      LIMIT 20
+    `),
+  ]);
+
+  const summary = summaryRows[0] ?? { totalQuotations: 0, completedRevenue: 0, avgAmount: 0, conversionRate: 0 };
+  // bySalesRepRows comes from db.execute() which returns [rows, fields]
+  const salesRepRows = Array.isArray(bySalesRepRows) ? (Array.isArray(bySalesRepRows[0]) ? bySalesRepRows[0] : bySalesRepRows) : [];
+  const productRows = Array.isArray(topProducts) ? (Array.isArray(topProducts[0]) ? topProducts[0] : topProducts) : [];
+
+  return {
+    summary: {
+      totalQuotations: Number(summary.totalQuotations ?? 0),
+      completedRevenue: Number(summary.completedRevenue ?? 0),
+      avgAmount: Number(summary.avgAmount ?? 0),
+      conversionRate: Number(summary.conversionRate ?? 0),
+    },
+    byIndustry,
+    byCustomer,
+    bySalesRep: salesRepRows as any[],
+    byTime,
+    byStatus,
+    topProducts: productRows as any[],
+  };
 }
 
 // ==================== Quotation Template helpers ====================

@@ -7,6 +7,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -34,24 +38,31 @@ import {
   Users,
   Activity,
   BarChart3,
+  TrendingUp,
   Sun,
   Moon,
+  Globe,
   Maximize2,
   Minimize2,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(useGSAP);
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "仪表盘", path: "/" },
-  { icon: Database, label: "产品数据", path: "/data" },
-  { icon: BarChart3, label: "分类统计", path: "/stats" },
-  { icon: FileText, label: "变更记录", path: "/summary" },
-  { icon: HardDriveUpload, label: "数据导入", path: "/import", permission: PERMISSIONS.IMPORT_DATA },
-  { icon: FileSpreadsheet, label: "报价管理", path: "/quotations" },
-  { icon: Users, label: "用户管理", path: "/users", permission: PERMISSIONS.MANAGE_USERS },
-  { icon: Activity, label: "操作日志", path: "/activity", permission: PERMISSIONS.VIEW_ACTIVITY_LOGS },
+  { icon: LayoutDashboard, labelKey: "menu.dashboard", path: "/" },
+  { icon: Database, labelKey: "menu.products", path: "/data" },
+  { icon: TrendingUp, labelKey: "menu.stats", path: "/stats" },
+  { icon: FileText, labelKey: "menu.summary", path: "/summary" },
+  { icon: HardDriveUpload, labelKey: "menu.import", path: "/import", permission: PERMISSIONS.IMPORT_DATA },
+  { icon: FileSpreadsheet, labelKey: "menu.quotations", path: "/quotations" },
+  { icon: Users, labelKey: "menu.users", path: "/users", permission: PERMISSIONS.MANAGE_USERS },
+  { icon: Activity, labelKey: "menu.activity", path: "/activity", permission: PERMISSIONS.VIEW_ACTIVITY_LOGS },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -101,6 +112,25 @@ export default function DashboardLayout({
   );
 }
 
+function PageTransition({ children, location }: { children: React.ReactNode; location: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    if (!ref.current) return;
+    gsap.fromTo(ref.current,
+      { opacity: 0, y: 16 },
+      { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }
+    );
+    // Stagger-animate child cards/sections
+    gsap.fromTo(ref.current.querySelectorAll(".stagger-in"),
+      { opacity: 0, y: 12 },
+      { opacity: 1, y: 0, stagger: 0.06, duration: 0.35, ease: "power2.out", delay: 0.1 }
+    );
+  }, { dependencies: [location], scope: ref });
+
+  return <div ref={ref}>{children}</div>;
+}
+
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
   setSidebarWidth: (width: number) => void;
@@ -111,19 +141,47 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, setTheme } = useTheme();
+  const { t, i18n } = useTranslation();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find((item) => item.path === location);
+  const activeLabel = activeMenuItem ? t(activeMenuItem.labelKey) : "";
   const visibleMenuItems = menuItems.filter((item: any) => {
     if (item.permission && !hasPermission(user!, item.permission)) return false;
     return true;
   });
   const isMobile = useIsMobile();
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Initial menu items stagger animation
+  useGSAP(() => {
+    gsap.from(".menu-item", {
+      x: -20,
+      opacity: 0,
+      stagger: 0.06,
+      duration: 0.5,
+      ease: "power2.out",
+      delay: 0.2,
+    });
+  }, { scope: menuRef });
+
+  // Animate menu items when sidebar expands from collapsed
+  const prevStateRef = useRef(state);
+  useGSAP(() => {
+    if (prevStateRef.current === "collapsed" && state === "expanded") {
+      gsap.fromTo(".menu-item span",
+        { opacity: 0, x: -10 },
+        { opacity: 1, x: 0, stagger: 0.04, duration: 0.3, ease: "power2.out", delay: 0.15 }
+      );
+    }
+    prevStateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -182,29 +240,30 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold tracking-tight truncate text-sm">
-                    ALE DAN CPL 系统
+                    {t('layout.systemName')}
                   </span>
                 </div>
               ) : null}
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0 pt-2">
+          <SidebarContent className="gap-0 pt-2" ref={menuRef}>
             <SidebarMenu className="px-2 py-1 space-y-0.5">
               {visibleMenuItems.map((item) => {
                 const isActive = location === item.path;
+                const label = t(item.labelKey);
                 return (
-                  <SidebarMenuItem key={item.path}>
+                  <SidebarMenuItem key={item.path} className="menu-item">
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
+                      tooltip={label}
                       className="h-10 transition-all font-normal"
                     >
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
                       />
-                      <span className="text-sm">{item.label}</span>
+                      <span className="text-sm">{label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -224,39 +283,40 @@ function DashboardLayoutContent({
                     </Avatar>
                     <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
                       <p className="text-sm font-medium truncate leading-none">
-                        {user?.name || "用户"}
+                        {user?.name || t('user.defaultName')}
                       </p>
                       <p className="text-xs text-muted-foreground truncate mt-1.5">
-                        {user?.email || "管理员"}
+                        {user?.email || t('user.defaultRole')}
                       </p>
                     </div>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem
-                    onClick={logout}
+                    onClick={() => setLogoutOpen(true)}
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>退出登录</span>
+                    <span>{t('user.logout')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {toggleTheme && (
-                <button
-                  onClick={toggleTheme}
-                  className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-accent/50 transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={theme === "dark" ? "切换亮色模式" : "切换暗色模式"}
-                >
-                  {theme === "dark" ? (
-                    <Sun className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Moon className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </button>
-              )}
             </div>
           </SidebarFooter>
+
+          {/* Logout Confirmation */}
+          <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('user.confirmLogout')}</AlertDialogTitle>
+                <AlertDialogDescription>{t('user.logoutWarning')}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                <AlertDialogAction onClick={logout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('user.confirmExit')}</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </Sidebar>
         <div
           className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
@@ -275,19 +335,67 @@ function DashboardLayoutContent({
               <button
                 onClick={() => { setIsMaximized(false); if (state === "collapsed") toggleSidebar(); }}
                 className="group h-9 w-9 flex items-center justify-center rounded-md hover:bg-primary/10 hover:text-primary transition-colors"
-                title="还原侧边栏"
+                title={t('layout.restoreSidebar')}
               >
                 <Minimize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
             )}
-            <span className="text-xs text-muted-foreground font-medium">{activeMenuItem?.label ?? ""}</span>
+            <span className="text-xs text-muted-foreground font-medium">{activeLabel}</span>
           </div>
           <div className="flex items-center gap-1">
+            {/* Language Switcher */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
+                  title={t('lang.label')}
+                >
+                  <Globe className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("zh")} className="cursor-pointer">
+                  <span className={i18n.language === "zh" ? "font-bold text-primary" : ""}>中文</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("zh-TW")} className="cursor-pointer">
+                  <span className={i18n.language === "zh-TW" ? "font-bold text-primary" : ""}>繁體中文</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("en")} className="cursor-pointer">
+                  <span className={i18n.language === "en" ? "font-bold text-primary" : ""}>English</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("ja")} className="cursor-pointer">
+                  <span className={i18n.language === "ja" ? "font-bold text-primary" : ""}>日本語</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("es")} className="cursor-pointer">
+                  <span className={i18n.language === "es" ? "font-bold text-primary" : ""}>Español</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => i18n.changeLanguage("fr")} className="cursor-pointer">
+                  <span className={i18n.language === "fr" ? "font-bold text-primary" : ""}>Français</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Theme Toggle */}
+            {toggleTheme && (
+              <button
+                onClick={toggleTheme}
+                className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
+                title={theme === "dark" ? t('theme.light') : t('theme.dark')}
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                ) : (
+                  <Moon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                )}
+              </button>
+            )}
+
+            {/* Maximize/Minimize */}
             {isMaximized ? (
               <button
                 onClick={() => { setIsMaximized(false); if (state === "collapsed") toggleSidebar(); }}
                 className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
-                title="还原侧边栏"
+                title={t('layout.restoreSidebar')}
               >
                 <Minimize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
@@ -295,14 +403,16 @@ function DashboardLayoutContent({
               <button
                 onClick={() => { setIsMaximized(true); if (state !== "collapsed") toggleSidebar(); }}
                 className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
-                title="全屏查看（折叠侧边栏）"
+                title={t('layout.maximize')}
               >
                 <Maximize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
             )}
           </div>
         </div>
-        <main className="flex-1 p-5 lg:p-6">{children}</main>
+        <main className="flex-1 p-5 lg:p-6">
+          <PageTransition location={location}>{children}</PageTransition>
+        </main>
       </SidebarInset>
     </>
   );

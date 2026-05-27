@@ -14,12 +14,13 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import {
   ArrowLeft, Save, Plus, Trash2, Loader2, Download,
-  Send, CheckCircle, CheckCircle2, Mail, XCircle, Share2, Copy,
+  Send, CheckCircle, CheckCircle2, Mail, XCircle, Share2, Copy, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
 import { exportQuotationToExcel } from "@/lib/quotationExport";
 import ProductSelectorDialog from "@/components/ProductSelectorDialog";
+import { useTranslation } from "react-i18next";
 
 type ItemRow = {
   productId?: number;
@@ -95,7 +96,18 @@ function QuotationItemsTable({
   onUpdate: (index: number, field: keyof ItemRow, value: any) => void;
   onRemove: (index: number) => void;
 }) {
+  const { t } = useTranslation();
   const { widths, startResize } = useColWidths(Q_COLS);
+
+  const renderColLabel = useCallback((key: string, defaultLabel: string): string => {
+    switch (key) {
+      case "price": return t('quotation.listPrice');
+      case "qty": return t('quotation.quantity');
+      case "disc": return t('quotation.discountRate');
+      case "sub": return t('quotation.subtotal');
+      default: return defaultLabel;
+    }
+  }, [t]);
 
   return (
     <div className="overflow-x-auto">
@@ -108,7 +120,7 @@ function QuotationItemsTable({
                 className={`relative text-xs font-semibold px-3 py-2 text-left border-l border-border ${col.key === "sub" ? "text-right" : ""}`}
                 style={{ width: widths[i] }}
               >
-                {col.label}
+                {renderColLabel(col.key, col.label)}
                 {col.key !== "act" && (
                   <span
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 z-10"
@@ -170,6 +182,7 @@ function QuotationItemsTable({
 }
 
 export default function QuotationDetail() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/quotations/:id");
   const { user } = useAuth();
@@ -182,6 +195,7 @@ export default function QuotationDetail() {
   const [salesContact, setSalesContact] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [industry, setIndustry] = useState("");
+  const [editingIndustry, setEditingIndustry] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [discountRate, setDiscountRate] = useState(0);
   const [notes, setNotes] = useState("");
@@ -249,7 +263,7 @@ export default function QuotationDetail() {
       listPrice: product.listPrice || "",
       quantity,
       discountRate: discountRate,
-      subtotal: parseFloat(product.listPrice || "0") * quantity * (1 - discountRate / 100),
+      subtotal: parseFloat(product.listPrice || "0") * quantity * (discountRate / 100),
     }));
     setItems(prev => [...prev, ...newItems]);
   };
@@ -265,23 +279,28 @@ export default function QuotationDetail() {
   const shareMutation = trpc.sharing.share.useMutation();
   const templateCreateMutation = trpc.templates.create.useMutation();
 
+  const versionsQuery = trpc.versions.list.useQuery(
+    { quotationId: quotationId! },
+    { enabled: !isNew && !!quotationId }
+  );
+
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   const handleSave = async () => {
     if (!customerName.trim()) {
-      toast.error("请输入客户名称");
+      toast.error(t('quotation.validateCustomer'));
       return;
     }
     if (!projectName.trim()) {
-      toast.error("请输入项目名称");
+      toast.error(t('quotation.validateProject'));
       return;
     }
     if (!salesContact.trim()) {
-      toast.error("请输入销售联系人");
+      toast.error(t('quotation.validateContact'));
       return;
     }
     if (items.length === 0) {
-      toast.error("请添加至少一个产品");
+      toast.error(t('quotation.validateItems'));
       return;
     }
 
@@ -308,17 +327,17 @@ export default function QuotationDetail() {
     try {
       if (isNew) {
         const result = await createMutation.mutateAsync(payload) as any;
-        toast.success("报价单已创建");
+        toast.success(t('quotation.createSuccess'));
         if (result?.id) {
           setLocation(`/quotations/${result.id}`);
         }
       } else {
         await updateMutation.mutateAsync({ id: quotationId!, ...payload });
-        toast.success("报价单已更新");
+        toast.success(t('quotation.updateSuccess'));
         quotationQuery.refetch();
       }
     } catch (err: any) {
-      toast.error(err.message || "保存失败");
+      toast.error(err.message || t('quotation.saveFailed'));
     }
   };
 
@@ -326,10 +345,10 @@ export default function QuotationDetail() {
     if (!quotationId) return;
     try {
       await statusMutation.mutateAsync({ id: quotationId, status: newStatus as any });
-      toast.success(`状态已更新为 ${QUOTATION_STATUS_LABELS[newStatus]}`);
+      toast.success(t('quotation.statusUpdated', { status: QUOTATION_STATUS_LABELS[newStatus] }));
       quotationQuery.refetch();
     } catch (err: any) {
-      toast.error(err.message || "状态更新失败");
+      toast.error(err.message || t('quotation.statusUpdateFailed'));
     }
   };
 
@@ -344,14 +363,14 @@ export default function QuotationDetail() {
       const result = await shareMutation.mutateAsync({ id: quotationId });
       const url = `${window.location.origin}/share/${result.shareToken}`;
       await navigator.clipboard.writeText(url);
-      toast.success("分享链接已复制到剪贴板");
+      toast.success(t('quotation.shareCopied'));
     } catch (err: any) {
-      toast.error(err.message || "分享失败");
+      toast.error(err.message || t('quotation.shareFailed'));
     }
   };
 
   const handleSaveTemplate = async () => {
-    const name = prompt("请输入模板名称:");
+    const name = prompt(t('quotation.templateNamePrompt'));
     if (!name) return;
     try {
       await templateCreateMutation.mutateAsync({
@@ -360,9 +379,9 @@ export default function QuotationDetail() {
         discountRate,
         notes,
       });
-      toast.success("模板已保存");
+      toast.success(t('quotation.templateSaved'));
     } catch (err: any) {
-      toast.error(err.message || "保存模板失败");
+      toast.error(err.message || t('quotation.templateSaveFailed'));
     }
   };
 
@@ -387,7 +406,7 @@ export default function QuotationDetail() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <h1 className="text-lg font-semibold text-foreground">
-            {isNew ? "新建报价单" : `报价单 ${quotationQuery.data?.quotationNo || ""}`}
+            {isNew ? t('quotation.newTitle') : t('quotation.detailTitle', { no: quotationQuery.data?.quotationNo || "" })}
           </h1>
           {!isNew && (
             <Badge variant="outline" className={`text-xs ${QUOTATION_STATUS_COLORS[currentStatus]}`}>
@@ -408,25 +427,25 @@ export default function QuotationDetail() {
           {!isNew && (
             <Button size="sm" variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-1" />
-              导出 Excel
+              {t('quotation.exportExcel')}
             </Button>
           )}
           {!isNew && (
             <Button size="sm" variant="outline" onClick={handleShare} disabled={shareMutation.isPending}>
               <Share2 className="w-4 h-4 mr-1" />
-              分享
+              {t('quotation.share')}
             </Button>
           )}
           {items.length > 0 && (
             <Button size="sm" variant="outline" onClick={handleSaveTemplate} disabled={templateCreateMutation.isPending}>
               <Copy className="w-4 h-4 mr-1" />
-              存为模板
+              {t('quotation.saveTemplate')}
             </Button>
           )}
           <Button size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
             <Save className="w-4 h-4 mr-1" />
-            保存
+            {t('quotation.save')}
           </Button>
         </div>
       </div>
@@ -435,42 +454,51 @@ export default function QuotationDetail() {
         {/* Customer Info */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">客户信息</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('quotation.customerInfo')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">客户名称 <span className="text-destructive">*</span></Label>
-                <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="请输入客户名称" className="h-9 text-sm" />
+                <Label className="text-xs">{t('quotation.customerName')} <span className="text-destructive">*</span></Label>
+                <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder={t('quotation.customerNamePlaceholder')} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">项目名称 <span className="text-destructive">*</span></Label>
-                <Input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="请输入项目名称" className="h-9 text-sm" />
+                <Label className="text-xs">{t('quotation.projectName')} <span className="text-destructive">*</span></Label>
+                <Input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder={t('quotation.projectNamePlaceholder')} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">报价有效期</Label>
+                <Label className="text-xs">{t('quotation.validUntil')}</Label>
                 <Input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">销售联系人 <span className="text-destructive">*</span></Label>
-                <Input value={salesContact} onChange={e => setSalesContact(e.target.value)} placeholder="请输入销售联系人" className="h-9 text-sm" />
+                <Label className="text-xs">{t('quotation.customerContact')} <span className="text-destructive">*</span></Label>
+                <Input value={salesContact} onChange={e => setSalesContact(e.target.value)} placeholder={t('quotation.salesContactPlaceholder')} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">行业</Label>
-                <Select value={industry} onValueChange={setIndustry}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="请选择行业" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INDUSTRY_OPTIONS.map(opt => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-xs">{t('quotation.industry')}</Label>
+                {industry && !editingIndustry ? (
+                  <div className="flex items-center gap-1.5 h-9">
+                    <span className="flex-1 px-3 py-1.5 bg-muted rounded-md text-sm font-medium">{industry}</span>
+                    <Button variant="ghost" size="sm" className="h-9 px-2 text-muted-foreground hover:text-primary" onClick={() => setEditingIndustry(true)} title="修改行业">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Select value={industry} onValueChange={v => { setIndustry(v); setEditingIndustry(false); }}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder={t('quotation.industryPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDUSTRY_OPTIONS.map(opt => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">联系电话</Label>
-                <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="可选" className="h-9 text-sm" />
+                <Label className="text-xs">{t('quotation.customerPhone')}</Label>
+                <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder={t('quotation.phoneOptional')} className="h-9 text-sm" />
               </div>
             </div>
           </CardContent>
@@ -480,18 +508,18 @@ export default function QuotationDetail() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">报价明细</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('quotation.items')}</CardTitle>
               <Button size="sm" variant="outline" onClick={() => setProductSearchOpen(true)} className="gap-1.5 h-8">
                 <Plus className="w-3.5 h-3.5" />
-                添加产品
+                {t('quotation.addProduct')}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             {items.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">
-                <p className="text-sm">暂无产品</p>
-                <p className="text-xs mt-1">点击"添加产品"从产品目录中选择</p>
+                <p className="text-sm">{t('quotation.noItems')}</p>
+                <p className="text-xs mt-1">{t('quotation.noItemsHint')}</p>
               </div>
             ) : (
               <QuotationItemsTable
@@ -506,12 +534,12 @@ export default function QuotationDetail() {
         {/* Summary */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">汇总信息</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('quotation.summary')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">整单折扣率(%)</Label>
+                <Label className="text-xs">{t('quotation.overallDiscount')}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -522,14 +550,14 @@ export default function QuotationDetail() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">合计金额</Label>
+                <Label className="text-xs">{t('quotation.totalAmount')}</Label>
                 <div className="h-9 flex items-center text-lg font-bold tabular-nums text-primary">
                   ¥{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">备注</Label>
-                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="可选" className="min-h-[36px] text-sm" rows={1} />
+                <Label className="text-xs">{t('quotation.notes')}</Label>
+                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('common.optional')} className="min-h-[36px] text-sm" rows={1} />
               </div>
             </div>
           </CardContent>
@@ -544,6 +572,161 @@ export default function QuotationDetail() {
         discountRate={discountRate}
         existingProductIds={existingProductIds}
       />
+
+      {/* Version Timeline */}
+      {!isNew && versionsQuery.data && versionsQuery.data.length > 0 && (
+        <VersionTimeline
+          versions={versionsQuery.data}
+          quotationId={quotationId!}
+        />
+      )}
     </div>
+  );
+}
+
+// ==================== Version Timeline Component ====================
+function VersionTimeline({ versions, quotationId }: { versions: any[]; quotationId: number }) {
+  const { t } = useTranslation();
+  const [diffData, setDiffData] = useState<any>(null);
+  const [comparing, setComparing] = useState(false);
+  const [selectedFrom, setSelectedFrom] = useState<number | null>(null);
+  const [selectedTo, setSelectedTo] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  const handleCompare = async () => {
+    if (!selectedFrom || !selectedTo) return;
+    setComparing(true);
+    try {
+      const from = Math.min(selectedFrom, selectedTo);
+      const to = Math.max(selectedFrom, selectedTo);
+      const trpcUrl = `/api/trpc/versions.diff?input=${encodeURIComponent(JSON.stringify({ json: { quotationId, fromVersion: from, toVersion: to } }))}`;
+      const res = await fetch(trpcUrl);
+      const data = await res.json();
+      setDiffData(data?.result?.data?.json ?? null);
+    } catch {
+      setDiffData(null);
+    }
+    setComparing(false);
+  };
+
+  const displayed = expanded ? versions : versions.slice(0, 3);
+
+  return (
+    <Card className="border-dashed">
+      <CardHeader className="pb-2 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <svg className="w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+            版本记录 (共{versions.length}个版本)
+          </CardTitle>
+          <svg className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </CardHeader>
+      {expanded && (
+        <CardContent className="pt-0">
+          <div className="relative ml-4 pl-6 border-l-2 border-muted">
+            {displayed.map((v: any, i: number) => (
+              <div key={v.id} className="relative pb-4 last:pb-0">
+                <div className={`absolute -left-[29px] top-1 w-3 h-3 rounded-full border-2 ${i === 0 ? "bg-primary border-primary" : "bg-background border-muted-foreground/40"}`} />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">V{v.version}</span>
+                      <span className="text-xs text-muted-foreground">{v.createdAt ? new Date(v.createdAt).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</span>
+                      {v.itemCount > 0 && <span className="text-xs text-muted-foreground">{v.itemCount}项</span>}
+                      {v.totalAmount && <span className="text-xs font-medium">¥{Number(v.totalAmount).toLocaleString()}</span>}
+                    </div>
+                    {v.changeSummary && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{v.changeSummary}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <input type="radio" name="fromVersion" checked={selectedFrom === v.version}
+                      onChange={() => { setSelectedFrom(v.version); if (!selectedTo || selectedTo === v.version) setSelectedTo(null); }}
+                      className="w-3 h-3 cursor-pointer" title="起始版本" />
+                    <input type="radio" name="toVersion" checked={selectedTo === v.version}
+                      onChange={() => { setSelectedTo(v.version); if (!selectedFrom || selectedFrom === v.version) setSelectedFrom(null); }}
+                      className="w-3 h-3 cursor-pointer" title="目标版本" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {selectedFrom && selectedTo && (
+            <div className="mt-3 pt-3 border-t flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">对比 V{Math.min(selectedFrom, selectedTo)} → V{Math.max(selectedFrom, selectedTo)}</span>
+              <Button size="sm" onClick={handleCompare} disabled={comparing} className="h-7 text-xs gap-1">
+                {comparing ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                查看差异
+              </Button>
+            </div>
+          )}
+
+          {diffData && (
+            <div className="mt-3 pt-3 border-t">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">V{diffData.fromVersion} → V{diffData.toVersion} 变更明细</span>
+                <button onClick={() => setDiffData(null)} className="text-xs text-muted-foreground hover:text-foreground">关闭</button>
+              </div>
+              <div className="flex items-center gap-4 mb-2 text-xs">
+                <span>V{diffData.fromVersion}: ¥{Number(diffData.fromTotal).toLocaleString()}</span>
+                <span>→</span>
+                <span>V{diffData.toVersion}: ¥{Number(diffData.toTotal).toLocaleString()}</span>
+                {diffData.fromTotal !== diffData.toTotal && (
+                  <span className={Number(diffData.toTotal) > Number(diffData.fromTotal) ? "text-green-600" : "text-red-600"}>
+                    {Number(diffData.toTotal) > Number(diffData.fromTotal) ? "+" : ""}¥{(Number(diffData.toTotal) - Number(diffData.fromTotal)).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              <div className="overflow-auto max-h-[300px]">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="px-2 py-1.5 text-left font-semibold">状态</th>
+                      <th className="px-2 py-1.5 text-left font-semibold">产品型号</th>
+                      <th className="px-2 py-1.5 text-right font-semibold">数量</th>
+                      <th className="px-2 py-1.5 text-right font-semibold">折扣</th>
+                      <th className="px-2 py-1.5 text-right font-semibold">小计</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {diffData.items.map((item: any, i: number) => {
+                      const cs: Record<string, string> = {
+                        added: "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400",
+                        removed: "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400",
+                        modified: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
+                        unchanged: "",
+                      };
+                      const cl: Record<string, string> = { added: "新增", removed: "删除", modified: "变更", unchanged: "-" };
+                      return (
+                        <tr key={i} className={`border-b border-border/50 ${cs[item.change]}`}>
+                          <td className="px-2 py-1 font-medium">{cl[item.change]}</td>
+                          <td className="px-2 py-1">{item.productModel}</td>
+                          <td className="px-2 py-1 text-right tabular-nums">
+                            {item.before?.quantity ?? "-"}{item.change === "modified" && item.before?.quantity !== item.after?.quantity ? `→${item.after?.quantity}` : ""}
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums">
+                            {item.before?.discountRate ?? "-"}{item.change === "modified" ? `→${item.after?.discountRate ?? "-"}` : ""}
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums">
+                            {item.before?.subtotal ? `¥${Number(item.before.subtotal).toLocaleString()}` : "-"}
+                            {item.change === "modified" ? `→¥${Number(item.after?.subtotal ?? 0).toLocaleString()}` : item.after?.subtotal ? `¥${Number(item.after.subtotal).toLocaleString()}` : ""}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
   );
 }
