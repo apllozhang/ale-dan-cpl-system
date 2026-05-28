@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Performance monitoring utility for GSAP animations
  * Tracks animation performance metrics and provides optimization insights
  */

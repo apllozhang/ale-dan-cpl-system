@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Optimized image preloader for carousel
  * Implements lazy loading with Intersection Observer
  * and efficient image caching

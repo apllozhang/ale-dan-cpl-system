@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+﻿import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
@@ -19,7 +19,14 @@ const CAROUSEL_IMAGES = [
   "/carousel-4.jpg",  // Digital transformation
 ];
 
-function FullScreenCarousel() {
+const SLIDE_TEXTS = [
+  "产品全域可视，一键智能更新",
+  "多维智能筛选，精准锁定数据",
+  "项目报价管理，高效跟踪价表",
+  "业务趋势洞察，赋能销售决策",
+];
+
+function FullScreenCarousel({ onIndexChange }: { onIndexChange?: (index: number) => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imagesLoaded, setImagesLoaded] = useState<boolean[]>([false, false, false, false]);
   const [animationsReady, setAnimationsReady] = useState(false);
@@ -110,6 +117,7 @@ function FullScreenCarousel() {
       tl.call(() => {
         startKenBurns(next);
         setCurrentIndex(next);
+        onIndexChange?.(next);
       }, undefined, 0.7);
 
       // Indicator animation
@@ -169,6 +177,90 @@ function FullScreenCarousel() {
   );
 }
 
+// ==================== Rotating Slide Text ====================
+function RotatingText({ currentIndex }: { currentIndex: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const prevIndex = useRef(currentIndex);
+  const text = SLIDE_TEXTS[currentIndex];
+  const chars = text.split("");
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const ctx = gsap.context(() => {
+      const charEls = containerRef.current!.querySelectorAll(".anim-char");
+      const line = lineRef.current;
+      const bar = progressBarRef.current;
+
+      if (prevIndex.current === currentIndex) {
+        // Initial entrance animation
+        const tl = gsap.timeline({ delay: 0.8 });
+        tl.fromTo(line, { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.out" });
+        tl.fromTo(charEls, { opacity: 0, y: 15 }, { opacity: 1, y: 0, stagger: 0.025, duration: 0.4, ease: "power2.out" }, "-=0.3");
+        tl.fromTo(bar, { scaleX: 0, transformOrigin: "left" }, { scaleX: 1, duration: 6, ease: "none" }, "-=0.5");
+        return;
+      }
+
+      // Slide transition
+      const tl = gsap.timeline();
+
+      // Exit: chars fly out upward with stagger
+      tl.to(charEls, {
+        opacity: 0, y: -12, stagger: { each: 0.015, from: "end" },
+        duration: 0.3, ease: "power2.in",
+      });
+      // Exit: line shrinks
+      tl.to(line, { scaleX: 0, duration: 0.25, ease: "power2.in" }, "-=0.3");
+
+      // Reset progress bar
+      tl.set(bar, { scaleX: 0, transformOrigin: "left" }, "-=0.1");
+
+      // Update text
+      tl.call(() => { prevIndex.current = currentIndex; });
+
+      // Enter: line expands
+      tl.fromTo(line, { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power3.out" });
+      // Enter: chars fly in from below
+      tl.fromTo(charEls, { opacity: 0, y: 15 }, { opacity: 1, y: 0, stagger: 0.025, duration: 0.35, ease: "power2.out" }, "-=0.3");
+      // Enter: progress bar fills
+      tl.fromTo(bar, { scaleX: 0, transformOrigin: "left" }, { scaleX: 1, duration: 6, ease: "none" }, "-=0.3");
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, [currentIndex, text]);
+
+  return (
+    <div ref={containerRef} className="mt-6">
+      {/* Animated divider line */}
+      <div className="h-px w-16 bg-white/30 mb-4 overflow-hidden">
+        <div ref={lineRef} className="h-full w-full bg-purple-400 origin-left" />
+      </div>
+
+      {/* Character-animated text */}
+      <div className="overflow-hidden min-h-[3.5rem]">
+        <div className="text-xl lg:text-2xl font-medium text-white/85 tracking-wide leading-relaxed flex flex-wrap">
+          {chars.map((char, i) => (
+            <span
+              key={`${currentIndex}-${i}`}
+              className="anim-char inline-block"
+              style={{ opacity: 0 }}
+            >
+              {char === " " ? " " : char}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mt-5 h-0.5 w-full bg-white/10 rounded-full overflow-hidden">
+        <div ref={progressBarRef} className="h-full bg-purple-400/60 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -176,6 +268,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const loginRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
   const visibilityRef = useRef<HTMLDivElement>(null);
   const animationsInitializedRef = useRef(false);
 
@@ -268,12 +361,12 @@ export default function Login() {
   return (
     <div className="min-h-screen relative flex" ref={loginRef}>
       {/* Full-screen background carousel */}
-      <FullScreenCarousel />
+      <FullScreenCarousel onIndexChange={setSlideIndex} />
 
       {/* Content layer */}
       <div className="relative z-10 flex w-full min-h-screen">
         {/* Left branding area */}
-        <div className="login-brand hidden lg:flex lg:flex-1 flex-col justify-between p-16">
+        <div className="login-brand hidden lg:flex lg:flex-1 flex-col p-16 pb-8">
           {/* Top - Logo */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
@@ -282,16 +375,16 @@ export default function Login() {
             <span className="text-white/90 text-lg font-medium tracking-wider">Digital Age Networking</span>
           </div>
 
-          {/* Center - Main headline */}
-          <div className="max-w-lg">
-            <h1 className="text-5xl font-bold text-white leading-tight mb-6 tracking-tight">
+          {/* Center - Main headline + rotating text */}
+          <div className="flex-1 flex flex-col justify-center max-w-lg -mt-8">
+            <h1 className="text-5xl font-bold text-white leading-tight mb-4 tracking-tight">
               DAN CPL
               <br />
               <span className="text-white/70 text-3xl font-light">管理系统</span>
             </h1>
-            <p className="text-white/50 text-lg leading-relaxed">
-              DAN 产品价格表管理平台，提供数据查询、筛选与导入功能。
-            </p>
+
+            {/* Rotating feature text */}
+            <RotatingText currentIndex={slideIndex} />
           </div>
 
           {/* Bottom - Copyright */}
