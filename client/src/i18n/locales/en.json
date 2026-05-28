@@ -7,7 +7,29 @@
     "import": "Data Import",
     "quotations": "Quotations",
     "users": "User Management",
-    "activity": "Activity Log"
+    "activity": "Activity Log",
+    "customers": "Customers"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "today": "Today is",
+    "newQuotation": "New Quotation",
+    "viewAll": "View All",
+    "thisMonth": "This Month",
+    "thisQuarter": "This Quarter",
+    "thisYear": "This Year",
+    "all": "All",
+    "quotationCount": "Quotations",
+    "completedRevenue": "Revenue",
+    "pending": "Pending",
+    "pendingApproval": "Pending Approval",
+    "recentActivity": "Recent Activity",
+    "noQuotations": "No quotations yet",
+    "createFirst": "Click \"New Quotation\" to create your first one",
+    "createQuotation": "Create Quotation",
+    "productCount": "Total Products",
+    "productSeries": "Product Series",
+    "latestVersion": "Latest CPL Version"
   },
   "common": {
     "save": "Save",
@@ -238,7 +260,26 @@
     "actionImportData": "Import Data",
     "actionCreateUser": "Create User",
     "actionUpdateUser": "Update User",
-    "actionDeleteUser": "Delete User"
+    "actionDeleteUser": "Delete User",
+    "actionCreateOrganization": "Create Organization",
+    "actionUpdateOrganization": "Update Organization",
+    "actionDeleteOrganization": "Delete Organization",
+    "createOrganizationDetail": "Created organization「{{name}}」",
+    "updateOrganizationDetail": "Updated organization「{{name}}」",
+    "deleteOrganizationDetail": "Deleted organization (ID: {{id}})",
+    "resOrganization": "Organization",
+    "exportLogs": "Export Logs",
+    "exportSuccess": "Logs exported",
+    "exportFailed": "Export failed",
+    "dateRange": "Date Range",
+    "allDates": "All Time",
+    "today": "Today",
+    "last7days": "Last 7 Days",
+    "last30days": "Last 30 Days",
+    "customRange": "Custom",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "allResourceTypes": "All Types"
   },
   "quotation": {
     "title": "Quotation Management",
@@ -308,8 +349,13 @@
     "completed": "Completed",
     "cancelled": "Cancelled",
     "batchExport": "Batch Export to Excel",
+    "batchStatus": "Batch Status",
+    "batchDelete": "Delete ({{count}})",
+    "batchDeleteConfirm": "Confirm Batch Delete",
+    "batchDeleteWarning": "Are you sure you want to delete {{count}} selected quotations? This cannot be undone.",
     "deselect": "Deselect",
-    "createQuotation": "Create Quotation"
+    "createQuotation": "Create Quotation",
+    "exportPDF": "Export PDF"
   },
   "data": {
     "category": "Product Category",
@@ -391,6 +437,23 @@
       "startDate": "Start Date",
       "endDate": "End Date"
     }
+  },
+  "customers": {
+    "title": "Customer Management",
+    "subtitle": "Auto-aggregated customer data from quotations",
+    "searchPlaceholder": "Search customers...",
+    "total": "{count} customers total",
+    "noData": "No customer data",
+    "noDataHint": "Customer info will appear here after creating quotations",
+    "quotationCount": "Quotations",
+    "totalRevenue": "Total Revenue",
+    "completedRevenue": "Completed",
+    "lastQuotation": "Last Quotation",
+    "industry": "Industry",
+    "rank": "Rank",
+    "relatedQuotations": "Related Quotations",
+    "noRelated": "No related quotations",
+    "loading": "Loading..."
   },
   "productSelector": {
     "title": "Add Products to Quotation",

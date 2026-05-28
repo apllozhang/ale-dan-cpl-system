@@ -8,11 +8,20 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import EmptyState from "@/components/EmptyState";
 import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   Search, Plus, Loader2, FileSpreadsheet, X,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GitCompare,
+  Trash2, ChevronDown,
 } from "lucide-react";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
 import QuotationCompare from "@/components/QuotationCompare";
@@ -45,6 +54,15 @@ export default function QuotationList() {
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showCompare, setShowCompare] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [batchLoading, setBatchLoading] = useState(false);
+
+  const batchStatusMutation = trpc.quotations.batchUpdateStatus.useMutation({
+    onSuccess: () => { quotationsQuery.refetch(); setSelectedIds(new Set()); },
+  });
+  const batchDeleteMutation = trpc.quotations.batchDelete.useMutation({
+    onSuccess: () => { quotationsQuery.refetch(); setSelectedIds(new Set()); },
+  });
 
   const STATUS_OPTIONS = [
     { value: "all", label: t("common.all") },
@@ -130,6 +148,33 @@ export default function QuotationList() {
               {t("quotation.compare", { count: selectedIds.size })}
             </Button>
           )}
+          {selectedIds.size >= 1 && (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1.5" disabled={batchLoading}>
+                    {batchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />}
+                    {t("quotation.batchStatus")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => { batchStatusMutation.mutate({ ids: Array.from(selectedIds), status: "submitted" }); }}>
+                    {QUOTATION_STATUS_LABELS.submitted}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { batchStatusMutation.mutate({ ids: Array.from(selectedIds), status: "approved" }); }}>
+                    {QUOTATION_STATUS_LABELS.approved}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { batchStatusMutation.mutate({ ids: Array.from(selectedIds), status: "cancelled" }); }}>
+                    {QUOTATION_STATUS_LABELS.cancelled}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button size="sm" variant="outline" className="gap-1.5 text-destructive hover:text-destructive" onClick={() => setDeleteDialogOpen(true)}>
+                <Trash2 className="w-4 h-4" />
+                {t("quotation.batchDelete", { count: selectedIds.size })}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -178,16 +223,11 @@ export default function QuotationList() {
             ) : items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-48 text-center">
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <FileSpreadsheet className="w-8 h-8 opacity-30" />
-                    <span className="text-sm">{t("quotation.noQuotations")}</span>
-                    <button
-                      onClick={() => setLocation("/quotations/new")}
-                      className="text-xs text-primary hover:text-primary/80 font-medium"
-                    >
-                      {t("quotation.createFirst")}
-                    </button>
-                  </div>
+                  <EmptyState
+                    icon={FileSpreadsheet}
+                    title={t("quotation.noQuotations")}
+                    action={{ label: t("quotation.createFirst"), onClick: () => setLocation("/quotations/new") }}
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -293,6 +333,30 @@ export default function QuotationList() {
           onClose={() => setShowCompare(false)}
         />
       )}
+
+      {/* Batch Delete Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("quotation.batchDeleteConfirm")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("quotation.batchDeleteWarning", { count: selectedIds.size })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                batchDeleteMutation.mutate({ ids: Array.from(selectedIds) });
+                setDeleteDialogOpen(false);
+              }}
+            >
+              {t("common.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

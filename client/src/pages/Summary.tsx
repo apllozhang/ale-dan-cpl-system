@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { FileText, Loader2, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import EmptyState from "@/components/EmptyState";
 
 export default function Summary() {
   const summaryQuery = trpc.cpl.summary.useQuery();
@@ -17,10 +18,12 @@ export default function Summary() {
 
   if (!summary) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
-        <Info className="w-10 h-10 opacity-30" />
-        <p className="text-sm">暂无变更记录</p>
-        <p className="text-xs">请先导入 CPL 数据文件</p>
+      <div className="flex items-center justify-center" style={{ minHeight: "12rem" }}>
+        <EmptyState
+          icon={Info}
+          title="暂无变更记录"
+          description="请先导入 CPL 数据文件"
+        />
       </div>
     );
   }

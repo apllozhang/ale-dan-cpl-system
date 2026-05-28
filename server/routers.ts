@@ -1,4 +1,4 @@
-﻿import { COOKIE_NAME, ONE_YEAR_MS, PERMISSIONS, hasPermission } from "@shared/const";
+﻿import { COOKIE_NAME, ONE_YEAR_MS, PERMISSIONS, hasPermission, QUOTATION_STATUS_TRANSITIONS, QUOTATION_STATUS_LABELS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, superAdminProcedure, permissionProcedure, router } from "./_core/trpc";
@@ -10,6 +10,23 @@ import * as db from "./db";
 import * as XLSX from "xlsx";
 import { hash, compare } from "bcryptjs";
 import { randomBytes } from "crypto";
+
+function logActivity(ctx: any, params: {
+  action: string;
+  resourceType?: string | null;
+  resourceId?: number | null;
+  detail?: Record<string, unknown>;
+}) {
+  return db.createActivityLog({
+    userId: ctx.user.id,
+    username: ctx.user.username || ctx.user.name || "",
+    action: params.action,
+    resourceType: params.resourceType ?? null,
+    resourceId: params.resourceId ?? null,
+    detail: params.detail ? JSON.stringify(params.detail) : null,
+    ipAddress: ctx.req.ip || ctx.req.headers["x-forwarded-for"] as string || null,
+  }).catch(() => {});
+}
 
 function getSessionSecret() {
   return new TextEncoder().encode(ENV.cookieSecret);
@@ -121,7 +138,10 @@ export const appRouter = router({
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user) {
+        await logActivity(ctx, { action: "logout", resourceType: "auth" });
+      }
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
@@ -155,12 +175,8 @@ export const appRouter = router({
         });
 
         // Audit log
-        await db.createActivityLog({
-          userId: user.id,
-          username: user.username || user.name || "",
-          action: "login",
-          detail: JSON.stringify({ method: "local" }),
-          ipAddress: ctx.req.ip || ctx.req.headers["x-forwarded-for"] as string || null,
+        await logActivity({ user, req: ctx.req }, {
+          action: "login", resourceType: "auth", detail: { method: "local" },
         });
 
         // Create session token
@@ -181,17 +197,22 @@ export const appRouter = router({
     }),
     create: superAdminProcedure
       .input(z.object({ name: z.string().min(1).max(128) }))
-      .mutation(async ({ input }) => {
-        return db.createOrganization(input);
+      .mutation(async ({ input, ctx }) => {
+        const result = await db.createOrganization(input);
+        await logActivity(ctx, { action: "create_organization", resourceType: "organization", detail: { name: input.name } });
+        return result;
       }),
     update: superAdminProcedure
       .input(z.object({ id: z.number(), name: z.string().min(1).max(128) }))
-      .mutation(async ({ input }) => {
-        return db.updateOrganization(input.id, { name: input.name });
+      .mutation(async ({ input, ctx }) => {
+        const result = await db.updateOrganization(input.id, { name: input.name });
+        await logActivity(ctx, { action: "update_organization", resourceType: "organization", resourceId: input.id, detail: { name: input.name } });
+        return result;
       }),
     delete: superAdminProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        await logActivity(ctx, { action: "delete_organization", resourceType: "organization", resourceId: input.id, detail: { id: input.id } });
         return db.deleteOrganization(input.id);
       }),
   }),
@@ -238,13 +259,13 @@ export const appRouter = router({
         organizationId: z.number().optional(),
         groupId: z.number().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const existingUser = await db.getUserByUsername(input.username);
         if (existingUser) {
           throw new TRPCError({ code: "CONFLICT", message: "用户名已存在" });
         }
         const passwordHash = await hash(input.password, 10);
-        return db.createUser({
+        const result = await db.createUser({
           username: input.username,
           passwordHash,
           name: input.name,
@@ -254,6 +275,8 @@ export const appRouter = router({
           organizationId: input.organizationId,
           groupId: input.groupId,
         });
+        await logActivity(ctx, { action: "create_user", resourceType: "user", detail: { username: input.username, role: input.role } });
+        return result;
       }),
     update: adminProcedure
       .input(z.object({
@@ -288,15 +311,18 @@ export const appRouter = router({
           }
           updateData.username = username;
         }
-        return db.updateUser(id, updateData);
+        const result = await db.updateUser(id, updateData);
+        await logActivity(ctx, { action: "update_user", resourceType: "user", resourceId: id, detail: { username: username || (await db.getUserById(id))?.username } });
+        return result;
       }),
     delete: adminProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const target = await db.getUserById(input.id);
         if (target?.isSuperAdmin) {
           throw new TRPCError({ code: "FORBIDDEN", message: "超级用户不可删除" });
         }
+        await logActivity(ctx, { action: "delete_user", resourceType: "user", resourceId: input.id, detail: { username: target?.username || target?.name } });
         return db.deleteUser(input.id);
       }),
   }),
@@ -372,9 +398,11 @@ export const appRouter = router({
           };
         });
         const totalAmount = processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
-        return db.updateQuotation(createdQuotation.id, {
+        const result = await db.updateQuotation(createdQuotation.id, {
           totalAmount: String(totalAmount),
         }, processedItems);
+        await logActivity(ctx, { action: "create_quotation", resourceType: "quotation", resourceId: createdQuotation.id, detail: { customerName: input.customerName, itemCount: items.length } });
+        return result;
       }),
     update: protectedProcedure
       .input(z.object({
@@ -428,12 +456,14 @@ export const appRouter = router({
           });
           totalAmount = String(processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0));
         }
-        return db.updateQuotation(id, {
+        const result = await db.updateQuotation(id, {
           ...quotationData,
           totalAmount,
           discountRate: input.discountRate !== undefined ? String(input.discountRate) : undefined,
           validUntil: validUntil ? new Date(validUntil) : undefined,
         }, processedItems, ctx.user.id);
+        await logActivity(ctx, { action: "update_quotation", resourceType: "quotation", resourceId: id, detail: { quotationNo: quotation.quotationNo } });
+        return result;
       }),
     updateStatus: protectedProcedure
       .input(z.object({
@@ -447,7 +477,14 @@ export const appRouter = router({
         if (!isAdmin && quotation.createdBy !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "无权修改此报价单状态" });
         }
-        return db.updateQuotationStatus(input.id, input.status);
+        const currentStatus = quotation.status;
+        const allowed = QUOTATION_STATUS_TRANSITIONS[currentStatus] || [];
+        if (!allowed.includes(input.status)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `不能从"${QUOTATION_STATUS_LABELS[currentStatus] || currentStatus}"变为"${QUOTATION_STATUS_LABELS[input.status] || input.status}"` });
+        }
+        await db.updateQuotationStatus(input.id, input.status);
+        await logActivity(ctx, { action: "update_status", resourceType: "quotation", resourceId: input.id, detail: { quotationNo: quotation.quotationNo, oldStatus: currentStatus, newStatus: input.status } });
+        return { success: true };
       }),
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -458,7 +495,49 @@ export const appRouter = router({
         if (!isAdmin && quotation.createdBy !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "无权删除此报价单" });
         }
+        await logActivity(ctx, { action: "delete_quotation", resourceType: "quotation", resourceId: input.id, detail: { quotationNo: quotation.quotationNo, customerName: quotation.customerName } });
         return db.deleteQuotation(input.id);
+      }),
+
+    batchUpdateStatus: protectedProcedure
+      .input(z.object({
+        ids: z.array(z.number()).min(1),
+        status: z.enum(["draft", "submitted", "approved", "sent", "completed", "cancelled"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        const validIds: number[] = [];
+        for (const id of input.ids) {
+          const q = await db.getQuotationById(id);
+          if (!q) continue;
+          if (!isAdmin && q.createdBy !== ctx.user.id) continue;
+          const allowed = QUOTATION_STATUS_TRANSITIONS[q.status] || [];
+          if (!allowed.includes(input.status)) continue;
+          validIds.push(id);
+        }
+        if (validIds.length > 0) {
+          await db.batchUpdateQuotationStatus(validIds, input.status);
+          await logActivity(ctx, { action: "update_status", resourceType: "quotation", detail: { status: input.status, count: validIds.length } });
+        }
+        return { success: true, updated: validIds.length };
+      }),
+
+    batchDelete: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()).min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        const validIds: number[] = [];
+        for (const id of input.ids) {
+          const q = await db.getQuotationById(id);
+          if (q && (isAdmin || q.createdBy === ctx.user.id)) {
+            validIds.push(id);
+          }
+        }
+        if (validIds.length > 0) {
+          await db.batchDeleteQuotations(validIds);
+          await logActivity(ctx, { action: "delete_quotation", resourceType: "quotation", detail: { count: validIds.length } });
+        }
+        return { success: true, deleted: validIds.length };
       }),
 
     analytics: protectedProcedure
@@ -473,6 +552,23 @@ export const appRouter = router({
           endDate: input.endDate ? new Date(input.endDate) : undefined,
           userId: isAdmin ? undefined : ctx.user.id,
         });
+      }),
+
+    myDashboard: protectedProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .query(async ({ input, ctx }) => {
+        const [stats, recent] = await Promise.all([
+          db.getMyDashboardStats(
+            ctx.user.id,
+            input.startDate ? new Date(input.startDate) : undefined,
+            input.endDate ? new Date(input.endDate) : undefined,
+          ),
+          db.getMyRecentQuotations(ctx.user.id, 5),
+        ]);
+        return { stats, recent };
       }),
   }),
 
@@ -565,6 +661,12 @@ export const appRouter = router({
           productsCount: products.length,
         } as any);
 
+        // Audit log
+        await logActivity(ctx, {
+          action: "import_data", resourceType: "import",
+          detail: { fileName: input.fileName, mode: input.mode, productsCount: products.length },
+        });
+
         return {
           success: true,
           sheetsImported: sheetMeta.length,
@@ -605,7 +707,10 @@ export const appRouter = router({
       .input(z.object({
         search: z.string().optional(),
         action: z.string().optional(),
+        resourceType: z.string().optional(),
         userId: z.number().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(100).default(20),
       }))
@@ -615,6 +720,22 @@ export const appRouter = router({
     stats: permissionProcedure(PERMISSIONS.VIEW_ACTIVITY_LOGS)
       .query(async () => {
         return db.getActivityStats();
+      }),
+    export: permissionProcedure(PERMISSIONS.VIEW_ACTIVITY_LOGS)
+      .input(z.object({
+        search: z.string().optional(),
+        action: z.string().optional(),
+        resourceType: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { items } = await db.getActivityLogs({ ...input, page: 1, pageSize: 10000 });
+        const header = "ID,时间,用户,操作,资源类型,资源ID,详情,IP";
+        const rows = items.map((l: any) =>
+          `${l.id},"${new Date(l.createdAt).toLocaleString("zh-CN")}","${l.username || ""}","${l.action}","${l.resourceType || ""}",${l.resourceId || ""},"${(l.detail || "").slice(0, 200)}","${l.ipAddress || ""}"`
+        );
+        return header + "\n" + rows.join("\n");
       }),
     clear: superAdminProcedure.mutation(async () => {
       await db.clearActivityLogs();
@@ -811,6 +932,18 @@ export const appRouter = router({
       }))
       .query(async ({ input }) => {
         return db.getSearchSuggestions(input.field, input.query, input.limit);
+      }),
+  }),
+
+  customers: router({
+    list: protectedProcedure
+      .input(z.object({
+        search: z.string().optional(),
+        page: z.number().min(1).default(1),
+        pageSize: z.number().min(1).max(100).default(20),
+      }))
+      .query(async ({ input }) => {
+        return db.getCustomerList(input);
       }),
   }),
 });

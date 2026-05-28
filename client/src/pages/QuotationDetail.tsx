@@ -15,6 +15,7 @@ import { useLocation, useRoute } from "wouter";
 import {
   ArrowLeft, Save, Plus, Trash2, Loader2, Download,
   Send, CheckCircle, CheckCircle2, Mail, XCircle, Share2, Copy, Pencil,
+  Search, Check, FileSpreadsheet, Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
@@ -203,6 +204,16 @@ export default function QuotationDetail() {
   const [items, setItems] = useState<ItemRow[]>([]);
   const [productSearchOpen, setProductSearchOpen] = useState(false);
 
+  // Quick search state
+  const [quickSearch, setQuickSearch] = useState("");
+  const [quickResults, setQuickResults] = useState<any[]>([]);
+  const quickSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const quickSearchRef = useRef<HTMLDivElement>(null);
+
+  // Total amount flash effect
+  const prevTotalRef = useRef(0);
+  const [totalFlash, setTotalFlash] = useState(false);
+
   // Load existing quotation
   const quotationQuery = trpc.quotations.getById.useQuery(
     { id: quotationId! },
@@ -249,6 +260,64 @@ export default function QuotationDetail() {
     setItems(prev => prev.filter((_, i) => i !== index));
   };
 
+  const applyDiscountToAll = () => {
+    setItems(prev => prev.map(item => ({
+      ...item,
+      discountRate,
+      subtotal: parseFloat(item.listPrice || "0") * item.quantity * (discountRate / 100),
+    })));
+    toast.success("已将折扣率应用到所有行");
+  };
+
+  // Quick search: debounced product lookup
+  const quickSearchQuery = trpc.cpl.products.useQuery(
+    { search: quickSearch.trim(), page: 1, pageSize: 8 },
+    { enabled: quickSearch.trim().length > 0 },
+  );
+  useEffect(() => {
+    if (quickSearch.trim() && quickSearchQuery.data?.items) {
+      setQuickResults(quickSearchQuery.data.items);
+    } else if (!quickSearch.trim()) {
+      setQuickResults([]);
+    }
+  }, [quickSearch, quickSearchQuery.data]);
+
+  const handleQuickSearch = useCallback((text: string) => {
+    setQuickSearch(text);
+  }, []);
+
+  const quickAdd = (product: any) => {
+    if (existingProductIds.has(product.id)) {
+      toast.info(`${product.productModel} 已在报价单中`);
+      setQuickSearch("");
+      setQuickResults([]);
+      return;
+    }
+    const newItem: ItemRow = {
+      productId: product.id,
+      productModel: product.productModel || "",
+      productDesc: product.productDesc || "",
+      listPrice: product.listPrice || "",
+      quantity: 1,
+      discountRate,
+      subtotal: parseFloat(product.listPrice || "0") * 1 * (discountRate / 100),
+    };
+    setItems(prev => [...prev, newItem]);
+    setQuickSearch("");
+    setQuickResults([]);
+  };
+
+  // Close quick search on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (quickSearchRef.current && !quickSearchRef.current.contains(e.target as Node)) {
+        setQuickResults([]);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   const existingProductIds = useMemo(() => {
     const ids = new Set<number>();
     items.forEach(item => { if (item.productId) ids.add(item.productId); });
@@ -271,6 +340,16 @@ export default function QuotationDetail() {
   const totalAmount = useMemo(() => {
     return items.reduce((sum, item) => sum + item.subtotal, 0);
   }, [items]);
+
+  // Flash total on change
+  useEffect(() => {
+    if (prevTotalRef.current !== totalAmount && prevTotalRef.current !== 0) {
+      setTotalFlash(true);
+      const timer = setTimeout(() => setTotalFlash(false), 400);
+      return () => clearTimeout(timer);
+    }
+    prevTotalRef.current = totalAmount;
+  }, [totalAmount]);
 
   // Mutations
   const createMutation = trpc.quotations.create.useMutation();
@@ -431,6 +510,12 @@ export default function QuotationDetail() {
             </Button>
           )}
           {!isNew && (
+            <Button size="sm" variant="outline" onClick={() => window.print()}>
+              <Printer className="w-4 h-4 mr-1" />
+              {t('quotation.exportPDF', '导出PDF')}
+            </Button>
+          )}
+          {!isNew && (
             <Button size="sm" variant="outline" onClick={handleShare} disabled={shareMutation.isPending}>
               <Share2 className="w-4 h-4 mr-1" />
               {t('quotation.share')}
@@ -516,10 +601,49 @@ export default function QuotationDetail() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Quick search bar */}
+            <div className="relative mb-3" ref={quickSearchRef}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="搜索产品型号快速添加..."
+                  value={quickSearch}
+                  onChange={e => handleQuickSearch(e.target.value)}
+                  className="h-9 pl-9 text-sm"
+                />
+              </div>
+              {quickResults.length > 0 && (
+                <div className="absolute z-50 top-10 left-0 right-0 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
+                  {quickResults.map((product: any) => (
+                    <button
+                      key={product.id}
+                      onClick={() => quickAdd(product)}
+                      className="w-full px-3 py-2 text-left hover:bg-accent/30 flex items-center justify-between gap-2 border-b border-border/50 last:border-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-medium">{product.productModel}</span>
+                        <span className="text-xs text-muted-foreground ml-2 truncate">{product.productDesc}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        ¥{Number(product.listPrice || 0).toLocaleString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {items.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                <p className="text-sm">{t('quotation.noItems')}</p>
-                <p className="text-xs mt-1">{t('quotation.noItemsHint')}</p>
+              <div className="text-center py-12">
+                <div className="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                  <FileSpreadsheet className="w-7 h-7 text-primary/40" />
+                </div>
+                <p className="text-sm font-medium mt-4">{t('quotation.noItems')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('quotation.noItemsHint')}</p>
+                <Button size="sm" variant="outline" className="mt-3" onClick={() => setProductSearchOpen(true)}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t('quotation.addProduct')}
+                </Button>
               </div>
             ) : (
               <QuotationItemsTable
@@ -540,18 +664,29 @@ export default function QuotationDetail() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">{t('quotation.overallDiscount')}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={discountRate}
-                  onChange={e => setDiscountRate(parseFloat(e.target.value) || 0)}
-                  className="h-9 text-sm"
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={discountRate}
+                    onChange={e => setDiscountRate(parseFloat(e.target.value) || 0)}
+                    className="h-9 text-sm flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={applyDiscountToAll}
+                    className="h-9 px-2 shrink-0"
+                    title="应用到所有行"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">{t('quotation.totalAmount')}</Label>
-                <div className="h-9 flex items-center text-lg font-bold tabular-nums text-primary">
+                <div className={`h-9 flex items-center text-lg font-bold tabular-nums transition-colors duration-300 ${totalFlash ? "text-blue-500" : "text-primary"}`}>
                   ¥{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>

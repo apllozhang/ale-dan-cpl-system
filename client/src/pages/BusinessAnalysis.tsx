@@ -2,7 +2,8 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, FileText, TrendingUp, Calculator, Target, Calendar } from "lucide-react";
+import { Loader2, FileText, TrendingUp, Calculator, Target, Calendar, X } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, Legend,
@@ -11,6 +12,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "wouter";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
 import gsap from "gsap";
 
@@ -87,6 +89,19 @@ function getDateRange(preset: string): { startDate?: string; endDate?: string } 
   }
 }
 
+function getPreviousPeriod(params: { startDate?: string; endDate?: string }): { startDate?: string; endDate?: string } {
+  if (!params.startDate) return {};
+  const start = new Date(params.startDate);
+  const end = params.endDate ? new Date(params.endDate) : new Date();
+  const diffMs = end.getTime() - start.getTime();
+  const prevEnd = new Date(start.getTime() - 1);
+  const prevStart = new Date(prevEnd.getTime() - diffMs);
+  return {
+    startDate: prevStart.toISOString().slice(0, 10),
+    endDate: prevEnd.toISOString().slice(0, 10),
+  };
+}
+
 function FunnelChart({ data }: { data: { name: string; count: number; color: string }[] }) {
   const total = data.reduce((s, d) => s + d.count, 0) || 1;
   const maxCount = Math.max(...data.map(d => d.count)) || 1;
@@ -146,6 +161,7 @@ function useResizableColumns(initialWidths: number[]) {
 
 export default function BusinessAnalysis() {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   const [preset, setPreset] = useState("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -157,7 +173,13 @@ export default function BusinessAnalysis() {
 
   const { data, isLoading } = trpc.quotations.analytics.useQuery(dateParams);
 
+  const prevParams = useMemo(() => dateParams.startDate ? getPreviousPeriod(dateParams) : undefined, [dateParams.startDate, dateParams.endDate]);
+  const { data: prevData } = trpc.quotations.analytics.useQuery(prevParams ?? { startDate: undefined, endDate: undefined }, { enabled: !!prevParams?.startDate });
+
+  const [industryFilter, setIndustryFilter] = useState<string | null>(null);
+
   const summary = data?.summary ?? { totalQuotations: 0, completedRevenue: 0, avgAmount: 0, conversionRate: 0 };
+  const prevSummary = prevData?.summary ?? { totalQuotations: 0, completedRevenue: 0, avgAmount: 0, conversionRate: 0 };
   const byIndustry = data?.byIndustry ?? [];
   const byCustomer = data?.byCustomer ?? [];
   const bySalesRep = data?.bySalesRep ?? [];
@@ -230,11 +252,17 @@ export default function BusinessAnalysis() {
     amount: { label: t("analytics.amount"), color: CHART_COLORS[3] },
   }), [t]);
 
+  function calcChange(current: number, previous: number): string | null {
+    if (!previous || previous === 0) return current > 0 ? null : null;
+    const pct = ((current - previous) / previous * 100).toFixed(1);
+    return pct;
+  }
+
   const kpis = [
-    { Icon: FileText, label: t("analytics.totalQuotations"), value: countQuotations, gradient: KPI_GRADIENTS[0] },
-    { Icon: TrendingUp, label: t("analytics.completedRevenue"), value: countRevenue, gradient: KPI_GRADIENTS[1] },
-    { Icon: Calculator, label: t("analytics.avgAmount"), value: countAvg, gradient: KPI_GRADIENTS[2] },
-    { Icon: Target, label: t("analytics.conversionRate"), value: countRate, gradient: KPI_GRADIENTS[3] },
+    { Icon: FileText, label: t("analytics.totalQuotations"), value: countQuotations, gradient: KPI_GRADIENTS[0], change: calcChange(summary.totalQuotations, prevSummary.totalQuotations) },
+    { Icon: TrendingUp, label: t("analytics.completedRevenue"), value: countRevenue, gradient: KPI_GRADIENTS[1], change: calcChange(summary.completedRevenue, prevSummary.completedRevenue) },
+    { Icon: Calculator, label: t("analytics.avgAmount"), value: countAvg, gradient: KPI_GRADIENTS[2], change: calcChange(summary.avgAmount, prevSummary.avgAmount) },
+    { Icon: Target, label: t("analytics.conversionRate"), value: countRate, gradient: KPI_GRADIENTS[3], change: calcChange(summary.conversionRate * 100, prevSummary.conversionRate * 100) },
   ];
 
   const PRESETS = [
@@ -294,7 +322,14 @@ export default function BusinessAnalysis() {
                 </div>
                 <div className="flex-1">
                   <div className="text-2xl font-bold tabular-nums tracking-tight">{kpi.value}</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{kpi.label}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-muted-foreground">{kpi.label}</p>
+                    {kpi.change !== null && (
+                      <span className={`text-[10px] font-medium px-1 py-0.5 rounded ${Number(kpi.change) >= 0 ? "text-emerald-600 bg-emerald-500/10" : "text-red-500 bg-red-500/10"}`}>
+                        {Number(kpi.change) >= 0 ? "+" : ""}{kpi.change}%
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -309,14 +344,15 @@ export default function BusinessAnalysis() {
             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{t("analytics.byIndustry")}</CardTitle></CardHeader>
             <CardContent>
               <ChartContainer config={barConfig} className="h-[320px] w-full">
-                <BarChart data={industryData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <BarChart data={industryData} layout="vertical" margin={{ left: 10, right: 20 }}
+                  onClick={(e: any) => { if (e?.activePayload?.[0]?.payload?.name) setIndustryFilter(e.activePayload[0].payload.name); }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border) / 0.5)" />
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                  <Bar dataKey="count" radius={[0, 6, 6, 0]} className="cursor-pointer">
                     {industryData.map((entry: any, i: number) => (
-                      <Cell key={i} fill={entry.fill} />
+                      <Cell key={i} fill={entry.fill} className="cursor-pointer" />
                     ))}
                   </Bar>
                 </BarChart>
@@ -335,8 +371,16 @@ export default function BusinessAnalysis() {
                   <PieChart>
                     <Pie data={statusData} dataKey="count" nameKey="name" cx="50%" cy="50%"
                       innerRadius={30} outerRadius={55} paddingAngle={2}
-                      animationBegin={0} animationDuration={800}>
-                      {statusData.map((d: any, i: number) => <Cell key={i} fill={d.fill} />)}
+                      animationBegin={0} animationDuration={800}
+                      onClick={(_data: any, index: number) => {
+                        const statusEntry = statusData[index];
+                        if (statusEntry) {
+                          const statusKey = byStatus[index]?.status;
+                          if (statusKey) setLocation(`/quotations?status=${statusKey}`);
+                        }
+                      }}
+                      className="cursor-pointer">
+                      {statusData.map((d: any, i: number) => <Cell key={i} fill={d.fill} className="cursor-pointer" />)}
                     </Pie>
                     <ChartTooltip content={<ChartTooltipContent />} />
                   </PieChart>
@@ -380,7 +424,15 @@ export default function BusinessAnalysis() {
 
         {byCustomer.length > 0 && (
           <Card className="stagger-child hover:shadow-lg transition-shadow duration-300">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{t("analytics.byCustomer")}</CardTitle></CardHeader>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium">{t("analytics.byCustomer")}</CardTitle>
+              {industryFilter && (
+                <button onClick={() => setIndustryFilter(null)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                  {industryFilter} <X className="w-3 h-3" />
+                </button>
+              )}
+            </CardHeader>
             <CardContent>
               <div className="overflow-auto max-h-[320px]">
                 <table className="w-full">
@@ -394,8 +446,11 @@ export default function BusinessAnalysis() {
                     </tr>
                   </thead>
                   <tbody>
-                    {byCustomer.slice(0, 10).map((c: any, i: number) => {
-                      const total = byCustomer.reduce((s: number, x: any) => s + Number(x.totalAmount), 0) || 1;
+                    {byCustomer
+                      .filter((c: any) => !industryFilter || c.industry?.includes(industryFilter))
+                      .slice(0, 10).map((c: any, i: number) => {
+                      const filtered = byCustomer.filter((c: any) => !industryFilter || c.industry?.includes(industryFilter));
+                      const total = filtered.reduce((s: number, x: any) => s + Number(x.totalAmount), 0) || 1;
                       const pct = (Number(c.totalAmount) / total * 100).toFixed(1);
                       return (
                         <tr key={i} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
@@ -542,10 +597,10 @@ export default function BusinessAnalysis() {
 
       {/* Empty state */}
       {!isLoading && summary.totalQuotations === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground stagger-child">
-          <Calendar className="w-10 h-10 opacity-30 mb-3" />
-          <p className="text-sm">{t("analytics.noData")}</p>
-        </div>
+        <EmptyState
+          icon={Calendar}
+          title={t("analytics.noData")}
+        />
       )}
     </div>
   );

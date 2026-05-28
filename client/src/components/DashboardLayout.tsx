@@ -36,6 +36,7 @@ import {
   Shield,
   FileSpreadsheet,
   Users,
+  Building2,
   Activity,
   BarChart3,
   TrendingUp,
@@ -61,6 +62,7 @@ const menuItems = [
   { icon: FileText, labelKey: "menu.summary", path: "/summary" },
   { icon: HardDriveUpload, labelKey: "menu.import", path: "/import", permission: PERMISSIONS.IMPORT_DATA },
   { icon: FileSpreadsheet, labelKey: "menu.quotations", path: "/quotations" },
+  { icon: Building2, labelKey: "menu.customers", path: "/customers" },
   { icon: Users, labelKey: "menu.users", path: "/users", permission: PERMISSIONS.MANAGE_USERS },
   { icon: Activity, labelKey: "menu.activity", path: "/activity", permission: PERMISSIONS.VIEW_ACTIVITY_LOGS },
 ];

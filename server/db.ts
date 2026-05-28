@@ -606,6 +606,111 @@ export async function updateQuotationStatus(id: number, status: string) {
   await db.update(quotations).set({ status: status as any }).where(eq(quotations.id, id));
 }
 
+export async function batchUpdateQuotationStatus(ids: number[], status: string) {
+  const db = await getDb();
+  if (!db || ids.length === 0) return;
+  await db.update(quotations).set({ status: status as any })
+    .where(inArray(quotations.id, ids));
+}
+
+export async function batchDeleteQuotations(ids: number[]) {
+  const db = await getDb();
+  if (!db || ids.length === 0) return;
+  await db.delete(quotationItems).where(inArray(quotationItems.quotationId, ids));
+  await db.delete(quotationVersions).where(inArray(quotationVersions.quotationId, ids));
+  await db.delete(quotations).where(inArray(quotations.id, ids));
+}
+
+// ==================== Customer helpers ====================
+export async function getCustomerList(params: { search?: string; page?: number; pageSize?: number }) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const page = params.page ?? 1;
+  const pageSize = params.pageSize ?? 20;
+  const offset = (page - 1) * pageSize;
+
+  const conditions = [
+    sql`${quotations.customerName} IS NOT NULL`,
+    sql`${quotations.customerName} != ''`,
+  ];
+  if (params.search) {
+    conditions.push(like(quotations.customerName, `%${params.search}%`));
+  }
+
+  const whereClause = and(...conditions);
+
+  const countResult = await db.select({
+    total: sql<number>`COUNT(DISTINCT ${quotations.customerName})`,
+  }).from(quotations).where(whereClause);
+  const total = Number((Array.isArray(countResult[0]) ? countResult[0][0] : countResult[0])?.total ?? 0);
+
+  const items = await db.select({
+    customerName: quotations.customerName,
+    quotationCount: sql<number>`COUNT(*)`,
+    totalRevenue: sql<number>`COALESCE(SUM(CAST(${quotations.totalAmount} AS DECIMAL(14,2))), 0)`,
+    completedRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${quotations.status} = 'completed' THEN CAST(${quotations.totalAmount} AS DECIMAL(14,2)) ELSE 0 END), 0)`,
+    industries: sql<string>`GROUP_CONCAT(DISTINCT ${quotations.industry})`,
+    lastQuotationAt: sql<Date>`MAX(${quotations.createdAt})`,
+  }).from(quotations)
+    .where(whereClause)
+    .groupBy(quotations.customerName)
+    .orderBy(sql`totalRevenue DESC`)
+    .limit(pageSize)
+    .offset(offset);
+
+  return {
+    items: items.map(item => ({
+      ...item,
+      quotationCount: Number(item.quotationCount),
+      totalRevenue: Number(item.totalRevenue),
+      completedRevenue: Number(item.completedRevenue),
+    })),
+    total,
+  };
+}
+
+// ==================== Dashboard helpers ====================
+export async function getMyDashboardStats(userId: number, startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return { totalQuotations: 0, completedRevenue: 0, pendingCount: 0, submittedCount: 0 };
+
+  const conditions = [eq(quotations.createdBy, userId)];
+  if (startDate) conditions.push(gte(quotations.createdAt, startDate));
+  if (endDate) conditions.push(lte(quotations.createdAt, endDate));
+
+  const result = await db.select({
+    totalQuotations: sql<number>`count(*)`,
+    completedRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${quotations.status} = 'completed' THEN CAST(${quotations.totalAmount} AS DECIMAL(14,2)) ELSE 0 END), 0)`,
+    pendingCount: sql<number>`COALESCE(SUM(CASE WHEN ${quotations.status} IN ('draft', 'submitted') THEN 1 ELSE 0 END), 0)`,
+    submittedCount: sql<number>`COALESCE(SUM(CASE WHEN ${quotations.status} = 'submitted' THEN 1 ELSE 0 END), 0)`,
+  }).from(quotations).where(and(...conditions));
+
+  const row = Array.isArray(result[0]) ? result[0][0] : result[0];
+  return {
+    totalQuotations: Number(row?.totalQuotations ?? 0),
+    completedRevenue: Number(row?.completedRevenue ?? 0),
+    pendingCount: Number(row?.pendingCount ?? 0),
+    submittedCount: Number(row?.submittedCount ?? 0),
+  };
+}
+
+export async function getMyRecentQuotations(userId: number, limit = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: quotations.id,
+    quotationNo: quotations.quotationNo,
+    customerName: quotations.customerName,
+    projectName: quotations.projectName,
+    status: quotations.status,
+    totalAmount: quotations.totalAmount,
+    updatedAt: quotations.updatedAt,
+  }).from(quotations)
+    .where(eq(quotations.createdBy, userId))
+    .orderBy(desc(quotations.updatedAt))
+    .limit(limit);
+}
+
 // ==================== Organization helpers ====================
 export async function getAllOrganizations() {
   const db = await getDb();
@@ -731,13 +836,16 @@ export async function createActivityLog(data: InsertActivityLog) {
 export async function getActivityLogs(params: {
   search?: string;
   action?: string;
+  resourceType?: string;
   userId?: number;
+  startDate?: string;
+  endDate?: string;
   page: number;
   pageSize: number;
 }) {
   const db = await getDb();
   if (!db) return { items: [] as any[], total: 0 };
-  const { search, action, userId, page, pageSize } = params;
+  const { search, action, resourceType, userId, startDate, endDate, page, pageSize } = params;
 
   const conditions: SQL[] = [];
   if (search) {
@@ -751,8 +859,17 @@ export async function getActivityLogs(params: {
   if (action) {
     conditions.push(eq(activityLogs.action, action));
   }
+  if (resourceType) {
+    conditions.push(eq(activityLogs.resourceType, resourceType));
+  }
   if (userId) {
     conditions.push(eq(activityLogs.userId, userId));
+  }
+  if (startDate) {
+    conditions.push(gte(activityLogs.createdAt, new Date(startDate)));
+  }
+  if (endDate) {
+    conditions.push(lte(activityLogs.createdAt, new Date(endDate + "T23:59:59")));
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -882,6 +999,7 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
     db.execute(sql`
       SELECT
         customerName,
+        GROUP_CONCAT(DISTINCT COALESCE(industry, '')) as industry,
         COUNT(*) as \`count\`,
         COALESCE(SUM(CAST(totalAmount AS DECIMAL(14,2))), 0) as totalAmount
       FROM quotations
