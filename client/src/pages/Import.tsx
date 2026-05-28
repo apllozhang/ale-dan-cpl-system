@@ -114,7 +114,7 @@ export default function Import() {
       {/* Drop zone */}
       <div
         className={`border-2 border-dashed rounded-lg p-10 text-center transition-all cursor-pointer ${
-          isDragging ? "border-primary bg-primary/5" : file ? "border-emerald-300 bg-emerald-50/50" : "border-border hover:border-primary/40 hover:bg-accent/30"
+          isDragging ? "border-primary bg-primary/5" : file ? "border-success-border bg-success-soft/50" : "border-border hover:border-primary/40 hover:bg-accent/30"
         }`}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
@@ -124,7 +124,7 @@ export default function Import() {
         <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
         {file ? (
           <div className="flex flex-col items-center gap-3">
-            <FileSpreadsheet className="w-10 h-10 text-emerald-500" />
+            <FileSpreadsheet className="w-10 h-10 text-success" />
             <p className="text-sm font-medium text-foreground">{file.name}</p>
             <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB &middot; {t('import.changeFile')}</p>
           </div>
@@ -162,9 +162,9 @@ export default function Import() {
                   <p className="font-medium text-sm">{t('import.merge')} (Merge)</p>
                   <p className="text-xs text-muted-foreground">{t('import.mergeDesc')}</p>
                 </div>
-                <div className="border rounded p-3 bg-red-50/50">
-                  <p className="font-medium text-sm text-red-700">{t('import.overwrite')} (Overwrite)</p>
-                  <p className="text-xs text-red-600">⚠ {t('import.overwriteDesc')}</p>
+                <div className="border rounded p-3 bg-destructive/5">
+                  <p className="font-medium text-sm text-destructive">{t('import.overwrite')} (Overwrite)</p>
+                  <p className="text-xs text-destructive">⚠ {t('import.overwriteDesc')}</p>
                 </div>
               </div>
             </AlertDialogDescription>
@@ -179,12 +179,12 @@ export default function Import() {
 
       {/* Result */}
       {importResult && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-5">
+        <div className="bg-success-soft border border-success-border rounded-lg p-5">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5" />
+            <CheckCircle2 className="w-5 h-5 text-success mt-0.5" />
             <div className="space-y-2">
-              <p className="text-sm font-medium text-emerald-800">{t('import.success')}</p>
-              <div className="text-sm text-emerald-700 space-y-1">
+              <p className="text-sm font-medium text-foreground">{t('import.success')}</p>
+              <div className="text-sm text-success space-y-1">
                 <p>· {t('import.importedSheets', { count: importResult.sheetsImported })}</p>
                 <p>· {t('import.importedProducts', { count: importResult.productsImported })}</p>
                 <p>· {t('menu.summary')}: {importResult.hasSummary ? t('import.summaryUpdated') : t('import.summaryNone')}</p>

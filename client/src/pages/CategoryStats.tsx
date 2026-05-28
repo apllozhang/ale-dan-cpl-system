@@ -80,7 +80,7 @@ export default function CategoryStats() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+              <div className="p-2 rounded-lg bg-info-soft text-info">
                 <Package className="w-4 h-4" />
               </div>
               <div>
@@ -93,7 +93,7 @@ export default function CategoryStats() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
+              <div className="p-2 rounded-lg bg-accent text-accent-foreground">
                 <Layers className="w-4 h-4" />
               </div>
               <div>
@@ -106,7 +106,7 @@ export default function CategoryStats() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-50 text-green-600">
+              <div className="p-2 rounded-lg bg-success-soft text-success">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>

@@ -63,12 +63,12 @@ export const QUOTATION_STATUS_LABELS: Record<string, string> = {
 };
 
 export const QUOTATION_STATUS_COLORS: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700 border-gray-200",
-  submitted: "bg-blue-50 text-blue-700 border-blue-200",
-  approved: "bg-green-50 text-green-700 border-green-200",
-  sent: "bg-purple-50 text-purple-700 border-purple-200",
-  completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  cancelled: "bg-red-50 text-red-600 border-red-200",
+  draft: "bg-muted text-muted-foreground border-border",
+  submitted: "bg-info-soft text-info border-info-border",
+  approved: "bg-success-soft text-success border-success-border",
+  sent: "bg-accent text-accent-foreground border-border",
+  completed: "bg-success-soft text-success border-success-border",
+  cancelled: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 export const QUOTATION_STATUS_TRANSITIONS: Record<string, string[]> = {

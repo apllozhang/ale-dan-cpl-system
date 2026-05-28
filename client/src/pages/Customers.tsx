@@ -144,7 +144,7 @@ function CustomerRow({
         <TableCell className="text-right text-sm font-medium tabular-nums">
           ¥{customer.totalRevenue.toLocaleString()}
         </TableCell>
-        <TableCell className="text-right text-sm tabular-nums text-emerald-600">
+        <TableCell className="text-right text-sm tabular-nums text-success">
           ¥{customer.completedRevenue.toLocaleString()}
         </TableCell>
         <TableCell className="text-right text-xs text-muted-foreground">
@@ -174,7 +174,7 @@ function CustomerRow({
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground tabular-nums">{q.quotationNo}</span>
                       <span className="text-xs font-medium">{q.projectName || "—"}</span>
-                      <Badge variant="outline" className={`text-[10px] h-4 ${q.status === "completed" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : ""}`}>
+                      <Badge variant="outline" className={`text-[10px] h-4 ${q.status === "completed" ? "bg-success-soft text-success border-success-border" : ""}`}>
                         {q.status === "draft" ? "草稿" : q.status === "submitted" ? "已提交" : q.status === "approved" ? "已审批" : q.status === "sent" ? "已发送" : q.status === "completed" ? "已完成" : "已取消"}
                       </Badge>
                     </div>

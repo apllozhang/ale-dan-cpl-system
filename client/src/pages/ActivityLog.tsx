@@ -78,27 +78,27 @@ function formatDetail(action: string, detail: string | null, t: (key: string, op
 }
 
 const ACTION_COLORS: Record<string, string> = {
-  login: "bg-green-50 text-green-700",
-  logout: "bg-gray-50 text-gray-600",
-  create_quotation: "bg-blue-50 text-blue-700",
-  update_quotation: "bg-amber-50 text-amber-700",
-  delete_quotation: "bg-red-50 text-red-700",
-  update_status: "bg-purple-50 text-purple-700",
-  import_data: "bg-indigo-50 text-indigo-700",
-  create_user: "bg-teal-50 text-teal-700",
-  update_user: "bg-orange-50 text-orange-700",
-  delete_user: "bg-red-50 text-red-600",
-  create_organization: "bg-cyan-50 text-cyan-700",
-  update_organization: "bg-cyan-50 text-cyan-700",
-  delete_organization: "bg-red-50 text-red-600",
+  login: "bg-success-soft text-success",
+  logout: "bg-muted text-muted-foreground",
+  create_quotation: "bg-info-soft text-info",
+  update_quotation: "bg-warning-soft text-warning",
+  delete_quotation: "bg-destructive/10 text-destructive",
+  update_status: "bg-accent text-accent-foreground",
+  import_data: "bg-info-soft text-info",
+  create_user: "bg-success-soft text-success",
+  update_user: "bg-warning-soft text-warning",
+  delete_user: "bg-destructive/10 text-destructive",
+  create_organization: "bg-info-soft text-info",
+  update_organization: "bg-warning-soft text-warning",
+  delete_organization: "bg-destructive/10 text-destructive",
 };
 
 const RESOURCE_COLORS: Record<string, string> = {
-  auth: "bg-gray-50 text-gray-600",
-  quotation: "bg-blue-50 text-blue-600",
-  user: "bg-teal-50 text-teal-600",
-  import: "bg-indigo-50 text-indigo-600",
-  organization: "bg-cyan-50 text-cyan-600",
+  auth: "bg-muted text-muted-foreground",
+  quotation: "bg-info-soft text-info",
+  user: "bg-success-soft text-success",
+  import: "bg-info-soft text-info",
+  organization: "bg-info-soft text-info",
 };
 
 export default function ActivityLog() {
@@ -255,7 +255,7 @@ export default function ActivityLog() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-50 text-green-600">
+              <div className="p-2 rounded-lg bg-success-soft text-success">
                 <Activity className="w-4 h-4" />
               </div>
               <div>
@@ -268,7 +268,7 @@ export default function ActivityLog() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+              <div className="p-2 rounded-lg bg-info-soft text-info">
                 <FileText className="w-4 h-4" />
               </div>
               <div>
@@ -281,7 +281,7 @@ export default function ActivityLog() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
+              <div className="p-2 rounded-lg bg-accent text-accent-foreground">
                 <Users className="w-4 h-4" />
               </div>
               <div>
@@ -385,7 +385,7 @@ export default function ActivityLog() {
                     </Badge>
                   </td>
                   <td className="px-4 py-2">
-                    <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${RESOURCE_COLORS[log.resourceType] || "bg-slate-50 text-slate-600"}`}>
+                    <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${RESOURCE_COLORS[log.resourceType] || "bg-muted text-muted-foreground"}`}>
                       {RESOURCE_LABELS[log.resourceType] || log.resourceType || "-"}
                     </Badge>
                   </td>

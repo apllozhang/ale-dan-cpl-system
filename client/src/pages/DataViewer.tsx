@@ -684,7 +684,7 @@ export default function DataViewer() {
                         >
                           <div className="break-words whitespace-normal">
                             {col.key === "isNew" && getCellValue(product, col.key) ? (
-                              <Badge variant="default" className="text-[10px] h-5 px-1.5 bg-emerald-500/10 text-emerald-600 border-emerald-200">
+                              <Badge variant="default" className="text-[10px] h-5 px-1.5 bg-success-soft text-success border-success-border">
                                 {getCellValue(product, col.key)}
                               </Badge>
                             ) : col.key === "productStatus" && getCellValue(product, col.key) ? (
@@ -692,10 +692,10 @@ export default function DataViewer() {
                                 variant="outline"
                                 className={`text-[10px] h-5 px-1.5 ${
                                   getCellValue(product, col.key).includes("GA")
-                                    ? "border-emerald-200 text-emerald-600"
+                                    ? "border-success-border text-success"
                                     : getCellValue(product, col.key).includes("EOS") || getCellValue(product, col.key).includes("EOL")
-                                    ? "border-red-200 text-red-500"
-                                    : "border-amber-200 text-amber-600"
+                                    ? "border-destructive/20 text-destructive"
+                                    : "border-warning-border text-warning"
                                 }`}
                               >
                                 {getCellValue(product, col.key)}

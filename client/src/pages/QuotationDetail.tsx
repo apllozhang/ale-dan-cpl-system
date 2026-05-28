@@ -686,7 +686,7 @@ export default function QuotationDetail() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">{t('quotation.totalAmount')}</Label>
-                <div className={`h-9 flex items-center text-lg font-bold tabular-nums transition-colors duration-300 ${totalFlash ? "text-blue-500" : "text-primary"}`}>
+                <div className={`h-9 flex items-center text-lg font-bold tabular-nums transition-colors duration-300 ${totalFlash ? "text-info" : "text-primary"}`}>
                   ¥{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
@@ -813,7 +813,7 @@ function VersionTimeline({ versions, quotationId }: { versions: any[]; quotation
                 <span>→</span>
                 <span>V{diffData.toVersion}: ¥{Number(diffData.toTotal).toLocaleString()}</span>
                 {diffData.fromTotal !== diffData.toTotal && (
-                  <span className={Number(diffData.toTotal) > Number(diffData.fromTotal) ? "text-green-600" : "text-red-600"}>
+                  <span className={Number(diffData.toTotal) > Number(diffData.fromTotal) ? "text-success" : "text-destructive"}>
                     {Number(diffData.toTotal) > Number(diffData.fromTotal) ? "+" : ""}¥{(Number(diffData.toTotal) - Number(diffData.fromTotal)).toLocaleString()}
                   </span>
                 )}
@@ -832,9 +832,9 @@ function VersionTimeline({ versions, quotationId }: { versions: any[]; quotation
                   <tbody>
                     {diffData.items.map((item: any, i: number) => {
                       const cs: Record<string, string> = {
-                        added: "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400",
-                        removed: "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400",
-                        modified: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
+                        added: "bg-success-soft text-success",
+                        removed: "bg-destructive/10 text-destructive",
+                        modified: "bg-warning-soft text-warning",
                         unchanged: "",
                       };
                       const cl: Record<string, string> = { added: "新增", removed: "删除", modified: "变更", unchanged: "-" };

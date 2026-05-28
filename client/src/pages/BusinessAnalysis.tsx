@@ -24,10 +24,10 @@ const CHART_COLORS = [
 ];
 
 const KPI_GRADIENTS = [
-  { from: "from-blue-500/10", to: "to-blue-600/5", icon: "bg-blue-500/15 text-blue-600", border: "border-blue-500/20" },
-  { from: "from-emerald-500/10", to: "to-emerald-600/5", icon: "bg-emerald-500/15 text-emerald-600", border: "border-emerald-500/20" },
-  { from: "from-violet-500/10", to: "to-violet-600/5", icon: "bg-violet-500/15 text-violet-600", border: "border-violet-500/20" },
-  { from: "from-amber-500/10", to: "to-amber-600/5", icon: "bg-amber-500/15 text-amber-600", border: "border-amber-500/20" },
+  { from: "from-info/10", to: "to-info/5", icon: "bg-info/15 text-info", border: "border-info/20" },
+  { from: "from-success/10", to: "to-success/5", icon: "bg-success/15 text-success", border: "border-success/20" },
+  { from: "from-primary/10", to: "to-primary/5", icon: "bg-primary/15 text-primary", border: "border-primary/20" },
+  { from: "from-warning/10", to: "to-warning/5", icon: "bg-warning/15 text-warning", border: "border-warning/20" },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -341,7 +341,7 @@ export default function BusinessAnalysis() {
                   <div className="flex items-center gap-2 mt-0.5">
                     <p className="text-xs text-muted-foreground">{kpi.label}</p>
                     {kpi.change !== null && (
-                      <span className={`text-[10px] font-medium px-1 py-0.5 rounded ${Number(kpi.change) >= 0 ? "text-emerald-600 bg-emerald-500/10" : "text-red-500 bg-red-500/10"}`}>
+                      <span className={`text-[10px] font-medium px-1 py-0.5 rounded ${Number(kpi.change) >= 0 ? "text-success bg-success/10" : "text-destructive bg-destructive/10"}`}>
                         {Number(kpi.change) >= 0 ? "+" : ""}{kpi.change}%
                       </span>
                     )}

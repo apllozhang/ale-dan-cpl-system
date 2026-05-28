@@ -26,15 +26,15 @@ interface ComparisonRow {
 }
 
 const COLORS = [
-  "bg-blue-50 border-blue-200",
-  "bg-emerald-50 border-emerald-200",
-  "bg-amber-50 border-amber-200",
+  "bg-info-soft border-info-border",
+  "bg-success-soft border-success-border",
+  "bg-warning-soft border-warning-border",
 ];
 
 const HEADER_COLORS = [
-  "text-blue-700",
-  "text-emerald-700",
-  "text-amber-700",
+  "text-info",
+  "text-success",
+  "text-warning",
 ];
 
 function formatPrice(value: string | number | null | undefined): string {
@@ -280,19 +280,19 @@ export default function QuotationCompare({ quotationIds, onClose }: QuotationCom
                             <>
                               <td
                                 key={`price-${rowIdx}-${qIdx}`}
-                                className={`px-2 py-2 text-right tabular-nums border-r border-border ${priceDiff && data ? "bg-rose-50 dark:bg-rose-950/30 font-medium" : ""}`}
+                                className={`px-2 py-2 text-right tabular-nums border-r border-border ${priceDiff && data ? "bg-destructive/10 font-medium" : ""}`}
                               >
                                 {data ? formatPrice(data.listPrice) : "-"}
                               </td>
                               <td
                                 key={`qty-${rowIdx}-${qIdx}`}
-                                className={`px-2 py-2 text-right tabular-nums border-r border-border ${qtyDiff && data ? "bg-rose-50 dark:bg-rose-950/30 font-medium" : ""}`}
+                                className={`px-2 py-2 text-right tabular-nums border-r border-border ${qtyDiff && data ? "bg-destructive/10 font-medium" : ""}`}
                               >
                                 {data ? data.quantity : "-"}
                               </td>
                               <td
                                 key={`disc-${rowIdx}-${qIdx}`}
-                                className={`px-2 py-2 text-right tabular-nums border-r border-border last:border-r-0 ${discDiff && data ? "bg-rose-50 dark:bg-rose-950/30 font-medium" : ""}`}
+                                className={`px-2 py-2 text-right tabular-nums border-r border-border last:border-r-0 ${discDiff && data ? "bg-destructive/10 font-medium" : ""}`}
                               >
                                 {data ? data.discountRate : "-"}
                               </td>
@@ -314,7 +314,7 @@ export default function QuotationCompare({ quotationIds, onClose }: QuotationCom
                       return (
                         <td
                           key={`total-${idx}`}
-                          className={`px-3 py-2.5 text-right tabular-nums border-r border-border last:border-r-0 ${totalDiff ? "bg-rose-50 dark:bg-rose-950/30" : ""}`}
+                          className={`px-3 py-2.5 text-right tabular-nums border-r border-border last:border-r-0 ${totalDiff ? "bg-destructive/10" : ""}`}
                           colSpan={3}
                         >
                           <span className={HEADER_COLORS[idx % HEADER_COLORS.length]}>

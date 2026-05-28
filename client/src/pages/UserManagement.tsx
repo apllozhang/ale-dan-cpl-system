@@ -44,15 +44,15 @@ const emptyUserForm: UserForm = {
 };
 
 const ROLE_BADGE_STYLES: Record<Role, string> = {
-  user: "bg-gray-100 text-gray-700 border-gray-200",
-  admin: "bg-blue-50 text-blue-700 border-blue-200",
-  sales_manager: "bg-amber-50 text-amber-700 border-amber-200",
-  sales_rep: "bg-green-50 text-green-700 border-green-200",
-  viewer: "bg-purple-50 text-purple-700 border-purple-200",
+  user: "bg-muted text-muted-foreground border-border",
+  admin: "bg-info-soft text-info border-info-border",
+  sales_manager: "bg-warning-soft text-warning border-warning-border",
+  sales_rep: "bg-success-soft text-success border-success-border",
+  viewer: "bg-accent text-accent-foreground border-border",
 };
 
 function roleBadgeStyle(role: string): string {
-  return ROLE_BADGE_STYLES[role as Role] ?? "bg-gray-100 text-gray-700 border-gray-200";
+  return ROLE_BADGE_STYLES[role as Role] ?? "bg-muted text-muted-foreground border-border";
 }
 
 export default function UserManagement() {
@@ -455,7 +455,7 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
               <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 6} className="h-32 text-center text-muted-foreground text-sm">{t('user.noUsers')}</TableCell></TableRow>
             ) : users.map((u: any) => (
               <TableRow key={u.id} className="hover:bg-accent/30">
-                <TableCell className="text-sm font-medium">{u.username}{u.isSuperAdmin ? <Badge className="ml-1.5 text-[10px] h-4 px-1 bg-amber-500/10 text-amber-600 border-amber-200">{t('user.superAdminBadge')}</Badge> : null}</TableCell>
+                <TableCell className="text-sm font-medium">{u.username}{u.isSuperAdmin ? <Badge className="ml-1.5 text-[10px] h-4 px-1 bg-warning-soft text-warning border-warning-border">{t('user.superAdminBadge')}</Badge> : null}</TableCell>
                 <TableCell className="text-sm">{u.name || "-"}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{u.email || "-"}</TableCell>
                 {isSuperAdmin && <TableCell className="text-xs">{getOrgName(u.organizationId)}</TableCell>}

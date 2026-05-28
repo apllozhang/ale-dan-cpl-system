@@ -40,6 +40,22 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-border: var(--warning-border);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  --color-info-border: var(--info-border);
+  --color-kpi-blue: var(--kpi-blue);
+  --color-kpi-emerald: var(--kpi-emerald);
+  --color-kpi-amber: var(--kpi-amber);
+  --color-kpi-violet: var(--kpi-violet);
   --font-sans: "Inter", "Noto Sans SC", system-ui, -apple-system, sans-serif;
 }
 
@@ -80,6 +96,24 @@
   --sidebar-ring: oklch(0.55 0.15 245);
   /* Sapphire blue gradient */
   --sidebar-gradient: linear-gradient(180deg, oklch(0.88 0.10 250) 0%, oklch(0.78 0.12 255) 50%, oklch(0.72 0.12 260) 100%);
+  /* Semantic status colors */
+  --success: oklch(0.52 0.14 160);
+  --success-foreground: oklch(0.98 0.01 160);
+  --success-soft: oklch(0.96 0.03 160);
+  --success-border: oklch(0.91 0.06 160);
+  --warning: oklch(0.62 0.16 75);
+  --warning-foreground: oklch(0.98 0.01 75);
+  --warning-soft: oklch(0.96 0.04 75);
+  --warning-border: oklch(0.91 0.08 75);
+  --info: oklch(0.55 0.17 260);
+  --info-foreground: oklch(0.98 0.01 260);
+  --info-soft: oklch(0.96 0.03 260);
+  --info-border: oklch(0.91 0.06 260);
+  /* KPI gradients */
+  --kpi-blue: oklch(0.55 0.17 260);
+  --kpi-emerald: oklch(0.52 0.14 160);
+  --kpi-amber: oklch(0.62 0.16 75);
+  --kpi-violet: oklch(0.55 0.20 290);
 }
 
 .dark {
@@ -112,6 +146,19 @@
   --sidebar-ring: oklch(0.65 0.18 280);
   /* Sapphire blue gradient */
   --sidebar-gradient: linear-gradient(180deg, oklch(0.35 0.10 250) 0%, oklch(0.28 0.12 255) 50%, oklch(0.22 0.12 260) 100%);
+  /* Semantic status colors */
+  --success: oklch(0.70 0.16 160);
+  --success-foreground: oklch(0.15 0.03 160);
+  --success-soft: oklch(0.25 0.04 160);
+  --success-border: oklch(0.35 0.06 160);
+  --warning: oklch(0.75 0.17 75);
+  --warning-foreground: oklch(0.15 0.03 75);
+  --warning-soft: oklch(0.25 0.04 75);
+  --warning-border: oklch(0.35 0.06 75);
+  --info: oklch(0.70 0.17 260);
+  --info-foreground: oklch(0.15 0.03 260);
+  --info-soft: oklch(0.25 0.04 260);
+  --info-border: oklch(0.35 0.06 260);
   --chart-1: oklch(0.65 0.15 280);
   --chart-2: oklch(0.60 0.17 280);
   --chart-3: oklch(0.55 0.18 280);

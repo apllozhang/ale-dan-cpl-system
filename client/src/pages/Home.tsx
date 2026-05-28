@@ -122,28 +122,28 @@ export default function Home() {
           icon={FileSpreadsheet}
           label="报价数"
           value={stats ? String(stats.totalQuotations) : "—"}
-          color="bg-gradient-to-br from-blue-500 to-blue-600"
+          color="bg-gradient-to-br from-kpi-blue to-kpi-blue/90"
           loading={dashboardQuery.isLoading}
         />
         <StatCard
           icon={Database}
           label="成交额"
           value={stats ? `¥${stats.completedRevenue.toLocaleString()}` : "—"}
-          color="bg-gradient-to-br from-emerald-500 to-emerald-600"
+          color="bg-gradient-to-br from-kpi-emerald to-kpi-emerald/90"
           loading={dashboardQuery.isLoading}
         />
         <StatCard
           icon={Clock}
           label="待处理"
           value={stats ? String(stats.pendingCount) : "—"}
-          color="bg-gradient-to-br from-amber-500 to-amber-600"
+          color="bg-gradient-to-br from-kpi-amber to-kpi-amber/90"
           loading={dashboardQuery.isLoading}
         />
         <StatCard
           icon={FileText}
           label="待审批"
           value={stats ? String(stats.submittedCount) : "—"}
-          color="bg-gradient-to-br from-violet-500 to-violet-600"
+          color="bg-gradient-to-br from-kpi-violet to-kpi-violet/90"
           loading={dashboardQuery.isLoading}
         />
       </div>

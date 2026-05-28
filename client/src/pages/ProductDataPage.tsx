@@ -416,7 +416,7 @@ export default function ProductDataPage() {
         <div
           className={`${
             sidebarCollapsed ? "w-0" : "w-64"
-          } transition-all duration-300 overflow-hidden flex flex-col border-r bg-slate-50`}
+          } transition-all duration-300 overflow-hidden flex flex-col border-r bg-muted`}
         >
         <div className="p-4 border-b">
           <h2 className="text-sm font-semibold text-foreground">产品分类</h2>
@@ -790,7 +790,7 @@ export default function ProductDataPage() {
                     >
                       <div className="break-words whitespace-normal">
                         {col.key === "isNew" && getCellValue(product as any, col.key) ? (
-                              <Badge variant="default" className="text-[10px] h-5 px-1.5 bg-emerald-500/10 text-emerald-600 border-emerald-200">
+                              <Badge variant="default" className="text-[10px] h-5 px-1.5 bg-success-soft text-success border-success-border">
                                 {getCellValue(product as any, col.key)}
                               </Badge>
                             ) : (
