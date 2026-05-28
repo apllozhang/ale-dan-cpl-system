@@ -179,6 +179,14 @@ export default function Login() {
   const visibilityRef = useRef<HTMLDivElement>(null);
   const animationsInitializedRef = useRef(false);
 
+  // Login page should not be affected by dark mode
+  useEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains("dark");
+    root.classList.remove("dark");
+    return () => { if (wasDark) root.classList.add("dark"); };
+  }, []);
+
   // Detect when login form is visible to trigger entrance animations
   useEffect(() => {
     const observer = new IntersectionObserver(

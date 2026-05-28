@@ -240,7 +240,7 @@ export default function QuotationDetail() {
       const price = parseFloat(updated.listPrice) || 0;
       const qty = field === "quantity" ? Number(value) : item.quantity;
       const disc = field === "discountRate" ? Number(value) : item.discountRate;
-      updated.subtotal = price * qty * (1 - disc / 100);
+      updated.subtotal = price * qty * (disc / 100);
       return updated;
     }));
   };
