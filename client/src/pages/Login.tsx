@@ -158,21 +158,7 @@ function FullScreenCarousel({ onIndexChange }: { onIndexChange?: (index: number)
       {/* Grain texture */}
       <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
 
-      {/* Carousel indicators */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-        {CAROUSEL_IMAGES.map((_, idx) => (
-          <div
-            key={idx}
-            ref={el => { indicatorsRef.current[idx] = el; }}
-            className="h-1 rounded-full transition-all"
-            style={{
-              width: idx === 0 ? 32 : 8,
-              backgroundColor: idx === 0 ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)",
-              willChange: "width, background-color",
-            }}
-          />
-        ))}
-      </div>
+
     </div>
   );
 }
