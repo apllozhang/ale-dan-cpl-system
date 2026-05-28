@@ -173,7 +173,9 @@
   "layout": {
     "systemName": "Sistema ALE DAN CPL",
     "restoreSidebar": "Restaurar barra lateral",
-    "maximize": "Pantalla completa (contraer barra lateral)"
+    "maximize": "Pantalla completa (contraer barra lateral)",
+    "mobilePreview": "Vista móvil",
+    "exitMobilePreview": "Salir de vista móvil"
   },
   "import": {
     "title": "Importar Datos",

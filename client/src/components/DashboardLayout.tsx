@@ -45,6 +45,8 @@ import {
   Globe,
   Maximize2,
   Minimize2,
+  Smartphone,
+  Monitor,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -151,6 +153,7 @@ function DashboardLayoutContent({
   const [isResizing, setIsResizing] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [isMobilePreview, setIsMobilePreview] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find((item) => item.path === location);
   const activeLabel = activeMenuItem ? t(activeMenuItem.labelKey) : "";
@@ -190,6 +193,15 @@ function DashboardLayoutContent({
       setIsResizing(false);
     }
   }, [isCollapsed]);
+
+  // Mobile preview: collapse sidebar + set data attribute for useIsMobile override
+  useEffect(() => {
+    if (isMobilePreview && state !== "collapsed") {
+      toggleSidebar();
+    }
+    document.documentElement.setAttribute("data-mobile-preview", isMobilePreview ? "true" : "false");
+    return () => { document.documentElement.removeAttribute("data-mobile-preview"); };
+  }, [isMobilePreview]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -393,6 +405,19 @@ function DashboardLayoutContent({
               </button>
             )}
 
+            {/* Mobile Preview Toggle */}
+            <button
+              onClick={() => setIsMobilePreview(prev => !prev)}
+              className={`group h-9 w-9 flex items-center justify-center rounded-md border transition-colors ${isMobilePreview ? "border-primary/40 bg-primary/10 text-primary" : "border-transparent hover:border-primary/20 hover:bg-primary/10"}`}
+              title={isMobilePreview ? t('layout.exitMobilePreview') : t('layout.mobilePreview')}
+            >
+              {isMobilePreview ? (
+                <Monitor className="h-5 w-5 group-hover:text-primary transition-colors" />
+              ) : (
+                <Smartphone className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              )}
+            </button>
+
             {/* Maximize/Minimize */}
             {isMaximized ? (
               <button
@@ -413,8 +438,26 @@ function DashboardLayoutContent({
             )}
           </div>
         </div>
-        <main className="flex-1 p-5 lg:p-6">
-          <PageTransition location={location}>{children}</PageTransition>
+        <main className={`flex-1 ${isMobilePreview ? "" : "p-5 lg:p-6"}`}>
+          {isMobilePreview ? (
+            <div className="flex justify-center py-4 px-4 h-full">
+              <div className="w-[375px] h-full flex flex-col bg-background rounded-[2rem] border-[6px] border-foreground/10 shadow-2xl overflow-hidden relative">
+                {/* Phone notch */}
+                <div className="flex justify-center py-1.5 bg-muted/30">
+                  <div className="w-20 h-4 bg-foreground/5 rounded-full" />
+                </div>
+                <div className="flex-1 overflow-auto p-4">
+                  <PageTransition location={location}>{children}</PageTransition>
+                </div>
+                {/* Phone home bar */}
+                <div className="flex justify-center py-2 bg-muted/30">
+                  <div className="w-24 h-1 bg-foreground/10 rounded-full" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <PageTransition location={location}>{children}</PageTransition>
+          )}
         </main>
       </SidebarInset>
     </>

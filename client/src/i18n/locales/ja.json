@@ -173,7 +173,9 @@
   "layout": {
     "systemName": "ALE DAN CPL システム",
     "restoreSidebar": "サイドバーを復元",
-    "maximize": "全画面表示（サイドバーを折りたたむ）"
+    "maximize": "全画面表示（サイドバーを折りたたむ）",
+    "mobilePreview": "モバイルプレビュー",
+    "exitMobilePreview": "モバイルプレビューを終了"
   },
   "import": {
     "title": "データインポート",

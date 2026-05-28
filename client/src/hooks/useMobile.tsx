@@ -10,11 +10,27 @@ export function useIsMobile() {
   React.useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      const forced = document.documentElement.getAttribute("data-mobile-preview");
+      if (forced === "true") {
+        setIsMobile(true);
+      } else {
+        setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      }
     };
     mql.addEventListener("change", onChange);
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    return () => mql.removeEventListener("change", onChange);
+
+    // Observe data-mobile-preview attribute changes
+    const observer = new MutationObserver(onChange);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-mobile-preview"],
+    });
+
+    onChange();
+    return () => {
+      mql.removeEventListener("change", onChange);
+      observer.disconnect();
+    };
   }, []);
 
   return !!isMobile;

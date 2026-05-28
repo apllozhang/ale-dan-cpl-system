@@ -173,7 +173,9 @@
   "layout": {
     "systemName": "ALE DAN CPL System",
     "restoreSidebar": "Restore Sidebar",
-    "maximize": "Full Screen View (Collapse Sidebar)"
+    "maximize": "Full Screen View (Collapse Sidebar)",
+    "mobilePreview": "Mobile Preview",
+    "exitMobilePreview": "Exit Mobile Preview"
   },
   "import": {
     "title": "Data Import",

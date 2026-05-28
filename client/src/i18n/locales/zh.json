@@ -174,7 +174,9 @@
   "layout": {
     "systemName": "ALE DAN CPL 系统",
     "restoreSidebar": "还原侧边栏",
-    "maximize": "全屏查看（折叠侧边栏）"
+    "maximize": "全屏查看（折叠侧边栏）",
+    "mobilePreview": "手机预览",
+    "exitMobilePreview": "退出手机预览"
   },
   "import": {
     "title": "数据导入",
