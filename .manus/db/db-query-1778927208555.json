@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE users SET username = 'aletss', passwordHash = '$2b$10$Gjpcyo6De0JGjliiuT3CteOVMzS6mqJLCsjGW0JcjIKNy7mKUiPdS', name = 'ALE TSS', email = 'aletss@ale.com', loginMethod = 'local', role = 'admin' WHERE openId = 'local-aletss'",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 36JDpBo3zu5AaRu.c009522ec6e2 --database neEWayju942ovVPrciQXjy --execute UPDATE users SET username = 'aletss', passwordHash = '$2b$10$Gjpcyo6De0JGjliiuT3CteOVMzS6mqJLCsjGW0JcjIKNy7mKUiPdS', name = 'ALE TSS', email = 'aletss@ale.com', loginMethod = 'local', role = 'admin' WHERE openId = 'local-aletss'",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 266
-}

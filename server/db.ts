@@ -549,7 +549,7 @@ export async function updateQuotation(id: number, data: Partial<InsertQuotation>
         if (!oi) {
           added.push(ni.productModel);
         } else {
-          if (Number(oi.quantity) !== ni.quantity || oi.discountRate !== String(ni.discountRate ?? 0)) {
+          if (Number(oi.quantity) !== ni.quantity || Number(oi.discountRate ?? 0) !== Number(ni.discountRate ?? 0)) {
             modified.push(ni.productModel);
           }
         }
@@ -596,6 +596,7 @@ export async function deleteQuotation(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(quotationItems).where(eq(quotationItems.quotationId, id));
+  await db.delete(quotationVersions).where(eq(quotationVersions.quotationId, id));
   await db.delete(quotations).where(eq(quotations.id, id));
 }
 

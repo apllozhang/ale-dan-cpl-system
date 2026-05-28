@@ -88,3 +88,24 @@ Quotation versioning is automatic on every save (`updateQuotation` in `server/db
 - **Git proxy**: `git config http.proxy http://127.0.0.1:10808` (if needed)
 - **Database**: `mysql://root:@localhost:3306/ale_cpl` (default .env)
 - **Node**: ES modules (`"type": "module"` in package.json)
+
+## Development Workflow
+
+1. **Type check**: `npm run check` — run tsc before committing
+2. **Tests**: `npm run test` — 41 tests across 7 files covering discount calc, version diff, permissions, auth, analytics
+3. **Auto-format**: `.claude/settings.json` PostToolUse hook runs prettier + eslint on every `.ts`/`.tsx` edit
+4. **Key test files**:
+   - `server/discount.test.ts` — discount calculation (rate / 100 formula)
+   - `server/version-diff.test.ts` — quotation version diff detection (handles type mismatches)
+   - `server/permissions.test.ts` — role/permission matrix validation
+   - `server/cpl.test.ts` — auth login/logout, CPL data endpoints
+   - `server/quotations.analytics.test.ts` — analytics queries
+   - `server/quotations.exportExcel.test.ts` — Excel export logic
+
+## Security Notes
+
+- Quotation mutations (update/updateStatus/delete) verify ownership: only creator or admin/sales_manager/superAdmin can mutate
+- `isSuperAdmin` flag only modifiable by existing super admins
+- Login input capped at 128 chars (bcrypt DoS prevention)
+- Excel import base64 capped at 50MB
+- Super admin passwords are immutable via API

@@ -3,6 +3,15 @@ import { appRouter } from "./routers";
 import { COOKIE_NAME } from "../shared/const";
 import type { TrpcContext } from "./_core/context";
 
+// Mock ENV before routers imports it
+vi.mock("./_core/env", () => ({
+  ENV: {
+    appId: "test-app",
+    cookieSecret: "test-secret-key-for-jwt-signing-at-least-32-chars",
+    isProduction: false,
+  },
+}));
+
 // Mock bcryptjs first
 vi.mock("bcryptjs", () => ({
   hash: vi.fn().mockResolvedValue("$2a$10$hashedpassword"),
@@ -68,6 +77,7 @@ vi.mock("./db", () => ({
   updateQuotationStatus: vi.fn().mockResolvedValue(undefined),
   deleteQuotation: vi.fn().mockResolvedValue(undefined),
   searchQuotations: vi.fn().mockResolvedValue([]),
+  createActivityLog: vi.fn().mockResolvedValue(undefined),
 }));
 
 type CookieCall = {

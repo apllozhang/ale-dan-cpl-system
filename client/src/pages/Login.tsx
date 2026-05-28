@@ -39,11 +39,13 @@ function FullScreenCarousel({ onIndexChange }: { onIndexChange?: (index: number)
 
   // Lazy load images using Intersection Observer
   useEffect(() => {
-    // Only load first image immediately, others on demand
+    let cancelled = false;
     const img = new Image();
     img.onload = () => {
-      setImagesLoaded(prev => { const n = [...prev]; n[0] = true; return n; });
-      setAnimationsReady(true);
+      if (!cancelled) {
+        setImagesLoaded(prev => { const n = [...prev]; n[0] = true; return n; });
+        setAnimationsReady(true);
+      }
     };
     img.src = CAROUSEL_IMAGES[0];
 
@@ -53,11 +55,12 @@ function FullScreenCarousel({ onIndexChange }: { onIndexChange?: (index: number)
         (entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting) {
-              // Container is visible, preload remaining images
               CAROUSEL_IMAGES.slice(1).forEach((src, i) => {
                 const img = new Image();
                 img.onload = () => {
-                  setImagesLoaded(prev => { const n = [...prev]; n[i + 1] = true; return n; });
+                  if (!cancelled) {
+                    setImagesLoaded(prev => { const n = [...prev]; n[i + 1] = true; return n; });
+                  }
                 };
                 img.src = src;
               });
@@ -71,6 +74,7 @@ function FullScreenCarousel({ onIndexChange }: { onIndexChange?: (index: number)
     }
 
     return () => {
+      cancelled = true;
       observerRef.current?.disconnect();
     };
   }, []);
@@ -89,6 +93,9 @@ function FullScreenCarousel({ onIndexChange }: { onIndexChange?: (index: number)
   }, []);
 
   // Carousel transition with GSAP - only start when animations are ready
+  const currentIndexRef = useRef(0);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
+
   useEffect(() => {
     if (!animationsReady) return;
 
@@ -96,26 +103,30 @@ function FullScreenCarousel({ onIndexChange }: { onIndexChange?: (index: number)
     startKenBurns(0);
 
     timerRef.current = setInterval(() => {
-      const next = (currentIndex + 1) % CAROUSEL_IMAGES.length;
-      const currentLayer = layersRef.current[currentIndex];
+      const cur = currentIndexRef.current;
+      const next = (cur + 1) % CAROUSEL_IMAGES.length;
+      const currentLayer = layersRef.current[cur];
       const nextLayer = layersRef.current[next];
-      const currentDot = indicatorsRef.current[currentIndex];
+      const currentDot = indicatorsRef.current[cur];
       const nextDot = indicatorsRef.current[next];
 
       if (!currentLayer || !nextLayer) return;
 
-      // Kill previous Ken Burns
+      // Kill previous Ken Burns and timeline
       if (kenBurnsRef.current) kenBurnsRef.current.kill();
+      if (tlRef.current) tlRef.current.kill();
 
       // Prepare next image
       gsap.set(nextLayer, { opacity: 0, scale: 1.0, x: 0 });
 
       // Crossfade + Ken Burns on new image
       const tl = gsap.timeline();
+      tlRef.current = tl;
       tl.to(currentLayer, { opacity: 0, duration: 1.4, ease: "power2.inOut" }, 0);
       tl.to(nextLayer, { opacity: 1, duration: 1.4, ease: "power2.inOut" }, 0);
       tl.call(() => {
         startKenBurns(next);
+        currentIndexRef.current = next;
         setCurrentIndex(next);
         onIndexChange?.(next);
       }, undefined, 0.7);
@@ -128,8 +139,9 @@ function FullScreenCarousel({ onIndexChange }: { onIndexChange?: (index: number)
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (kenBurnsRef.current) kenBurnsRef.current.kill();
+      if (tlRef.current) tlRef.current.kill();
     };
-  }, [currentIndex, animationsReady, startKenBurns]);
+  }, [animationsReady, startKenBurns]);
 
   return (
     <div className="absolute inset-0 overflow-hidden" ref={containerRef}>
@@ -289,38 +301,39 @@ export default function Login() {
   }, []);
 
   // Entrance animation - only runs when visible
+  const entranceCtxRef = useRef<gsap.Context | null>(null);
+
   useLayoutEffect(() => {
     if (!isVisible || !loginRef.current) return;
 
-    // Use requestAnimationFrame to ensure DOM is ready
     const rafId = requestAnimationFrame(() => {
-      const ctx = gsap.context(() => {
-        // Stagger entrance animations for better performance
-        gsap.fromTo(".login-brand", 
-          { x: -60, opacity: 0 }, 
+      entranceCtxRef.current = gsap.context(() => {
+        gsap.fromTo(".login-brand",
+          { x: -60, opacity: 0 },
           { x: 0, opacity: 1, duration: 0.8, ease: "power3.out", delay: 0.2 }
         );
-        
-        gsap.fromTo(".login-card", 
-          { y: 40, opacity: 0 }, 
+
+        gsap.fromTo(".login-card",
+          { y: 40, opacity: 0 },
           { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", delay: 0.3 }
         );
-        
-        gsap.fromTo(".login-card .space-y-2", 
-          { y: 20, opacity: 0 }, 
+
+        gsap.fromTo(".login-card .space-y-2",
+          { y: 20, opacity: 0 },
           { y: 0, opacity: 1, stagger: 0.08, duration: 0.6, ease: "power2.out", delay: 0.4 }
         );
-        
-        gsap.fromTo(".login-card .login-btn", 
-          { y: 15, opacity: 0 }, 
+
+        gsap.fromTo(".login-card .login-btn",
+          { y: 15, opacity: 0 },
           { y: 0, opacity: 1, duration: 0.5, ease: "power2.out", delay: 0.6 }
         );
       }, loginRef);
-
-      return () => ctx.revert();
     });
 
-    return () => cancelAnimationFrame(rafId);
+    return () => {
+      cancelAnimationFrame(rafId);
+      entranceCtxRef.current?.revert();
+    };
   }, [isVisible]);
 
   const { loading } = useAuth();

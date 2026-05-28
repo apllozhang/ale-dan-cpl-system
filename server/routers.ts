@@ -128,8 +128,8 @@ export const appRouter = router({
     }),
     login: publicProcedure
       .input(z.object({
-        username: z.string(),
-        password: z.string(),
+        username: z.string().max(128),
+        password: z.string().max(128),
       }))
       .mutation(async ({ input, ctx }) => {
         const user = await db.getUserByUsername(input.username);
@@ -259,7 +259,7 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         username: z.string().min(3).max(64).optional(),
-        password: z.string().min(6).optional(),
+        password: z.string().min(6).max(128).optional(),
         name: z.string().optional(),
         email: z.string().email().optional(),
         role: z.enum(["user", "admin", "sales_manager", "sales_rep", "viewer"]).optional(),
@@ -267,8 +267,12 @@ export const appRouter = router({
         organizationId: z.number().nullable().optional(),
         groupId: z.number().nullable().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { id, password, username, ...rest } = input;
+        // Only super admins can modify isSuperAdmin
+        if (rest.isSuperAdmin !== undefined && !ctx.user.isSuperAdmin) {
+          delete (rest as any).isSuperAdmin;
+        }
         const updateData: any = { ...rest };
         if (password) {
           const target = await db.getUserById(id);
@@ -396,6 +400,13 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, items, validUntil, ...quotationData } = input;
+        // Ownership check: only owner or admin/sales_manager can update
+        const quotation = await db.getQuotationById(id);
+        if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "报价单不存在" });
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        if (!isAdmin && quotation.createdBy !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "无权编辑此报价单" });
+        }
         let processedItems = undefined;
         let totalAmount = undefined;
         if (items) {
@@ -429,12 +440,24 @@ export const appRouter = router({
         id: z.number(),
         status: z.enum(["draft", "submitted", "approved", "sent", "completed", "cancelled"]),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const quotation = await db.getQuotationById(input.id);
+        if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "报价单不存在" });
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        if (!isAdmin && quotation.createdBy !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "无权修改此报价单状态" });
+        }
         return db.updateQuotationStatus(input.id, input.status);
       }),
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const quotation = await db.getQuotationById(input.id);
+        if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "报价单不存在" });
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        if (!isAdmin && quotation.createdBy !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "无权删除此报价单" });
+        }
         return db.deleteQuotation(input.id);
       }),
 
@@ -493,7 +516,7 @@ export const appRouter = router({
     // Import Excel file
     import: superAdminProcedure
       .input(z.object({
-        fileBase64: z.string(),
+        fileBase64: z.string().max(50_000_000),
         fileName: z.string(),
         mode: z.enum(["merge", "overwrite"]).default("overwrite"),
       }))
