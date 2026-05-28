@@ -220,6 +220,7 @@ function DashboardLayoutContent({
         <Sidebar
           collapsible="icon"
           className="border-r-0"
+          style={{ backgroundImage: "var(--sidebar-gradient)" }}
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-16 justify-center">

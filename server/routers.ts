@@ -285,6 +285,10 @@ export const appRouter = router({
     delete: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
+        const target = await db.getUserById(input.id);
+        if (target?.isSuperAdmin) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "超级用户不可删除" });
+        }
         return db.deleteUser(input.id);
       }),
   }),

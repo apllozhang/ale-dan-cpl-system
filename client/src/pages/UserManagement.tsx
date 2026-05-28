@@ -465,7 +465,7 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                 <TableCell>
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(u)}><Pencil className="w-3.5 h-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteId(u.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                    {!u.isSuperAdmin && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteId(u.id)}><Trash2 className="w-3.5 h-3.5" /></Button>}
                   </div>
                 </TableCell>
               </TableRow>
