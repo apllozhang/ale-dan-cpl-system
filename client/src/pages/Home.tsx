@@ -100,7 +100,7 @@ export default function Home() {
       </div>
 
       {/* Row 2: Date Filter */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         {DATE_PRESETS.map(p => (
           <button
             key={p.key}

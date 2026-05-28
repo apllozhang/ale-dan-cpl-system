@@ -493,7 +493,7 @@ export default function QuotationDetail() {
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {!isNew && transitions.map(status => {
             const Icon = STATUS_ICONS[status] || Send;
             return (

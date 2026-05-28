@@ -28,6 +28,8 @@ import QuotationCompare from "@/components/QuotationCompare";
 import { useTranslation } from "react-i18next";
 import { useStaggerIn } from "@/hooks/useStaggerIn";
 
+import { useMobilePreview } from "@/contexts/MobilePreviewContext";
+
 function generatePageNumbers(current: number, total: number): (number | "...")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages: (number | "...")[] = [];
@@ -53,6 +55,7 @@ export default function QuotationList() {
   const [pageSize, setPageSize] = useState(20);
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const isMobilePreview = useMobilePreview();
   const [showCompare, setShowCompare] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
@@ -100,7 +103,7 @@ export default function QuotationList() {
   return (
     <div className="h-full flex flex-col gap-4">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className={`flex items-center justify-between gap-4 ${isMobilePreview ? "" : "flex-wrap"}`}>
         <div className="flex items-center gap-3">
           <FileSpreadsheet className="w-5 h-5 text-primary" />
           <h1 className="text-lg font-semibold text-foreground">{t("quotation.title")}</h1>
@@ -110,14 +113,14 @@ export default function QuotationList() {
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className={`flex items-center gap-2 ${isMobilePreview ? "w-full flex-wrap" : ""}`}>
+          <div className={`relative ${isMobilePreview ? "flex-1 min-w-0" : ""}`}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder={t("quotation.searchPlaceholder")}
               value={search}
               onChange={e => handleSearchChange(e.target.value)}
-              className="pl-9 w-64 h-9 text-sm bg-background"
+              className={`pl-9 h-9 text-sm bg-background ${isMobilePreview ? "w-full" : "w-64"}`}
             />
             {search && (
               <button

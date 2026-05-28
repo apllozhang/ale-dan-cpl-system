@@ -1,4 +1,5 @@
 ﻿import { useAuth } from "@/_core/hooks/useAuth";
+import { MobilePreviewProvider } from "@/contexts/MobilePreviewContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -358,7 +359,8 @@ function DashboardLayoutContent({
             <span className="text-xs text-muted-foreground font-medium">{activeLabel}</span>
           </div>
           <div className="flex items-center gap-1">
-            {/* Language Switcher */}
+            {/* Language Switcher — hidden in mobile preview */}
+            {!isMobilePreview && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -389,6 +391,7 @@ function DashboardLayoutContent({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            )}
 
             {/* Theme Toggle */}
             {toggleTheme && (
@@ -418,8 +421,8 @@ function DashboardLayoutContent({
               )}
             </button>
 
-            {/* Maximize/Minimize */}
-            {isMaximized ? (
+            {/* Maximize/Minimize — hidden in mobile preview */}
+            {!isMobilePreview && (isMaximized ? (
               <button
                 onClick={() => { setIsMaximized(false); if (state === "collapsed") toggleSidebar(); }}
                 className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
@@ -435,9 +438,10 @@ function DashboardLayoutContent({
               >
                 <Maximize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
-            )}
+            ))}
           </div>
         </div>
+        <MobilePreviewProvider value={isMobilePreview}>
         <main className={`flex-1 ${isMobilePreview ? "" : "p-5 lg:p-6"}`}>
           {isMobilePreview ? (
             <div className="flex justify-center py-4 px-4 h-full">
@@ -459,6 +463,7 @@ function DashboardLayoutContent({
             <PageTransition location={location}>{children}</PageTransition>
           )}
         </main>
+        </MobilePreviewProvider>
       </SidebarInset>
     </>
   );

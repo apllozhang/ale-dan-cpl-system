@@ -9,10 +9,12 @@ import {
   PieChart, Pie, Cell, Legend,
   AreaChart, Area,
 } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
+import { useMobilePreview } from "@/contexts/MobilePreviewContext";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
 import gsap from "gsap";
 
@@ -162,6 +164,7 @@ function useResizableColumns(initialWidths: number[]) {
 export default function BusinessAnalysis() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
+  const isMobilePreview = useMobilePreview();
   const [preset, setPreset] = useState("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -297,16 +300,29 @@ export default function BusinessAnalysis() {
           {t("analytics.title")}
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
-          {PRESETS.map(p => (
-            <Button key={p.key} size="sm" variant={preset === p.key ? "default" : "outline"}
-              onClick={() => setPreset(p.key)} className={`h-8 text-xs transition-all ${preset === p.key ? "shadow-md" : ""}`}>{p.label}</Button>
-          ))}
+          {isMobilePreview ? (
+            <Select value={preset} onValueChange={v => setPreset(v)}>
+              <SelectTrigger className="h-8 w-[130px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PRESETS.map(p => (
+                  <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            PRESETS.map(p => (
+              <Button key={p.key} size="sm" variant={preset === p.key ? "default" : "outline"}
+                onClick={() => setPreset(p.key)} className={`h-8 text-xs transition-all ${preset === p.key ? "shadow-md" : ""}`}>{p.label}</Button>
+            ))
+          )}
           <div className="flex items-center gap-1">
             <Input type="date" value={customStart} onChange={e => { setCustomStart(e.target.value); setPreset("custom"); }}
-              className="h-8 w-[130px] text-xs" placeholder={t("analytics.dateFilter.startDate")} />
+              className={`h-8 text-xs ${isMobilePreview ? "w-[110px]" : "w-[130px]"}`} placeholder={t("analytics.dateFilter.startDate")} />
             <span className="text-xs text-muted-foreground">~</span>
             <Input type="date" value={customEnd} onChange={e => { setCustomEnd(e.target.value); setPreset("custom"); }}
-              className="h-8 w-[130px] text-xs" placeholder={t("analytics.dateFilter.endDate")} />
+              className={`h-8 text-xs ${isMobilePreview ? "w-[110px]" : "w-[130px]"}`} placeholder={t("analytics.dateFilter.endDate")} />
           </div>
         </div>
       </div>

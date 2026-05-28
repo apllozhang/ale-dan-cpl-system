@@ -8,9 +8,11 @@ import EmptyState from "@/components/EmptyState";
 import { useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Search, Users, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { useMobilePreview } from "@/contexts/MobilePreviewContext";
 
 export default function Customers() {
   const [, setLocation] = useLocation();
+  const isMobilePreview = useMobilePreview();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page] = useState(1);
@@ -48,13 +50,14 @@ export default function Customers() {
             placeholder="搜索客户名称..."
             value={search}
             onChange={e => handleSearchChange(e.target.value)}
-            className="pl-9 w-64 h-9 text-sm bg-background"
+            className={`pl-9 h-9 text-sm bg-background ${isMobilePreview ? "w-full" : "w-64"}`}
           />
         </div>
       </div>
 
       {/* Table */}
       <div className="bg-card border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -97,6 +100,7 @@ export default function Customers() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
     </div>
   );

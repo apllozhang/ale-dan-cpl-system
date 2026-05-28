@@ -34,6 +34,7 @@ import {
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useStaggerIn } from "@/hooks/useStaggerIn";
+import { useMobilePreview } from "@/contexts/MobilePreviewContext";
 
 function formatDetail(action: string, detail: string | null, t: (key: string, options?: Record<string, any>) => string): string {
   if (!detail) return "-";
@@ -103,6 +104,7 @@ const RESOURCE_COLORS: Record<string, string> = {
 export default function ActivityLog() {
   const { t } = useTranslation();
   const utils = trpc.useUtils();
+  const isMobilePreview = useMobilePreview();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -292,50 +294,54 @@ export default function ActivityLog() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input
-            placeholder={t('activity.searchPlaceholder')}
-            value={search}
-            onChange={e => handleSearchChange(e.target.value)}
-            className="pl-9 h-9 text-sm w-64 bg-background"
-          />
+      <div className={`flex items-center gap-3 flex-wrap ${isMobilePreview ? "flex-col items-stretch" : ""}`}>
+        <div className={`${isMobilePreview ? "w-full" : "flex-1 min-w-[200px]"}`}>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder={t('activity.searchPlaceholder')}
+              value={search}
+              onChange={e => handleSearchChange(e.target.value)}
+              className="pl-9 h-9 text-sm w-full bg-background"
+            />
+          </div>
         </div>
-        <Select value={actionFilter} onValueChange={v => { setActionFilter(v); setPage(1); }}>
-          <SelectTrigger className="w-[140px] h-9 text-sm">
-            <SelectValue placeholder={t('activity.actionType')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('activity.allActions')}</SelectItem>
-            {Object.entries(ACTION_LABELS).map(([key, label]) => (
-              <SelectItem key={key} value={key}>{label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={resourceTypeFilter} onValueChange={v => { setResourceTypeFilter(v); setPage(1); }}>
-          <SelectTrigger className="w-[120px] h-9 text-sm">
-            <SelectValue placeholder={t('activity.resourceType')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('activity.allResourceTypes')}</SelectItem>
-            <SelectItem value="quotation">{t('activity.resQuotation')}</SelectItem>
-            <SelectItem value="user">{t('activity.resUser')}</SelectItem>
-            <SelectItem value="import">{t('activity.resImport')}</SelectItem>
-            <SelectItem value="auth">{t('activity.resAuth')}</SelectItem>
-            <SelectItem value="organization">{t('activity.resOrganization')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={dateRange} onValueChange={v => { setDateRange(v); setPage(1); }}>
-          <SelectTrigger className="w-[120px] h-9 text-sm">
-            <SelectValue placeholder={t('activity.dateRange')} />
-          </SelectTrigger>
-          <SelectContent>
-            {DATE_OPTIONS.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className={`flex items-center gap-2 ${isMobilePreview ? "flex-wrap" : ""}`}>
+          <Select value={actionFilter} onValueChange={v => { setActionFilter(v); setPage(1); }}>
+            <SelectTrigger className={`${isMobilePreview ? "flex-1 min-w-0" : "w-[140px]"} h-9 text-sm`}>
+              <SelectValue placeholder={t('activity.actionType')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('activity.allActions')}</SelectItem>
+              {Object.entries(ACTION_LABELS).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={resourceTypeFilter} onValueChange={v => { setResourceTypeFilter(v); setPage(1); }}>
+            <SelectTrigger className={`${isMobilePreview ? "flex-1 min-w-0" : "w-[120px]"} h-9 text-sm`}>
+              <SelectValue placeholder={t('activity.resourceType')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('activity.allResourceTypes')}</SelectItem>
+              <SelectItem value="quotation">{t('activity.resQuotation')}</SelectItem>
+              <SelectItem value="user">{t('activity.resUser')}</SelectItem>
+              <SelectItem value="import">{t('activity.resImport')}</SelectItem>
+              <SelectItem value="auth">{t('activity.resAuth')}</SelectItem>
+              <SelectItem value="organization">{t('activity.resOrganization')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={dateRange} onValueChange={v => { setDateRange(v); setPage(1); }}>
+            <SelectTrigger className={`${isMobilePreview ? "flex-1 min-w-0" : "w-[120px]"} h-9 text-sm`}>
+              <SelectValue placeholder={t('activity.dateRange')} />
+            </SelectTrigger>
+            <SelectContent>
+              {DATE_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {dateRange === "custom" && (
           <div className="flex items-center gap-1">
             <Input type="date" value={customStart} onChange={e => { setCustomStart(e.target.value); setPage(1); }}
@@ -350,7 +356,7 @@ export default function ActivityLog() {
       {/* Log table */}
       <Card className="flex-1 overflow-hidden">
         <div className="overflow-auto h-full">
-          <table className="w-full" style={{ tableLayout: "fixed" }}>
+          <table className="w-full min-w-[600px]" style={{ tableLayout: "fixed" }}>
             <thead>
               <tr className="bg-muted/30 border-b">
                 <th className="text-xs font-semibold px-4 py-2.5 text-left w-[160px]">{t('activity.time')}</th>
