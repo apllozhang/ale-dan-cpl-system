@@ -480,9 +480,16 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           <DialogHeader><DialogTitle>{editingId ? t('user.editUser') : t('user.createUser')}</DialogTitle></DialogHeader>
           <div className="space-y-3 overflow-y-auto flex-1 px-1">
             <div className="space-y-1.5"><Label>{t('common.username')} *</Label><Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder={t('user.usernameMin')} disabled={!!editingId} /></div>
-            <div className="space-y-1.5"><Label>{editingId ? t('user.newPassword') : t('user.password') + ' *'}</Label><Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={editingId ? t('common.optional') : t('user.passwordMin')} /></div>
-            {(form.password || !editingId) && (
-              <div className="space-y-1.5"><Label>{t('user.confirmPassword')} *</Label><Input type="password" value={form.password2} onChange={e => setForm(f => ({ ...f, password2: e.target.value }))} placeholder={t('user.passwordMin')} /></div>
+            {!form.isSuperAdmin && (
+              <>
+                <div className="space-y-1.5"><Label>{editingId ? t('user.newPassword') : t('user.password') + ' *'}</Label><Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={editingId ? t('common.optional') : t('user.passwordMin')} /></div>
+                {(form.password || !editingId) && (
+                  <div className="space-y-1.5"><Label>{t('user.confirmPassword')} *</Label><Input type="password" value={form.password2} onChange={e => setForm(f => ({ ...f, password2: e.target.value }))} placeholder={t('user.passwordMin')} /></div>
+                )}
+              </>
+            )}
+            {form.isSuperAdmin && editingId && (
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">超管密码不允许修改</div>
             )}
             <div className="space-y-1.5"><Label>{t('common.name')}</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={t('common.optional')} /></div>
             <div className="space-y-1.5"><Label>{t('common.email')}</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder={t('common.optional')} /></div>

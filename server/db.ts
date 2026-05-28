@@ -874,6 +874,7 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       ${where ? sql`WHERE ${where}` : sql``}
       GROUP BY COALESCE(industry, '未指定')
       ORDER BY COUNT(*) DESC
+      LIMIT 10
     `),
 
     // 3. Top Customers
@@ -886,7 +887,7 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       ${where ? sql`WHERE ${where}` : sql``}
       GROUP BY customerName
       ORDER BY totalAmount DESC
-      LIMIT 20
+      LIMIT 10
     `),
 
     // 4. By Sales Rep — use raw SQL for JOIN
@@ -906,6 +907,7 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       )}` : sql``}
       GROUP BY q.createdBy, u.name, u.username
       ORDER BY totalAmount DESC
+      LIMIT 10
     `),
 
     // 5. Monthly Trend
@@ -917,8 +919,8 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       FROM quotations
       ${where ? sql`WHERE ${where}` : sql``}
       GROUP BY DATE_FORMAT(createdAt, '%Y-%m')
-      ORDER BY DATE_FORMAT(createdAt, '%Y-%m') ASC
-      LIMIT 24
+      ORDER BY DATE_FORMAT(createdAt, '%Y-%m') DESC
+      LIMIT 10
     `),
 
     // 6. By Status
@@ -931,6 +933,7 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       ${where ? sql`WHERE ${where}` : sql``}
       GROUP BY status
       ORDER BY COUNT(*) DESC
+      LIMIT 10
     `),
 
     // 7. Top Products — JOIN needs raw SQL
@@ -950,7 +953,7 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       )}` : sql``}
       GROUP BY qi.productModel, qi.productDesc
       ORDER BY quotationCount DESC
-      LIMIT 20
+      LIMIT 10
     `),
   ]);
 

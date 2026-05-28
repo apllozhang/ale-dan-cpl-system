@@ -1,4 +1,4 @@
-﻿import { trpc } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +9,12 @@ import {
   AreaChart, Area,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
 import gsap from "gsap";
 
-const COLORS = [
+const CHART_COLORS = [
   "#6366f1", "#3b82f6", "#06b6d4", "#22c55e", "#f59e0b",
   "#ef4444", "#ec4899", "#8b5cf6", "#14b8a6", "#f97316",
 ];
@@ -114,6 +114,36 @@ function FunnelChart({ data }: { data: { name: string; count: number; color: str
   );
 }
 
+// Resizable table hook for column drag-resize
+function useResizableColumns(initialWidths: number[]) {
+  const [widths, setWidths] = useState(initialWidths);
+  const dragging = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  const onResizeStart = useCallback((colIndex: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = { colIndex, startX: e.clientX, startWidth: widths[colIndex] };
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const diff = ev.clientX - dragging.current.startX;
+      setWidths(prev => {
+        const next = [...prev];
+        next[dragging.current!.colIndex] = Math.max(40, dragging.current!.startWidth + diff);
+        return next;
+      });
+    };
+    const onUp = () => {
+      dragging.current = null;
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [widths]);
+
+  return { widths, onResizeStart, tableRef };
+}
+
 export default function BusinessAnalysis() {
   const { t } = useTranslation();
   const [preset, setPreset] = useState("all");
@@ -140,10 +170,11 @@ export default function BusinessAnalysis() {
   const countAvg = useCountUp(summary.avgAmount, 1000, 0, "¥");
   const countRate = useCountUp(summary.conversionRate * 100, 800, 1, "", "%");
 
-  const industryData = useMemo(() => byIndustry.map((d: any) => ({
+  const industryData = useMemo(() => byIndustry.map((d: any, i: number) => ({
     name: (d.industry || t("analytics.unspecified")).slice(0, 10),
     count: Number(d.count),
     amount: Number(d.totalAmount),
+    fill: CHART_COLORS[i % CHART_COLORS.length],
   })), [byIndustry, t]);
 
   const funnelData = useMemo(() => {
@@ -160,7 +191,7 @@ export default function BusinessAnalysis() {
     name: QUOTATION_STATUS_LABELS[d.status] || d.status,
     count: Number(d.count),
     amount: Number(d.totalAmount),
-    fill: STATUS_COLORS[d.status] || COLORS[0],
+    fill: STATUS_COLORS[d.status] || CHART_COLORS[0],
   })), [byStatus]);
 
   const timeData = useMemo(() => {
@@ -190,13 +221,13 @@ export default function BusinessAnalysis() {
   })), [bySalesRep]);
 
   const barConfig = useMemo(() => ({
-    count: { label: t("analytics.count"), color: "hsl(221, 83%, 53%)" },
-    amount: { label: t("analytics.amount"), color: "hsl(142, 71%, 45%)" },
+    count: { label: t("analytics.count"), color: CHART_COLORS[0] },
+    amount: { label: t("analytics.amount"), color: CHART_COLORS[3] },
   }), [t]);
 
   const areaConfig = useMemo(() => ({
-    count: { label: t("analytics.count"), color: "hsl(221, 83%, 53%)" },
-    amount: { label: t("analytics.amount"), color: "hsl(142, 71%, 45%)" },
+    count: { label: t("analytics.count"), color: CHART_COLORS[0] },
+    amount: { label: t("analytics.amount"), color: CHART_COLORS[3] },
   }), [t]);
 
   const kpis = [
@@ -212,6 +243,9 @@ export default function BusinessAnalysis() {
     { key: "thisYear", label: t("analytics.dateFilter.thisYear") },
     { key: "all", label: t("analytics.dateFilter.all") },
   ];
+
+  // Resizable columns for top products table: #, model, desc, freq, qty, revenue
+  const productTable = useResizableColumns([40, 160, 240, 80, 80, 120]);
 
   const ready = !isLoading;
   const containerRef = useStaggerIn<HTMLDivElement>(ready);
@@ -280,13 +314,11 @@ export default function BusinessAnalysis() {
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <defs>
-                    <linearGradient id="barGrad" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.8} />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={1} />
-                    </linearGradient>
-                  </defs>
-                  <Bar dataKey="count" fill="url(#barGrad)" radius={[0, 6, 6, 0]} />
+                  <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                    {industryData.map((entry: any, i: number) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ChartContainer>
             </CardContent>
@@ -330,12 +362,12 @@ export default function BusinessAnalysis() {
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <defs>
                     <linearGradient id="salesGrad1" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0.5} />
+                      <stop offset="0%" stopColor={CHART_COLORS[0]} stopOpacity={0.9} />
+                      <stop offset="100%" stopColor={CHART_COLORS[0]} stopOpacity={0.5} />
                     </linearGradient>
                     <linearGradient id="salesGrad2" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#22c55e" stopOpacity={0.5} />
+                      <stop offset="0%" stopColor={CHART_COLORS[3]} stopOpacity={0.9} />
+                      <stop offset="100%" stopColor={CHART_COLORS[3]} stopOpacity={0.5} />
                     </linearGradient>
                   </defs>
                   <Bar yAxisId="left" dataKey="count" fill="url(#salesGrad1)" radius={[4, 4, 0, 0]} />
@@ -362,7 +394,7 @@ export default function BusinessAnalysis() {
                     </tr>
                   </thead>
                   <tbody>
-                    {byCustomer.slice(0, 15).map((c: any, i: number) => {
+                    {byCustomer.slice(0, 10).map((c: any, i: number) => {
                       const total = byCustomer.reduce((s: number, x: any) => s + Number(x.totalAmount), 0) || 1;
                       const pct = (Number(c.totalAmount) / total * 100).toFixed(1);
                       return (
@@ -380,7 +412,7 @@ export default function BusinessAnalysis() {
                           <td className="px-3 py-1.5">
                             <div className="flex items-center gap-2">
                               <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-500" style={{ width: `${pct}%` }} />
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
                               </div>
                               <span className="text-[10px] text-muted-foreground w-10 text-right tabular-nums">{pct}%</span>
                             </div>
@@ -405,12 +437,12 @@ export default function BusinessAnalysis() {
               <AreaChart data={timeData} margin={{ left: 10, right: 20 }}>
                 <defs>
                   <linearGradient id="areaGrad1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor={CHART_COLORS[0]} stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={CHART_COLORS[0]} stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="areaGrad2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#22c55e" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor={CHART_COLORS[3]} stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={CHART_COLORS[3]} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
@@ -418,33 +450,70 @@ export default function BusinessAnalysis() {
                 <YAxis yAxisId="left" />
                 <YAxis yAxisId="right" orientation="right" tickFormatter={(v: number) => `¥${(v / 1000).toFixed(0)}k`} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Area yAxisId="left" type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2.5}
-                  fill="url(#areaGrad1)" dot={{ r: 3, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }}
-                  activeDot={{ r: 5, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }} />
-                <Area yAxisId="right" type="monotone" dataKey="amount" stroke="#22c55e" strokeWidth={2.5}
-                  fill="url(#areaGrad2)" dot={{ r: 3, fill: "#22c55e", strokeWidth: 2, stroke: "#fff" }}
-                  activeDot={{ r: 5, fill: "#22c55e", strokeWidth: 2, stroke: "#fff" }} />
+                <Area yAxisId="left" type="monotone" dataKey="count" stroke={CHART_COLORS[0]} strokeWidth={2.5}
+                  fill="url(#areaGrad1)" dot={{ r: 3, fill: CHART_COLORS[0], strokeWidth: 2, stroke: "#fff" }}
+                  activeDot={{ r: 5, fill: CHART_COLORS[0], strokeWidth: 2, stroke: "#fff" }} />
+                <Area yAxisId="right" type="monotone" dataKey="amount" stroke={CHART_COLORS[3]} strokeWidth={2.5}
+                  fill="url(#areaGrad2)" dot={{ r: 3, fill: CHART_COLORS[3], strokeWidth: 2, stroke: "#fff" }}
+                  activeDot={{ r: 5, fill: CHART_COLORS[3], strokeWidth: 2, stroke: "#fff" }} />
               </AreaChart>
             </ChartContainer>
           </CardContent>
         </Card>
       )}
 
-      {/* Row 4: Top Products */}
+      {/* Row 4: Top Products - Resizable Columns */}
       {topProducts.length > 0 && (
         <Card className="stagger-child hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{t("analytics.topProducts")}</CardTitle></CardHeader>
           <CardContent>
             <div className="overflow-auto">
-              <table className="w-full">
+              <table ref={productTable.tableRef} className="w-full" style={{ tableLayout: "fixed" }}>
+                <colgroup>
+                  {productTable.widths.map((w, i) => (
+                    <col key={i} style={{ width: w }} />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr className="border-b bg-muted/30">
-                    <th className="text-xs font-semibold px-3 py-2 text-left w-10">#</th>
-                    <th className="text-xs font-semibold px-3 py-2 text-left">{t("analytics.productModel")}</th>
-                    <th className="text-xs font-semibold px-3 py-2 text-left">{t("analytics.productDesc")}</th>
-                    <th className="text-xs font-semibold px-3 py-2 text-right">{t("analytics.frequency")}</th>
-                    <th className="text-xs font-semibold px-3 py-2 text-right">{t("analytics.totalQuantity")}</th>
-                    <th className="text-xs font-semibold px-3 py-2 text-right">{t("analytics.revenue")}</th>
+                    <th className="text-xs font-semibold px-3 py-2 text-left relative select-none" style={{ width: productTable.widths[0] }}>
+                      #
+                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
+                        onMouseDown={(e) => productTable.onResizeStart(0, e)}>
+                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
+                      </div>
+                    </th>
+                    <th className="text-xs font-semibold px-3 py-2 text-center relative select-none overflow-hidden text-ellipsis whitespace-nowrap" style={{ width: productTable.widths[1] }}>
+                      {t("analytics.productModel")}
+                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
+                        onMouseDown={(e) => productTable.onResizeStart(1, e)}>
+                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
+                      </div>
+                    </th>
+                    <th className="text-xs font-semibold px-3 py-2 text-left relative select-none overflow-hidden text-ellipsis whitespace-nowrap" style={{ width: productTable.widths[2] }}>
+                      {t("analytics.productDesc")}
+                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
+                        onMouseDown={(e) => productTable.onResizeStart(2, e)}>
+                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
+                      </div>
+                    </th>
+                    <th className="text-xs font-semibold px-3 py-2 text-center relative select-none overflow-hidden text-ellipsis whitespace-nowrap" style={{ width: productTable.widths[3] }}>
+                      {t("analytics.frequency")}
+                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
+                        onMouseDown={(e) => productTable.onResizeStart(3, e)}>
+                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
+                      </div>
+                    </th>
+                    <th className="text-xs font-semibold px-3 py-2 text-center relative select-none overflow-hidden text-ellipsis whitespace-nowrap" style={{ width: productTable.widths[4] }}>
+                      {t("analytics.totalQuantity")}
+                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
+                        onMouseDown={(e) => productTable.onResizeStart(4, e)}>
+                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
+                      </div>
+                    </th>
+                    <th className="text-xs font-semibold px-3 py-2 text-center" style={{ width: productTable.widths[5] }}>
+                      {t("analytics.revenue")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -457,11 +526,11 @@ export default function BusinessAnalysis() {
                           <span className="text-muted-foreground text-xs">{i + 1}</span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 text-sm font-medium">{p.productModel}</td>
-                      <td className="px-3 py-1.5 text-sm text-muted-foreground truncate max-w-[200px]">{p.productDesc || "-"}</td>
-                      <td className="px-3 py-1.5 text-sm text-right tabular-nums font-medium">{Number(p.quotationCount)}</td>
-                      <td className="px-3 py-1.5 text-sm text-right tabular-nums">{Number(p.totalQuantity)}</td>
-                      <td className="px-3 py-1.5 text-sm text-right tabular-nums font-medium">¥{Number(p.totalRevenue).toLocaleString()}</td>
+                      <td className="px-3 py-1.5 text-sm font-medium text-center whitespace-normal break-words">{p.productModel}</td>
+                      <td className="px-3 py-1.5 text-sm text-muted-foreground whitespace-normal break-words">{p.productDesc || "-"}</td>
+                      <td className="px-3 py-1.5 text-sm text-center tabular-nums font-medium">{Number(p.quotationCount)}</td>
+                      <td className="px-3 py-1.5 text-sm text-center tabular-nums">{Number(p.totalQuantity)}</td>
+                      <td className="px-3 py-1.5 text-sm text-center tabular-nums font-medium">¥{Number(p.totalRevenue).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -271,6 +271,10 @@ export const appRouter = router({
         const { id, password, username, ...rest } = input;
         const updateData: any = { ...rest };
         if (password) {
+          const target = await db.getUserById(id);
+          if (target?.isSuperAdmin) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "超管密码不允许修改" });
+          }
           updateData.passwordHash = await hash(password, 10);
         }
         if (username) {

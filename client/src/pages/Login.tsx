@@ -383,40 +383,40 @@ export default function Login() {
         <div className="w-full lg:w-[480px] xl:w-[520px] flex items-center justify-center p-6 sm:p-12" ref={visibilityRef}>
           <div className="w-full max-w-[380px]">
             {/* Glassmorphism card */}
-            <div className="login-card relative rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 border border-white/20 bg-white/90 backdrop-blur-xl" style={{ willChange: "transform, opacity" }}>
+            <div className="login-card group relative rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 border border-white/15 bg-white/[0.06] backdrop-blur-sm transition-all duration-500 ease-out hover:bg-white/95 hover:border-white/40 hover:backdrop-blur-xl" style={{ willChange: "transform, opacity, background-color" }}>
               {/* Mobile logo */}
               <div className="lg:hidden mb-8 text-center">
                 <div className="inline-flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-100 border border-purple-300 flex items-center justify-center">
-                    <span className="text-purple-600 font-bold text-xs">D</span>
+                  <div className="w-8 h-8 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center group-hover:bg-purple-100 group-hover:border-purple-300 transition-colors duration-500">
+                    <span className="text-white/80 font-bold text-xs group-hover:text-purple-600 transition-colors duration-500">D</span>
                   </div>
-                  <span className="text-gray-900 font-medium">DAN CPL</span>
+                  <span className="text-white/80 font-medium group-hover:text-gray-900 transition-colors duration-500">DAN CPL</span>
                 </div>
               </div>
 
               <div className="space-y-1 mb-8">
-                <h2 className="text-2xl font-semibold text-gray-900 tracking-tight">
+                <h2 className="text-2xl font-semibold text-white/90 group-hover:text-gray-900 tracking-tight transition-colors duration-500">
                   欢迎登录
                 </h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-white/50 group-hover:text-gray-500 transition-colors duration-500">
                   请输入您的账号信息以访问系统
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="username" className="text-sm font-medium text-white/70 group-hover:text-gray-700 transition-colors duration-500">
                     用户名
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 group-hover:text-gray-400 transition-colors duration-500" />
                     <Input
                       id="username"
                       type="text"
                       placeholder="请输入用户名"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="pl-11 h-12 bg-white/60 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                      className="pl-11 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl focus:bg-white/20 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-all group-hover:bg-white/60 group-hover:border-gray-300 group-hover:text-gray-900 group-hover:placeholder:text-gray-400"
                       autoComplete="username"
                       autoFocus
                     />
@@ -424,18 +424,18 @@ export default function Login() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="password" className="text-sm font-medium text-white/70 group-hover:text-gray-700 transition-colors duration-500">
                     密码
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 group-hover:text-gray-400 transition-colors duration-500" />
                     <Input
                       id="password"
                       type="password"
                       placeholder="请输入密码"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-11 h-12 bg-white/60 border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                      className="pl-11 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl focus:bg-white/20 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-all group-hover:bg-white/60 group-hover:border-gray-300 group-hover:text-gray-900 group-hover:placeholder:text-gray-400"
                       autoComplete="current-password"
                     />
                   </div>
@@ -464,7 +464,7 @@ export default function Login() {
               </form>
 
               {/* Footer */}
-              <div className="mt-8 text-center text-xs text-gray-500">
+              <div className="mt-8 text-center text-xs text-white/40 group-hover:text-gray-500 transition-colors duration-500">
                 DAN CPL 系统 - 仅授权用户访问
               </div>
             </div>
