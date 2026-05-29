@@ -27,6 +27,7 @@ export const PERMISSIONS = {
   IMPORT_DATA: "import_data",
   MANAGE_USERS: "manage_users",
   VIEW_ACTIVITY_LOGS: "view_activity_logs",
+  MANAGE_SPECS: "manage_specs",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -45,6 +46,7 @@ export const ROLE_PERMISSIONS: Record<Permission, RoleOrSuper[]> = {
   [PERMISSIONS.IMPORT_DATA]: [SUPER_ADMIN_ROLE],
   [PERMISSIONS.MANAGE_USERS]: [SUPER_ADMIN_ROLE, "admin"],
   [PERMISSIONS.VIEW_ACTIVITY_LOGS]: [SUPER_ADMIN_ROLE, "admin"],
+  [PERMISSIONS.MANAGE_SPECS]: [SUPER_ADMIN_ROLE, "admin"],
 };
 
 export function hasPermission(user: { role: string; isSuperAdmin: boolean }, permission: Permission): boolean {

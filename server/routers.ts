@@ -935,6 +935,131 @@ export const appRouter = router({
       }),
   }),
 
+  // Product specs
+  productSpecs: router({
+    listSets: protectedProcedure
+      .input(z.object({
+        search: z.string().optional(),
+        page: z.number().min(1).default(1),
+        pageSize: z.number().min(1).max(100).default(20),
+      }))
+      .query(async ({ input }) => {
+        return db.getProductSpecSets(input);
+      }),
+
+    getSetById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return db.getProductSpecSetById(input.id);
+      }),
+
+    importSet: permissionProcedure(PERMISSIONS.MANAGE_SPECS)
+      .input(z.object({
+        fileBase64: z.string().max(50_000_000),
+        fileName: z.string(),
+        name: z.string().min(1).max(256),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const buffer = Buffer.from(input.fileBase64, "base64");
+        const workbook = XLSX.read(buffer, { type: "buffer" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        if (!sheet) throw new TRPCError({ code: "BAD_REQUEST", message: "No sheet found in file" });
+
+        const rows: Record<string, string>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        if (rows.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "No data rows found" });
+
+        // Parse: first column = productModel, "产品说明" = description, rest = spec params
+        const headers = Object.keys(rows[0]);
+        const specKeys = headers.filter(h => h !== "产品型号" && h !== "产品说明" && h.trim() !== "");
+
+        const specEntries = rows
+          .filter(row => (row["产品型号"] || "").trim() !== "")
+          .map(row => ({
+            setId: 0 as number, // placeholder, will be set after insert
+            productModel: (row["产品型号"] || "").trim(),
+            productDesc: (row["产品说明"] || "").trim() || null,
+            specs: Object.fromEntries(
+              specKeys.filter(k => (row[k] || "").toString().trim() !== "").map(k => [k.trim(), String(row[k] || "").trim()])
+            ),
+          }))
+          .filter(entry => Object.keys(entry.specs).length > 0 || entry.productDesc);
+
+        if (specEntries.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "No valid spec entries found" });
+
+        // Create set
+        const setId = await db.createProductSpecSet({
+          name: input.name,
+          fileName: input.fileName,
+          description: input.description || null,
+          modelCount: specEntries.length,
+          createdBy: ctx.user.id,
+        });
+
+        // Bulk insert specs with correct setId
+        await db.bulkInsertProductSpecs(specEntries.map(e => ({ ...e, setId })));
+
+        await logActivity(ctx, {
+          action: "import_specs", resourceType: "product_specs",
+          detail: { name: input.name, fileName: input.fileName, count: specEntries.length },
+        });
+
+        return { setId, modelCount: specEntries.length };
+      }),
+
+    deleteSet: permissionProcedure(PERMISSIONS.MANAGE_SPECS)
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.deleteProductSpecSet(input.id);
+        await logActivity(ctx, { action: "delete_specs", resourceType: "product_specs", resourceId: input.id });
+        return { success: true };
+      }),
+
+    updateEntry: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        specs: z.record(z.string(), z.string()),
+        productDesc: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateProductSpecEntry(input.id, { specs: input.specs, productDesc: input.productDesc });
+        return { success: true };
+      }),
+
+    addEntry: protectedProcedure
+      .input(z.object({
+        setId: z.number(),
+        productModel: z.string().min(1),
+        productDesc: z.string().optional(),
+        specs: z.record(z.string(), z.string()),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await db.addProductSpecEntry({
+          setId: input.setId,
+          productModel: input.productModel,
+          productDesc: input.productDesc || null,
+          specs: input.specs,
+        });
+        return { id };
+      }),
+
+    deleteEntry: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteProductSpecEntry(input.id);
+        return { success: true };
+      }),
+
+    matchQuotation: protectedProcedure
+      .input(z.object({
+        quotationId: z.number(),
+        setId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        return db.matchQuotationWithSpecs(input.quotationId, input.setId);
+      }),
+  }),
+
   customers: router({
     list: protectedProcedure
       .input(z.object({

@@ -48,6 +48,7 @@ import {
   Minimize2,
   Smartphone,
   Monitor,
+  ClipboardList,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -61,6 +62,7 @@ gsap.registerPlugin(useGSAP);
 const menuItems = [
   { icon: LayoutDashboard, labelKey: "menu.dashboard", path: "/" },
   { icon: FileSpreadsheet, labelKey: "menu.quotations", path: "/quotations" },
+  { icon: ClipboardList, labelKey: "menu.techSpecs", path: "/tech-specs" },
   { icon: Building2, labelKey: "menu.customers", path: "/customers" },
   { icon: Database, labelKey: "menu.products", path: "/data" },
   { icon: TrendingUp, labelKey: "menu.stats", path: "/stats" },

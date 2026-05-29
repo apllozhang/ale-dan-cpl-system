@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -209,3 +209,32 @@ export const savedSearches = mysqlTable("saved_searches", {
 
 export type SavedSearch = typeof savedSearches.$inferSelect;
 export type InsertSavedSearch = typeof savedSearches.$inferInsert;
+
+// Product spec sets (one per upload)
+export const productSpecSets = mysqlTable("product_spec_sets", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  fileName: varchar("fileName", { length: 256 }),
+  description: text("description"),
+  modelCount: int("modelCount").notNull().default(0),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProductSpecSet = typeof productSpecSets.$inferSelect;
+export type InsertProductSpecSet = typeof productSpecSets.$inferInsert;
+
+// Product spec entries (one per productModel within a set)
+export const productSpecs = mysqlTable("product_specs", {
+  id: int("id").autoincrement().primaryKey(),
+  setId: int("setId").notNull(),
+  productModel: varchar("productModel", { length: 256 }).notNull(),
+  productDesc: text("productDesc"),
+  specs: json("specs").notNull().$type<Record<string, string>>(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProductSpec = typeof productSpecs.$inferSelect;
+export type InsertProductSpec = typeof productSpecs.$inferInsert;
