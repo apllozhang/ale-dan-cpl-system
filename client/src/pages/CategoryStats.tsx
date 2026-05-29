@@ -1,4 +1,4 @@
-import { trpc } from "@/lib/trpc";
+﻿import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Package, Layers, TrendingUp, BarChart3 } from "lucide-react";
@@ -7,8 +7,9 @@ import {
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import gsap from "gsap";
 
 const CHART_COLORS = [
   "#3b82f6", // 蓝
@@ -26,6 +27,36 @@ const CHART_COLORS = [
   "#0ea5e9", // 天蓝
   "#a855f7", // 亮紫
 ];
+
+function useCountUp(target: number, duration = 1000, decimals = 0, prefix = "", suffix = "") {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (target === 0) { setValue(0); return; }
+    const obj = { val: 0 };
+    gsap.to(obj, {
+      val: target,
+      duration,
+      ease: "power2.out",
+      onUpdate: () => setValue(Number(obj.val.toFixed(decimals))),
+    });
+  }, [target, duration, decimals]);
+  const formatted = value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return `${prefix}${formatted}${suffix}`;
+}
+
+function useStaggerIn<T extends HTMLElement>(ready: boolean) {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    if (!ready || !ref.current) return;
+    const children = ref.current.querySelectorAll(".stagger-child");
+    if (!children.length) return;
+    gsap.fromTo(children,
+      { opacity: 0, y: 16, scale: 0.97 },
+      { opacity: 1, y: 0, scale: 1, stagger: 0.06, duration: 0.5, ease: "power3.out" }
+    );
+  }, [ready]);
+  return ref;
+}
 
 export default function CategoryStats() {
   const { t } = useTranslation();
@@ -68,8 +99,14 @@ export default function CategoryStats() {
     );
   }
 
+  const ready = !!stats;
+  const containerRef = useStaggerIn<HTMLDivElement>(ready);
+  const countTotal = useCountUp(stats?.total ?? 0, 1000);
+  const countSeries = useCountUp(stats?.bySheet?.length ?? 0, 800);
+  const countStatus = useCountUp(stats?.byStatus?.length ?? 0, 800);
+
   return (
-    <div className="h-full flex flex-col gap-4 overflow-auto">
+    <div className="h-full flex flex-col gap-4 overflow-auto" ref={containerRef}>
       <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
         <BarChart3 className="w-5 h-5" />
         {t('stats.title')}
@@ -77,40 +114,40 @@ export default function CategoryStats() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
+        <Card className="stagger-child">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-info-soft text-info">
                 <Package className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xl font-bold tabular-nums">{(stats?.total ?? 0).toLocaleString()}</div>
+                <div className="text-xl font-bold tabular-nums">{countTotal}</div>
                 <p className="text-xs text-muted-foreground">{t('stats.totalProducts')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="stagger-child">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-accent text-accent-foreground">
                 <Layers className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xl font-bold tabular-nums">{stats?.bySheet?.length ?? 0}</div>
+                <div className="text-xl font-bold tabular-nums">{countSeries}</div>
                 <p className="text-xs text-muted-foreground">{t('stats.productSeries')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="stagger-child">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-success-soft text-success">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xl font-bold tabular-nums">{stats?.byStatus?.length ?? 0}</div>
+                <div className="text-xl font-bold tabular-nums">{countStatus}</div>
                 <p className="text-xs text-muted-foreground">{t('stats.statusTypes')}</p>
               </div>
             </div>
@@ -120,7 +157,7 @@ export default function CategoryStats() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Products per sheet - Bar chart */}
-        <Card>
+        <Card className="stagger-child">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">{t('stats.seriesChart')}</CardTitle>
           </CardHeader>
@@ -138,7 +175,7 @@ export default function CategoryStats() {
         </Card>
 
         {/* Product status distribution - Pie chart */}
-        <Card>
+        <Card className="stagger-child">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">{t('stats.statusChart')}</CardTitle>
           </CardHeader>
@@ -176,7 +213,7 @@ export default function CategoryStats() {
 
       {/* Sales category distribution */}
       {salesCatData.length > 0 && (
-        <Card>
+        <Card className="stagger-child">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">{t('stats.salesChart')}</CardTitle>
           </CardHeader>
@@ -195,7 +232,7 @@ export default function CategoryStats() {
       )}
 
       {/* Sheet detail table */}
-      <Card>
+      <Card className="stagger-child">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.seriesDetail')}</CardTitle>
         </CardHeader>

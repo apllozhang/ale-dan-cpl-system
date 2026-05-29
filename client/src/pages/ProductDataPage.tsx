@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+﻿import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import gsap from "gsap";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -274,6 +275,22 @@ export default function ProductDataPage() {
   const products = productsQuery.data?.items || [];
   const total = productsQuery.data?.total || 0;
   const totalPages = Math.ceil(total / pageSize);
+
+  // Stagger-animate table rows when products load
+  const tableBodyRef = useRef<HTMLTableSectionElement>(null);
+  const prevSheetRef = useRef(selectedSheet);
+  useEffect(() => {
+    if (prevSheetRef.current !== selectedSheet) {
+      prevSheetRef.current = selectedSheet;
+    }
+    if (!tableBodyRef.current || products.length === 0) return;
+    const rows = tableBodyRef.current.querySelectorAll("tr");
+    if (!rows.length) return;
+    gsap.fromTo(rows,
+      { opacity: 0, y: 8 },
+      { opacity: 1, y: 0, stagger: 0.02, duration: 0.3, ease: "power2.out" }
+    );
+  }, [products]);
 
   // Debounce search
   useEffect(() => {
@@ -731,7 +748,7 @@ export default function ProductDataPage() {
                   ))}
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody ref={tableBodyRef}>
                 {!selectedSheet ? (
                   <TableRow>
                     <TableCell colSpan={visibleColumnsList.length + 1} className="h-48 text-center">

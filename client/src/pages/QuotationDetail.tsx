@@ -1,4 +1,4 @@
-﻿import { trpc } from "@/lib/trpc";
+﻿﻿import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
+import gsap from "gsap";
 import { exportQuotationToExcel } from "@/lib/quotationExport";
 import ProductSelectorDialog from "@/components/ProductSelectorDialog";
 import { useTranslation } from "react-i18next";
@@ -210,10 +211,6 @@ export default function QuotationDetail() {
   const quickSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quickSearchRef = useRef<HTMLDivElement>(null);
 
-  // Total amount flash effect
-  const prevTotalRef = useRef(0);
-  const [totalFlash, setTotalFlash] = useState(false);
-
   // Load existing quotation
   const quotationQuery = trpc.quotations.getById.useQuery(
     { id: quotationId! },
@@ -341,14 +338,17 @@ export default function QuotationDetail() {
     return items.reduce((sum, item) => sum + item.subtotal, 0);
   }, [items]);
 
-  // Flash total on change
+  // Animated total amount counter
+  const totalDisplayRef = useRef({ val: 0 });
+  const [displayTotal, setDisplayTotal] = useState(0);
   useEffect(() => {
-    if (prevTotalRef.current !== totalAmount && prevTotalRef.current !== 0) {
-      setTotalFlash(true);
-      const timer = setTimeout(() => setTotalFlash(false), 400);
-      return () => clearTimeout(timer);
-    }
-    prevTotalRef.current = totalAmount;
+    if (totalAmount === totalDisplayRef.current.val) return;
+    gsap.to(totalDisplayRef.current, {
+      val: totalAmount,
+      duration: 0.6,
+      ease: "power2.out",
+      onUpdate: () => setDisplayTotal(totalDisplayRef.current.val),
+    });
   }, [totalAmount]);
 
   // Mutations
@@ -686,8 +686,8 @@ export default function QuotationDetail() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">{t('quotation.totalAmount')}</Label>
-                <div className={`h-9 flex items-center text-lg font-bold tabular-nums transition-colors duration-300 ${totalFlash ? "text-info" : "text-primary"}`}>
-                  ¥{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className="h-9 flex items-center text-lg font-bold tabular-nums text-primary">
+                  ¥{displayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
               <div className="space-y-1.5">

@@ -1,4 +1,4 @@
-﻿import { COOKIE_NAME, ONE_YEAR_MS, PERMISSIONS, hasPermission, QUOTATION_STATUS_TRANSITIONS, QUOTATION_STATUS_LABELS } from "@shared/const";
+﻿﻿import { COOKIE_NAME, ONE_YEAR_MS, PERMISSIONS, hasPermission, QUOTATION_STATUS_TRANSITIONS, QUOTATION_STATUS_LABELS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, superAdminProcedure, permissionProcedure, router } from "./_core/trpc";
@@ -566,7 +566,7 @@ export const appRouter = router({
             input.startDate ? new Date(input.startDate) : undefined,
             input.endDate ? new Date(input.endDate) : undefined,
           ),
-          db.getMyRecentQuotations(ctx.user.id, 5),
+          db.getMyRecentQuotations(ctx.user.id, 6),
         ]);
         return { stats, recent };
       }),

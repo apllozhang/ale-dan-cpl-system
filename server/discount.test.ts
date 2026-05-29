@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+﻿import { describe, it, expect } from "vitest";
 
 describe("Discount calculation", () => {
   function calcSubtotal(unitPrice: number, quantity: number, discountRate: number): number {

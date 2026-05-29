@@ -1,0 +1,34 @@
+﻿{
+  "query": "SELECT id, quotationNo, customerName, totalAmount, status, createdAt FROM quotations ORDER BY createdAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 36JDpBo3zu5AaRu.c009522ec6e2 --database neEWayju942ovVPrciQXjy --execute SELECT id, quotationNo, customerName, totalAmount, status, createdAt FROM quotations ORDER BY createdAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "60001",
+      "quotationNo": "QT-20260527-001",
+      "customerName": "南方学院",
+      "totalAmount": "160744.23",
+      "status": "submitted",
+      "createdAt": "2026-05-27 22:38:10"
+    },
+    {
+      "id": "30001",
+      "quotationNo": "QT-20260525-001",
+      "customerName": "1111",
+      "totalAmount": "6685455.12",
+      "status": "cancelled",
+      "createdAt": "2026-05-25 06:58:15"
+    },
+    {
+      "id": "1",
+      "quotationNo": "QT-20260520-001",
+      "customerName": "中广核",
+      "totalAmount": "665221.30",
+      "status": "submitted",
+      "createdAt": "2026-05-20 14:12:59"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tquotationNo\tcustomerName\ttotalAmount\tstatus\tcreatedAt\n60001\tQT-20260527-001\t南方学院\t160744.23\tsubmitted\t2026-05-27 22:38:10\n30001\tQT-20260525-001\t1111\t6685455.12\tcancelled\t2026-05-25 06:58:15\n1\tQT-20260520-001\t中广核\t665221.30\tsubmitted\t2026-05-20 14:12:59\n",
+  "stderr": "",
+  "execution_time_ms": 269
+}

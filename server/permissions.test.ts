@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+﻿import { describe, it, expect } from "vitest";
 import { hasPermission, PERMISSIONS } from "@shared/const";
 
 describe("Permission system", () => {

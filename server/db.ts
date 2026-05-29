@@ -1,4 +1,4 @@
-﻿import { eq, like, or, and, sql, asc, desc, SQL, inArray, gte, lte } from "drizzle-orm";
+﻿﻿import { eq, like, or, and, sql, asc, desc, SQL, inArray, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users, cplProducts, cplSheets, cplSummary,
@@ -672,25 +672,35 @@ export async function getCustomerList(params: { search?: string; page?: number; 
 // ==================== Dashboard helpers ====================
 export async function getMyDashboardStats(userId: number, startDate?: Date, endDate?: Date) {
   const db = await getDb();
-  if (!db) return { totalQuotations: 0, completedRevenue: 0, pendingCount: 0, submittedCount: 0 };
+  if (!db) return { totalQuotations: 0, completedRevenue: 0, statusCounts: {} as Record<string, number> };
 
   const conditions = [eq(quotations.createdBy, userId)];
   if (startDate) conditions.push(gte(quotations.createdAt, startDate));
   if (endDate) conditions.push(lte(quotations.createdAt, endDate));
 
+  // Get totals + revenue in one query
   const result = await db.select({
     totalQuotations: sql<number>`count(*)`,
     completedRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${quotations.status} = 'completed' THEN CAST(${quotations.totalAmount} AS DECIMAL(14,2)) ELSE 0 END), 0)`,
-    pendingCount: sql<number>`COALESCE(SUM(CASE WHEN ${quotations.status} IN ('draft', 'submitted') THEN 1 ELSE 0 END), 0)`,
-    submittedCount: sql<number>`COALESCE(SUM(CASE WHEN ${quotations.status} = 'submitted' THEN 1 ELSE 0 END), 0)`,
   }).from(quotations).where(and(...conditions));
 
+  // Get per-status counts
+  const statusResult = await db.select({
+    status: quotations.status,
+    count: sql<number>`count(*)`,
+  }).from(quotations).where(and(...conditions)).groupBy(quotations.status);
+
   const row = Array.isArray(result[0]) ? result[0][0] : result[0];
+  const statusCounts: Record<string, number> = {};
+  const statusRows = Array.isArray(statusResult[0]) ? statusResult[0] : statusResult;
+  for (const sr of statusRows as any[]) {
+    if (sr.status) statusCounts[sr.status] = Number(sr.count);
+  }
+
   return {
     totalQuotations: Number(row?.totalQuotations ?? 0),
     completedRevenue: Number(row?.completedRevenue ?? 0),
-    pendingCount: Number(row?.pendingCount ?? 0),
-    submittedCount: Number(row?.submittedCount ?? 0),
+    statusCounts,
   };
 }
 
@@ -701,9 +711,11 @@ export async function getMyRecentQuotations(userId: number, limit = 5) {
     id: quotations.id,
     quotationNo: quotations.quotationNo,
     customerName: quotations.customerName,
+    customerContact: quotations.customerContact,
     projectName: quotations.projectName,
     status: quotations.status,
     totalAmount: quotations.totalAmount,
+    createdAt: quotations.createdAt,
     updatedAt: quotations.updatedAt,
   }).from(quotations)
     .where(eq(quotations.createdBy, userId))
