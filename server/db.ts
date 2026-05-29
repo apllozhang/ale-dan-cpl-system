@@ -654,7 +654,7 @@ export async function getCustomerList(params: { search?: string; page?: number; 
   }).from(quotations)
     .where(whereClause)
     .groupBy(quotations.customerName)
-    .orderBy(sql`totalRevenue DESC`)
+    .orderBy(sql`COALESCE(SUM(CAST(${quotations.totalAmount} AS DECIMAL(14,2))), 0) DESC`)
     .limit(pageSize)
     .offset(offset);
 
