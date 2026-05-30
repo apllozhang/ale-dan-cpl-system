@@ -213,7 +213,7 @@ export function ProductDataContent() {
 
   // Build category navigation
   const categoryNav = useMemo(() => {
-    if (!sheetsQuery.data) return [];
+    if (!Array.isArray(sheetsQuery.data)) return [];
     return buildCategoryNav(
       sheetsQuery.data.map(s => ({
         sheetName: s.sheetName,
@@ -224,7 +224,7 @@ export function ProductDataContent() {
 
   // Get sheets for selected category (filtered by subcategory if selected)
   const categorySheets = useMemo(() => {
-    if (!sheetsQuery.data) return [];
+    if (!Array.isArray(sheetsQuery.data)) return [];
     const sheets = sheetsQuery.data.map(s => ({
       sheetName: s.sheetName,
       productCount: s.productCount,
@@ -496,7 +496,7 @@ export function ProductDataContent() {
                             setSelectedSubcategoryId(subId);
                             setPage(1);
                             // Directly find matching sheets for this subcategory
-                            if (sheetsQuery.data) {
+                            if (Array.isArray(sheetsQuery.data)) {
                               const sheets = sheetsQuery.data.map(s => ({ sheetName: s.sheetName, productCount: s.productCount }));
                               const matching = getSheetsBySubcategory(sheets, category.id, subId);
                               setSelectedSheet(matching[0]?.sheetName || "");
