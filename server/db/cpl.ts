@@ -14,15 +14,34 @@ export async function deactivateAllImports() {
 export async function createImportLogAndGetId(data: InsertImportLog): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(importLogs).values(data);
+  const insertResult = await db.insert(importLogs).values(data);
+  console.log('[DEBUG] insertResult:', insertResult);
+  
   // Get the last inserted record by querying with the unique combination
   const lastRecord = await db.select({ id: importLogs.id })
     .from(importLogs)
     .where(eq(importLogs.fileName, data.fileName))
     .orderBy(desc(importLogs.id))
     .limit(1);
-  const insertId = lastRecord[0]?.id;
-  if (!insertId) {
+  console.log('[DEBUG] lastRecord:', lastRecord);
+  
+  const rawId = lastRecord[0]?.id;
+  console.log('[DEBUG] raw id:', rawId, 'type:', typeof rawId);
+  
+  let insertId: number;
+  if (typeof rawId === 'bigint') {
+    insertId = Number(rawId);
+  } else if (typeof rawId === 'number') {
+    insertId = rawId;
+  } else if (typeof rawId === 'string') {
+    insertId = parseInt(rawId, 10);
+  } else {
+    insertId = 0;
+  }
+  
+  console.log('[DEBUG] converted insertId:', insertId);
+  
+  if (!insertId || insertId <= 0) {
     throw new Error("Failed to get insertId from import log creation");
   }
   return insertId;

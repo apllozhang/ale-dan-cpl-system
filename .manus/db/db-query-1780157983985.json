@@ -1,0 +1,20 @@
+{
+  "query": "SELECT id, fileName, createdAt FROM import_logs ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 36JDpBo3zu5AaRu.c009522ec6e2 --database neEWayju942ovVPrciQXjy --execute SELECT id, fileName, createdAt FROM import_logs ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "fileName": "Data CPL-(Q2 Apr 2026 CN)).xlsx",
+      "createdAt": "2026-05-20 13:29:13"
+    },
+    {
+      "id": "180001",
+      "fileName": "Data CPL-(Q2 Apr 2026 CN)).xlsx",
+      "createdAt": "2026-05-30 16:18:30"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfileName\tcreatedAt\n1\tData CPL-(Q2 Apr 2026 CN)).xlsx\t2026-05-20 13:29:13\n180001\tData CPL-(Q2 Apr 2026 CN)).xlsx\t2026-05-30 16:18:30\n",
+  "stderr": "",
+  "execution_time_ms": 395
+}
