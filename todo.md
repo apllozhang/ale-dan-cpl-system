@@ -196,4 +196,5 @@
 
 - [x] 修复批量插入 sheets 时的 MySQL max packet size 错误
 - [x] 将 sheets 批量插入改为 50 条一批处理
+- [x] 修复 Excel 解析中 id 字段与数据库 auto-increment 的冲突
 - [x] 验证导入功能正常工作
