@@ -15,13 +15,14 @@ import { useLocation, useRoute } from "wouter";
 import {
   ArrowLeft, Save, Plus, Trash2, Loader2, Download,
   Send, CheckCircle, CheckCircle2, Mail, XCircle, Share2, Copy, Pencil,
-  Search, Check, FileSpreadsheet, Printer,
+  Search, Check, FileSpreadsheet, Printer, ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
 import gsap from "gsap";
 import { exportQuotationToExcel } from "@/lib/quotationExport";
 import ProductSelectorDialog from "@/components/ProductSelectorDialog";
+import SpecMatchPreview from "@/components/SpecMatchPreview";
 import { useTranslation } from "react-i18next";
 
 type ItemRow = {
@@ -204,6 +205,7 @@ export default function QuotationDetail() {
   const [validUntil, setValidUntil] = useState("");
   const [items, setItems] = useState<ItemRow[]>([]);
   const [productSearchOpen, setProductSearchOpen] = useState(false);
+  const [specPreviewOpen, setSpecPreviewOpen] = useState(false);
 
   // Quick search state
   const [quickSearch, setQuickSearch] = useState("");
@@ -515,6 +517,12 @@ export default function QuotationDetail() {
               {t('quotation.exportPDF', '导出PDF')}
             </Button>
           )}
+          {!isNew && items.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setSpecPreviewOpen(true)}>
+              <ClipboardList className="w-4 h-4 mr-1" />
+              {t('techSpecs.generateFrom')}
+            </Button>
+          )}
           {!isNew && (
             <Button size="sm" variant="outline" onClick={handleShare} disabled={shareMutation.isPending}>
               <Share2 className="w-4 h-4 mr-1" />
@@ -707,6 +715,15 @@ export default function QuotationDetail() {
         discountRate={discountRate}
         existingProductIds={existingProductIds}
       />
+
+      {/* Spec Match Preview Dialog */}
+      {!isNew && quotationId && (
+        <SpecMatchPreview
+          open={specPreviewOpen}
+          onOpenChange={setSpecPreviewOpen}
+          quotationId={quotationId}
+        />
+      )}
 
       {/* Version Timeline */}
       {!isNew && versionsQuery.data && versionsQuery.data.length > 0 && (

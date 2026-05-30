@@ -1,7 +1,7 @@
 {
   "menu": {
     "dashboard": "Tableau de bord",
-    "products": "Produits",
+    "products": "Gestion des Données",
     "stats": "Analyse Commerciale",
     "summary": "Journal des modifications",
     "import": "Importation",
@@ -218,7 +218,29 @@
     "productCount": "Produits",
     "historyCleared": "Historique effacé",
     "confirmClearHistory": "Confirmer l'effacement de l'historique",
-    "clearHistoryWarning": "Cette action est irréversible. Voulez-vous vraiment effacer tout l'historique d'importation ?"
+    "clearHistoryWarning": "Cette action est irréversible. Voulez-vous vraiment effacer tout l'historique d'importation ?",
+    "tabProduct": "Import de Données Produit",
+    "tabSpec": "Import de Paramètres Techniques",
+    "specInstructions": "Instructions d'Import de Paramètres Techniques",
+    "specSupportFormat": "Prend en charge les fichiers .xlsx / .xls / .csv de paramètres techniques",
+    "specFormatExplain": "La première colonne est le modèle produit, les suivantes sont les noms de paramètres (ports, capacité, consommation, etc.)",
+    "specDropzone": "Glissez un fichier Excel/CSV ici ou cliquez pour sélectionner",
+    "specFormatHint": "Formats .xlsx / .xls / .csv pris en charge",
+    "specName": "Nom du Jeu de Paramètres",
+    "specDescription": "Description (facultatif)",
+    "specPreview": "Aperçu : {{count}} lignes",
+    "specImportSuccess": "Jeu de paramètres importé avec succès, {{count}} modèles",
+    "specConfirmTitle": "Confirmer l'Import du Jeu de Paramètres",
+    "specConfirmDesc": "Import du jeu de paramètres \"{{name}}\" depuis le fichier : {{file}}",
+    "specConfirmRows": "{{count}} lignes en aperçu",
+    "specHistory": "Historique des Imports de Paramètres",
+    "specExistingData": "{{count}} jeu(x) de paramètres existe(nt) déjà.",
+    "specMergeDesc": "Conserver les jeux existants et ajouter le nouveau.",
+    "specOverwriteDesc": "Supprimer tous les jeux existants et ne garder que le nouveau. Cette action est irréversible.",
+    "rows": "{{count}} lignes",
+    "invalid": "✗ Invalide",
+    "sheetCount": "{{count}} feuilles",
+    "fileCount": "{{count}} fichiers"
   },
   "activity": {
     "title": "Journal d'activité",
@@ -362,6 +384,7 @@
   },
   "data": {
     "category": "Catégorie de produits",
+    "specCategories": "Catégorie de Produit",
     "title": "Données produits",
     "searchPlaceholder": "Rechercher dans tous les champs...",
     "filter": "Filtrer",
@@ -390,7 +413,24 @@
       "isNew": "Nouveau",
       "remark": "Remarque"
     },
-    "selectProductsFirst": "Veuillez d'abord sélectionner des produits"
+    "selectProductsFirst": "Veuillez d'abord sélectionner des produits",
+    "tabProduct": "Données Produit",
+    "tabSpec": "Données Paramètres",
+    "colModel": "Modèle",
+    "colSpecs": "Paramètres",
+    "expandCategory": "Développer les catégories",
+    "collapseCategory": "Réduire les catégories",
+    "unlockEdit": "Déverrouiller",
+    "lockReadonly": "Verrouiller",
+    "readonly": "Lecture seule",
+    "editing": "Modification",
+    "adjustSearchHint": "Essayez d'ajuster les critères de recherche",
+    "productDescription": "Description du produit"
+  },
+  "summary": {
+    "title": "Journal des Modifications",
+    "tabPrice": "Modifications de Prix",
+    "tabSpec": "Modifications de Paramètres"
   },
   "stats": {
     "title": "Statistiques",
@@ -504,6 +544,8 @@
     "exportExcel": "Exporter Excel",
     "print": "Imprimer",
     "noSpecData": "Aucune donnée",
+    "models": "modèles",
+    "briefSpecs": "Spécifications",
     "searchPlaceholder": "Rechercher des modèles...",
     "createdAt": "Créé",
     "specCount": "Spécifications",

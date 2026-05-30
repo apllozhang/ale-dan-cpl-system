@@ -2,9 +2,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +13,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import EmptyState from "@/components/EmptyState";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
   Search, Plus, Loader2, FileSpreadsheet, X,
@@ -27,6 +24,7 @@ import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const"
 import QuotationCompare from "@/components/QuotationCompare";
 import { useTranslation } from "react-i18next";
 import { useStaggerIn } from "@/hooks/useStaggerIn";
+import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";
 
 import { useMobilePreview } from "@/contexts/MobilePreviewContext";
 
@@ -59,6 +57,18 @@ export default function QuotationList() {
   const [showCompare, setShowCompare] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
+
+  const tableColumns = useMemo<ColumnDef[]>(() => [
+    { key: "quotationNo", label: t("quotation.no"), defaultWidth: 120, sortable: true },
+    { key: "customerName", label: t("quotation.customerName"), defaultWidth: 160, sortable: true },
+    { key: "projectName", label: t("quotation.projectName"), defaultWidth: 180, sortable: true },
+    { key: "status", label: t("quotation.status"), defaultWidth: 100, sortable: true },
+    { key: "totalAmount", label: t("quotation.amount"), defaultWidth: 130, sortable: true },
+    { key: "creatorName", label: t("quotation.createdBy"), defaultWidth: 120, sortable: true },
+    { key: "createdAt", label: t("quotation.createDate"), defaultWidth: 120, sortable: true },
+  ], [t]);
+
+  const { renderHeader, renderCell, sortData } = useTableFeatures(tableColumns);
 
   const batchStatusMutation = trpc.quotations.batchUpdateStatus.useMutation({
     onSuccess: () => { quotationsQuery.refetch(); setSelectedIds(new Set()); },
@@ -95,10 +105,11 @@ export default function QuotationList() {
     pageSize,
   });
 
-  const items = quotationsQuery.data?.items ?? [];
+  const rawItems = quotationsQuery.data?.items ?? [];
+  const items = useMemo(() => sortData(rawItems), [rawItems, sortData]);
   const total = quotationsQuery.data?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);
-  const tableRef = useStaggerIn<HTMLTableSectionElement>(items.length > 0 && !quotationsQuery.isLoading);
+  const tbodyRef = useStaggerIn<HTMLTableSectionElement>(items.length > 0 && !quotationsQuery.isLoading);
 
   return (
     <div className="h-full flex flex-col gap-4">
@@ -182,11 +193,11 @@ export default function QuotationList() {
       </div>
 
       {/* Table */}
-      <div className="flex-1 border rounded-lg bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-xs font-semibold w-10">
+      <div className="flex-1 border rounded-lg bg-card overflow-auto">
+        <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
+          <thead className="sticky top-0 z-10 bg-muted/30">
+            <tr className="border-b">
+              <th className="px-3 py-2 text-xs font-semibold w-10 border-r border-border/50">
                 <input
                   type="checkbox"
                   checked={items.length > 0 && items.every((q: any) => selectedIds.has(q.id))}
@@ -203,78 +214,73 @@ export default function QuotationList() {
                   }}
                   className="w-4 h-4 cursor-pointer"
                 />
-              </TableHead>
-              <TableHead className="text-xs font-semibold">{t("quotation.no")}</TableHead>
-              <TableHead className="text-xs font-semibold">{t("quotation.customerName")}</TableHead>
-              <TableHead className="text-xs font-semibold">{t("quotation.projectName")}</TableHead>
-              <TableHead className="text-xs font-semibold">{t("quotation.status")}</TableHead>
-              <TableHead className="text-xs font-semibold text-right">{t("quotation.amount")}</TableHead>
-              <TableHead className="text-xs font-semibold">{t("quotation.createdBy")}</TableHead>
-              <TableHead className="text-xs font-semibold">{t("quotation.createDate")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody ref={tableRef}>
+              </th>
+              {tableColumns.map((col, i) => renderHeader(col, i === tableColumns.length - 1))}
+            </tr>
+          </thead>
+          <tbody ref={tbodyRef}>
             {quotationsQuery.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-48 text-center">
+              <tr>
+                <td colSpan={tableColumns.length + 1} className="h-48 text-center">
                   <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span className="text-sm">{t("common.loading")}</span>
                   </div>
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-48 text-center">
+              <tr>
+                <td colSpan={tableColumns.length + 1} className="h-48 text-center">
                   <EmptyState
                     icon={FileSpreadsheet}
                     title={t("quotation.noQuotations")}
                     action={{ label: t("quotation.createFirst"), onClick: () => setLocation("/quotations/new") }}
                   />
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
-              items.map((q: any) => (
-                <TableRow
-                  key={q.id}
-                  className="stagger-child cursor-pointer hover:bg-accent/30 transition-colors"
-                  onClick={() => setLocation(`/quotations/${q.id}`)}
-                >
-                  <TableCell onClick={e => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(q.id)}
-                      onChange={() => {
-                        setSelectedIds(prev => {
-                          const next = new Set(prev);
-                          if (next.has(q.id)) next.delete(q.id);
-                          else next.add(q.id);
-                          return next;
-                        });
-                      }}
-                      className="w-4 h-4 cursor-pointer"
-                    />
-                  </TableCell>
-                  <TableCell className="text-sm font-medium text-primary">{q.quotationNo}</TableCell>
-                  <TableCell className="text-sm">{q.customerName}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{q.projectName || "-"}</TableCell>
-                  <TableCell>
+              items.map((q: any) => {
+                const cellData: Record<string, React.ReactNode> = {
+                  quotationNo: <span className="text-sm font-medium text-primary break-words whitespace-normal">{q.quotationNo}</span>,
+                  customerName: <span className="text-sm break-words whitespace-normal">{q.customerName}</span>,
+                  projectName: <span className="text-sm text-muted-foreground break-words whitespace-normal">{q.projectName || "-"}</span>,
+                  status: (
                     <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${QUOTATION_STATUS_COLORS[q.status] || ""}`}>
                       {QUOTATION_STATUS_LABELS[q.status] || q.status}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-right font-medium tabular-nums">
-                    {q.totalAmount ? `¥${Number(q.totalAmount).toLocaleString()}` : "-"}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{q.creatorName || q.creatorUsername || "-"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {q.createdAt ? new Date(q.createdAt).toLocaleDateString("zh-CN") : "-"}
-                  </TableCell>
-                </TableRow>
-              ))
+                  ),
+                  totalAmount: <span className="text-sm text-right font-medium tabular-nums block">{q.totalAmount ? `¥${Number(q.totalAmount).toLocaleString()}` : "-"}</span>,
+                  creatorName: <span className="text-sm text-muted-foreground break-words whitespace-normal">{q.creatorName || q.creatorUsername || "-"}</span>,
+                  createdAt: <span className="text-xs text-muted-foreground">{q.createdAt ? new Date(q.createdAt).toLocaleDateString("zh-CN") : "-"}</span>,
+                };
+                return (
+                  <tr
+                    key={q.id}
+                    className="stagger-child cursor-pointer hover:bg-accent/30 transition-colors border-b border-border/30"
+                    onClick={() => setLocation(`/quotations/${q.id}`)}
+                  >
+                    <td className="px-3 py-2 border-r border-border/50" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(q.id)}
+                        onChange={() => {
+                          setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            if (next.has(q.id)) next.delete(q.id);
+                            else next.add(q.id);
+                            return next;
+                          });
+                        }}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                    </td>
+                    {tableColumns.map((col, i) => renderCell(col, i === tableColumns.length - 1, cellData[col.key]))}
+                  </tr>
+                );
+              })
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {/* Pagination */}

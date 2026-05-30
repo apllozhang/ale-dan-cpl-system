@@ -1,0 +1,1 @@
+ALTER TABLE `import_logs` ADD `sheetNames` json;

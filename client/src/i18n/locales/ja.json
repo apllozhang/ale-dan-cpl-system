@@ -1,7 +1,7 @@
 {
   "menu": {
     "dashboard": "ダッシュボード",
-    "products": "製品データ",
+    "products": "データ管理",
     "stats": "業務分析",
     "summary": "変更履歴",
     "import": "データインポート",
@@ -218,7 +218,29 @@
     "productCount": "製品",
     "historyCleared": "履歴をクリアしました",
     "confirmClearHistory": "履歴クリアの確認",
-    "clearHistoryWarning": "クリアするとすべてのインポート履歴が削除されます。この操作は元に戻せません。続行しますか？"
+    "clearHistoryWarning": "クリアするとすべてのインポート履歴が削除されます。この操作は元に戻せません。続行しますか？",
+    "tabProduct": "製品データインポート",
+    "tabSpec": "技術パラメータインポート",
+    "specInstructions": "技術パラメータインポート手順",
+    "specSupportFormat": ".xlsx / .xls / .csv 形式の技術パラメータファイルに対応",
+    "specFormatExplain": "最初の列は製品型番、以降の列はパラメータ名（ポート数、スイッチング容量、消費電力など）",
+    "specDropzone": "Excel/CSVファイルをここにドラッグ、またはクリックして選択",
+    "specFormatHint": ".xlsx / .xls / .csv 形式に対応",
+    "specName": "パラメータセット名",
+    "specDescription": "説明（任意）",
+    "specPreview": "プレビュー：{{count}}行のデータ",
+    "specImportSuccess": "パラメータセットのインポート成功、{{count}}型番",
+    "specConfirmTitle": "パラメータセットのインポート確認",
+    "specConfirmDesc": "パラメータセット「{{name}}」をインポートします。ファイル：{{file}}",
+    "specConfirmRows": "{{count}}行のプレビューデータ",
+    "specHistory": "パラメータセットインポート履歴",
+    "specExistingData": "{{count}}件のパラメータセットが既に存在します。",
+    "specMergeDesc": "既存のパラメータセットを保持し、新しいセットを追加します。",
+    "specOverwriteDesc": "既存のパラメータセットをすべて削除し、新しいセットのみ保持します。この操作は元に戻せません。",
+    "rows": "{{count}} 行",
+    "invalid": "✗ 無効",
+    "sheetCount": "{{count}} シート",
+    "fileCount": "{{count}} ファイル"
   },
   "activity": {
     "title": "操作ログ",
@@ -362,6 +384,7 @@
   },
   "data": {
     "category": "製品カテゴリ",
+    "specCategories": "製品カテゴリ",
     "title": "製品データ",
     "searchPlaceholder": "すべてのフィールドを検索...",
     "filter": "フィルター",
@@ -390,7 +413,24 @@
       "isNew": "新製品",
       "remark": "備考"
     },
-    "selectProductsFirst": "先に製品を選択してください"
+    "selectProductsFirst": "先に製品を選択してください",
+    "tabProduct": "製品データ",
+    "tabSpec": "パラメータデータ",
+    "colModel": "型番",
+    "colSpecs": "主な仕様",
+    "expandCategory": "カテゴリ展開",
+    "collapseCategory": "カテゴリ折りたたみ",
+    "unlockEdit": "編集ロック解除",
+    "lockReadonly": "読み取り専用ロック",
+    "readonly": "読み取り専用",
+    "editing": "編集中",
+    "adjustSearchHint": "検索条件を調整してみてください",
+    "productDescription": "製品説明"
+  },
+  "summary": {
+    "title": "変更記録",
+    "tabPrice": "価格変更記録",
+    "tabSpec": "パラメータ変更記録"
   },
   "stats": {
     "title": "カテゴリ統計",
@@ -504,6 +544,8 @@
     "exportExcel": "Excel エクスポート",
     "print": "印刷",
     "noSpecData": "仕様データなし",
+    "models": "型番",
+    "briefSpecs": "簡易仕様",
     "searchPlaceholder": "モデルを検索...",
     "createdAt": "作成日時",
     "specCount": "仕様数",

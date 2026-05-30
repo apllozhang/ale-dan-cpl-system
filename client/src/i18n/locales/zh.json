@@ -1,7 +1,7 @@
 {
   "menu": {
     "dashboard": "仪表盘",
-    "products": "产品数据",
+    "products": "数据管理",
     "stats": "业务分析",
     "summary": "变更记录",
     "import": "数据导入",
@@ -219,7 +219,29 @@
     "productCount": "产品",
     "historyCleared": "历史记录已清除",
     "confirmClearHistory": "确认清除历史记录",
-    "clearHistoryWarning": "清除后将删除所有导入历史记录，此操作不可恢复。确定要继续吗？"
+    "clearHistoryWarning": "清除后将删除所有导入历史记录，此操作不可恢复。确定要继续吗？",
+    "tabProduct": "产品数据导入",
+    "tabSpec": "技术参数导入",
+    "specInstructions": "技术参数导入说明",
+    "specSupportFormat": "支持 .xlsx / .xls / .csv 格式的技术参数文件",
+    "specFormatExplain": "第一列为产品型号，后续列为参数名（如端口数、交换容量、功耗等）",
+    "specDropzone": "拖拽 Excel/CSV 文件到此处，或点击选择",
+    "specFormatHint": "支持 .xlsx / .xls / .csv 格式",
+    "specName": "参数集名称",
+    "specDescription": "描述（可选）",
+    "specPreview": "预览：{{count}} 行数据",
+    "specImportSuccess": "参数集导入成功，共 {{count}} 个型号",
+    "specConfirmTitle": "确认导入参数集",
+    "specConfirmDesc": "即将导入参数集「{{name}}」，文件：{{file}}",
+    "specConfirmRows": "预览到 {{count}} 行数据",
+    "specHistory": "参数集导入记录",
+    "specExistingData": "当前已有 {{count}} 个参数集。",
+    "specMergeDesc": "保留现有参数集，新增本次导入的参数集。",
+    "specOverwriteDesc": "将删除所有现有参数集，仅保留本次导入。此操作不可撤销。",
+    "rows": "{{count}} 行",
+    "invalid": "✗无效",
+    "sheetCount": "{{count}} 个表格",
+    "fileCount": "{{count}} 个文件"
   },
   "activity": {
     "title": "操作日志",
@@ -362,6 +384,9 @@
     "exportPDF": "导出PDF"
   },
   "data": {
+    "tabProduct": "产品数据",
+    "tabSpec": "参数数据",
+    "specCategories": "产品分类",
     "category": "产品分类",
     "title": "产品数据",
     "searchPlaceholder": "搜索所有字段...",
@@ -391,7 +416,17 @@
       "isNew": "新品",
       "remark": "备注"
     },
-    "selectProductsFirst": "请先选择产品"
+    "selectProductsFirst": "请先选择产品",
+    "colModel": "型号",
+    "colSpecs": "简要参数",
+    "expandCategory": "展开分类",
+    "collapseCategory": "收缩分类",
+    "unlockEdit": "解锁编辑",
+    "lockReadonly": "锁定只读",
+    "readonly": "只读",
+    "editing": "编辑中",
+    "adjustSearchHint": "尝试调整搜索条件",
+    "productDescription": "产品描述"
   },
   "stats": {
     "title": "分类统计",
@@ -505,11 +540,18 @@
     "exportExcel": "导出 Excel",
     "print": "打印",
     "noSpecData": "暂无参数数据",
+    "models": "型号",
+    "briefSpecs": "简要参数",
     "searchPlaceholder": "搜索型号...",
     "createdAt": "创建时间",
     "specCount": "参数数",
     "backToList": "返回列表",
     "dropzone": "拖拽 Excel/CSV 文件到此处，或点击选择文件",
     "changeFile": "更换文件"
+  },
+  "summary": {
+    "title": "变更记录",
+    "tabPrice": "价格变更记录",
+    "tabSpec": "参数变更记录"
   }
 }

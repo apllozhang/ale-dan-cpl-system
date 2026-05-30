@@ -16,7 +16,7 @@ import UserManagement from "./pages/UserManagement";
 import ActivityLog from "./pages/ActivityLog";
 import BusinessAnalysis from "./pages/BusinessAnalysis";
 import Customers from "./pages/Customers";
-import ProductSpecsPage from "@/pages/ProductSpecsPage";
+import ProductSpecsPage, { SpecSetDetail } from "@/pages/ProductSpecsPage";
 
 function DashboardRoutes() {
   return (
@@ -33,8 +33,7 @@ function DashboardRoutes() {
         <Route path="/activity" component={ActivityLog} />
         <Route path="/stats" component={BusinessAnalysis} />
         <Route path="/customers" component={Customers} />
-        <Route path="/tech-specs" component={ProductSpecsPage} />
-        <Route path="/tech-specs/:setId" component={ProductSpecsPage} />
+        <Route path="/data/specs/:setId" component={({ params }) => <SpecSetDetail setId={Number(params!.setId)} onBack={() => window.location.href = "/data"} />} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useMobilePreview } from "@/contexts/MobilePreviewContext";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
+import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";
 import gsap from "gsap";
 
 const CHART_COLORS = [
@@ -129,36 +130,6 @@ function FunnelChart({ data }: { data: { name: string; count: number; color: str
       })}
     </div>
   );
-}
-
-// Resizable table hook for column drag-resize
-function useResizableColumns(initialWidths: number[]) {
-  const [widths, setWidths] = useState(initialWidths);
-  const dragging = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
-  const tableRef = useRef<HTMLTableElement>(null);
-
-  const onResizeStart = useCallback((colIndex: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    dragging.current = { colIndex, startX: e.clientX, startWidth: widths[colIndex] };
-    const onMove = (ev: MouseEvent) => {
-      if (!dragging.current) return;
-      const diff = ev.clientX - dragging.current.startX;
-      setWidths(prev => {
-        const next = [...prev];
-        next[dragging.current!.colIndex] = Math.max(40, dragging.current!.startWidth + diff);
-        return next;
-      });
-    };
-    const onUp = () => {
-      dragging.current = null;
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  }, [widths]);
-
-  return { widths, onResizeStart, tableRef };
 }
 
 export default function BusinessAnalysis() {
@@ -275,8 +246,27 @@ export default function BusinessAnalysis() {
     { key: "all", label: t("analytics.dateFilter.all") },
   ];
 
-  // Resizable columns for top products table: #, model, desc, freq, qty, revenue
-  const productTable = useResizableColumns([40, 160, 240, 80, 80, 120]);
+  // Column definitions for customer performance table
+  const customerColumns: ColumnDef[] = useMemo(() => [
+    { key: "rank", label: "#", defaultWidth: 40, sortable: false },
+    { key: "customerName", label: t("analytics.customerName"), defaultWidth: 140, sortable: true },
+    { key: "count", label: t("analytics.count"), defaultWidth: 80, sortable: true },
+    { key: "totalAmount", label: t("analytics.amount"), defaultWidth: 120, sortable: true },
+    { key: "proportion", label: t("analytics.proportion"), defaultWidth: 120, sortable: false },
+  ], [t]);
+
+  // Column definitions for top products table
+  const productColumns: ColumnDef[] = useMemo(() => [
+    { key: "rank", label: "#", defaultWidth: 40, sortable: false },
+    { key: "productModel", label: t("analytics.productModel"), defaultWidth: 160, sortable: true },
+    { key: "productDesc", label: t("analytics.productDesc"), defaultWidth: 240, sortable: false },
+    { key: "quotationCount", label: t("analytics.frequency"), defaultWidth: 80, sortable: true },
+    { key: "totalQuantity", label: t("analytics.totalQuantity"), defaultWidth: 80, sortable: true },
+    { key: "totalRevenue", label: t("analytics.revenue"), defaultWidth: 120, sortable: true },
+  ], [t]);
+
+  const customerTable = useTableFeatures(customerColumns);
+  const productTable = useTableFeatures(productColumns);
 
   const ready = !isLoading;
   const containerRef = useStaggerIn<HTMLDivElement>(ready);
@@ -451,43 +441,47 @@ export default function BusinessAnalysis() {
             </CardHeader>
             <CardContent>
               <div className="overflow-auto max-h-[320px]">
-                <table className="w-full">
+                <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
                   <thead>
                     <tr className="border-b bg-muted/30 sticky top-0">
-                      <th className="text-xs font-semibold px-3 py-2 text-left w-10">#</th>
-                      <th className="text-xs font-semibold px-3 py-2 text-left">{t("analytics.customerName")}</th>
-                      <th className="text-xs font-semibold px-3 py-2 text-right">{t("analytics.count")}</th>
-                      <th className="text-xs font-semibold px-3 py-2 text-right">{t("analytics.amount")}</th>
-                      <th className="text-xs font-semibold px-3 py-2 text-right w-24">{t("analytics.proportion")}</th>
+                      {customerColumns.map((col, i) => customerTable.renderHeader(col, i === customerColumns.length - 1))}
                     </tr>
                   </thead>
                   <tbody>
-                    {byCustomer
-                      .filter((c: any) => !industryFilter || c.industry?.includes(industryFilter))
-                      .slice(0, 10).map((c: any, i: number) => {
+                    {customerTable.sortData(
+                      byCustomer
+                        .filter((c: any) => !industryFilter || c.industry?.includes(industryFilter))
+                        .slice(0, 10)
+                        .map((c: any) => ({
+                          ...c,
+                          customerName: c.customerName,
+                          count: Number(c.count),
+                          totalAmount: Number(c.totalAmount),
+                        }))
+                    ).map((c: any, i: number) => {
                       const filtered = byCustomer.filter((c: any) => !industryFilter || c.industry?.includes(industryFilter));
                       const total = filtered.reduce((s: number, x: any) => s + Number(x.totalAmount), 0) || 1;
                       const pct = (Number(c.totalAmount) / total * 100).toFixed(1);
                       return (
                         <tr key={i} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
-                          <td className="px-3 py-1.5 text-sm">
-                            {i < 3 ? (
+                          {customerTable.renderCell(customerColumns[0], false,
+                            i < 3 ? (
                               <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white ${i === 0 ? "bg-amber-500" : i === 1 ? "bg-slate-400" : "bg-amber-700"}`}>{i + 1}</span>
                             ) : (
                               <span className="text-muted-foreground text-xs">{i + 1}</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-1.5 text-sm font-medium truncate max-w-[140px]">{c.customerName}</td>
-                          <td className="px-3 py-1.5 text-sm text-right tabular-nums">{Number(c.count)}</td>
-                          <td className="px-3 py-1.5 text-sm text-right tabular-nums font-medium">¥{Number(c.totalAmount).toLocaleString()}</td>
-                          <td className="px-3 py-1.5">
+                            )
+                          )}
+                          {customerTable.renderCell(customerColumns[1], false, <span className="text-sm font-medium">{c.customerName}</span>)}
+                          {customerTable.renderCell(customerColumns[2], false, <span className="text-sm text-right tabular-nums block">{Number(c.count)}</span>)}
+                          {customerTable.renderCell(customerColumns[3], false, <span className="text-sm text-right tabular-nums font-medium block">¥{Number(c.totalAmount).toLocaleString()}</span>)}
+                          {customerTable.renderCell(customerColumns[4], true,
                             <div className="flex items-center gap-2">
                               <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
                               </div>
                               <span className="text-[10px] text-muted-foreground w-10 text-right tabular-nums">{pct}%</span>
                             </div>
-                          </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -539,69 +533,32 @@ export default function BusinessAnalysis() {
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{t("analytics.topProducts")}</CardTitle></CardHeader>
           <CardContent>
             <div className="overflow-auto">
-              <table ref={productTable.tableRef} className="w-full" style={{ tableLayout: "fixed" }}>
-                <colgroup>
-                  {productTable.widths.map((w, i) => (
-                    <col key={i} style={{ width: w }} />
-                  ))}
-                </colgroup>
+              <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
                 <thead>
                   <tr className="border-b bg-muted/30">
-                    <th className="text-xs font-semibold px-3 py-2 text-left relative select-none" style={{ width: productTable.widths[0] }}>
-                      #
-                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
-                        onMouseDown={(e) => productTable.onResizeStart(0, e)}>
-                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
-                      </div>
-                    </th>
-                    <th className="text-xs font-semibold px-3 py-2 text-center relative select-none overflow-hidden text-ellipsis whitespace-nowrap" style={{ width: productTable.widths[1] }}>
-                      {t("analytics.productModel")}
-                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
-                        onMouseDown={(e) => productTable.onResizeStart(1, e)}>
-                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
-                      </div>
-                    </th>
-                    <th className="text-xs font-semibold px-3 py-2 text-left relative select-none overflow-hidden text-ellipsis whitespace-nowrap" style={{ width: productTable.widths[2] }}>
-                      {t("analytics.productDesc")}
-                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
-                        onMouseDown={(e) => productTable.onResizeStart(2, e)}>
-                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
-                      </div>
-                    </th>
-                    <th className="text-xs font-semibold px-3 py-2 text-center relative select-none overflow-hidden text-ellipsis whitespace-nowrap" style={{ width: productTable.widths[3] }}>
-                      {t("analytics.frequency")}
-                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
-                        onMouseDown={(e) => productTable.onResizeStart(3, e)}>
-                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
-                      </div>
-                    </th>
-                    <th className="text-xs font-semibold px-3 py-2 text-center relative select-none overflow-hidden text-ellipsis whitespace-nowrap" style={{ width: productTable.widths[4] }}>
-                      {t("analytics.totalQuantity")}
-                      <div className="absolute right-[-2px] top-1 bottom-1 w-[5px] cursor-col-resize rounded-sm bg-border/60 hover:bg-primary hover:w-[7px] transition-all z-10 flex items-center justify-center"
-                        onMouseDown={(e) => productTable.onResizeStart(4, e)}>
-                        <svg width="4" height="12" viewBox="0 0 4 12" className="opacity-0 hover:opacity-100"><circle cx="2" cy="2" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="6" r="1.2" fill="currentColor" className="text-primary" /><circle cx="2" cy="10" r="1.2" fill="currentColor" className="text-primary" /></svg>
-                      </div>
-                    </th>
-                    <th className="text-xs font-semibold px-3 py-2 text-center" style={{ width: productTable.widths[5] }}>
-                      {t("analytics.revenue")}
-                    </th>
+                    {productColumns.map((col, i) => productTable.renderHeader(col, i === productColumns.length - 1))}
                   </tr>
                 </thead>
                 <tbody>
-                  {topProducts.map((p: any, i: number) => (
+                  {productTable.sortData(topProducts.map((p: any) => ({
+                    ...p,
+                    quotationCount: Number(p.quotationCount),
+                    totalQuantity: Number(p.totalQuantity),
+                    totalRevenue: Number(p.totalRevenue),
+                  }))).map((p: any, i: number) => (
                     <tr key={i} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
-                      <td className="px-3 py-1.5 text-sm">
-                        {i < 3 ? (
+                      {productTable.renderCell(productColumns[0], false,
+                        i < 3 ? (
                           <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white ${i === 0 ? "bg-amber-500" : i === 1 ? "bg-slate-400" : "bg-amber-700"}`}>{i + 1}</span>
                         ) : (
                           <span className="text-muted-foreground text-xs">{i + 1}</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-1.5 text-sm font-medium text-center whitespace-normal break-words">{p.productModel}</td>
-                      <td className="px-3 py-1.5 text-sm text-muted-foreground whitespace-normal break-words">{p.productDesc || "-"}</td>
-                      <td className="px-3 py-1.5 text-sm text-center tabular-nums font-medium">{Number(p.quotationCount)}</td>
-                      <td className="px-3 py-1.5 text-sm text-center tabular-nums">{Number(p.totalQuantity)}</td>
-                      <td className="px-3 py-1.5 text-sm text-center tabular-nums font-medium">¥{Number(p.totalRevenue).toLocaleString()}</td>
+                        )
+                      )}
+                      {productTable.renderCell(productColumns[1], false, <span className="text-sm font-medium">{p.productModel}</span>)}
+                      {productTable.renderCell(productColumns[2], false, <span className="text-sm text-muted-foreground">{p.productDesc || "-"}</span>)}
+                      {productTable.renderCell(productColumns[3], false, <span className="text-sm text-center tabular-nums font-medium block">{Number(p.quotationCount)}</span>)}
+                      {productTable.renderCell(productColumns[4], false, <span className="text-sm text-center tabular-nums block">{Number(p.totalQuantity)}</span>)}
+                      {productTable.renderCell(productColumns[5], true, <span className="text-sm text-center tabular-nums font-medium block">¥{Number(p.totalRevenue).toLocaleString()}</span>)}
                     </tr>
                   ))}
                 </tbody>

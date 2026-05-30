@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json, index } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -46,6 +46,7 @@ export type InsertUserGroup = typeof userGroups.$inferInsert;
 // CPL Product data table
 export const cplProducts = mysqlTable("cpl_products", {
   id: int("id").autoincrement().primaryKey(),
+  importLogId: int("importLogId"),
   sheetName: varchar("sheetName", { length: 128 }).notNull(),
   productGroup: text("productGroup"),       // 产品组件
   taxCategory: text("taxCategory"),         // 税务小类
@@ -60,7 +61,10 @@ export const cplProducts = mysqlTable("cpl_products", {
   remark: text("remark"),                   // 备注
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("cpl_products_importLogId_idx").on(table.importLogId),
+  index("cpl_products_sheetName_idx").on(table.sheetName),
+]);
 
 export type CplProduct = typeof cplProducts.$inferSelect;
 export type InsertCplProduct = typeof cplProducts.$inferInsert;
@@ -68,6 +72,7 @@ export type InsertCplProduct = typeof cplProducts.$inferInsert;
 // CPL Summary / Changelog table
 export const cplSummary = mysqlTable("cpl_summary", {
   id: int("id").autoincrement().primaryKey(),
+  importLogId: int("importLogId"),
   content: text("content").notNull(),
   version: varchar("version", { length: 256 }),
   importedAt: timestamp("importedAt").defaultNow().notNull(),
@@ -79,7 +84,8 @@ export type InsertCplSummary = typeof cplSummary.$inferInsert;
 // Sheet metadata table
 export const cplSheets = mysqlTable("cpl_sheets", {
   id: int("id").autoincrement().primaryKey(),
-  sheetName: varchar("sheetName", { length: 128 }).notNull().unique(),
+  importLogId: int("importLogId"),
+  sheetName: varchar("sheetName", { length: 128 }).notNull(),
   displayOrder: int("displayOrder").notNull().default(0),
   productCount: int("productCount").notNull().default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -128,7 +134,9 @@ export const quotationItems = mysqlTable("quotation_items", {
   subtotal: decimal("subtotal", { precision: 14, scale: 2 }).default("0"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("quotation_items_quotationId_idx").on(table.quotationId),
+]);
 
 export type QuotationItem = typeof quotationItems.$inferSelect;
 export type InsertQuotationItem = typeof quotationItems.$inferInsert;
@@ -136,12 +144,14 @@ export type InsertQuotationItem = typeof quotationItems.$inferInsert;
 // Import log table
 export const importLogs = mysqlTable("import_logs", {
   id: int("id").autoincrement().primaryKey(),
+  isActive: boolean("isActive").default(false).notNull(),
   fileName: varchar("fileName", { length: 256 }).notNull(),
   userId: int("userId").notNull(),
   username: varchar("username", { length: 64 }).notNull(),
   orgName: varchar("orgName", { length: 128 }),
   groupName: varchar("groupName", { length: 128 }),
   mode: varchar("mode", { length: 16 }).notNull(), // "overwrite" | "merge"
+  sheetNames: json("sheetNames").$type<string[]>(),
   sheetsCount: int("sheetsCount").notNull().default(0),
   productsCount: int("productsCount").notNull().default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -216,6 +226,7 @@ export const productSpecSets = mysqlTable("product_spec_sets", {
   name: varchar("name", { length: 256 }).notNull(),
   fileName: varchar("fileName", { length: 256 }),
   description: text("description"),
+  summaryContent: text("summaryContent"),
   modelCount: int("modelCount").notNull().default(0),
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -1,7 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,7 +15,7 @@ import { useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   ClipboardList, Upload, Trash2, ArrowLeft, Plus, X, Search,
-  Loader2, FileSpreadsheet, Edit2, Check,
+  Loader2, Edit2, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -42,7 +41,7 @@ export default function ProductSpecsPage() {
   }, []);
 
   if (setId && !isNaN(setId)) {
-    return <SpecSetDetail setId={setId} onBack={() => setLocation("/tech-specs")} />;
+    return <SpecSetDetail setId={setId} onBack={() => setLocation("/data")} />;
   }
 
   return <SpecSetList search={debouncedSearch} page={page} onSearchChange={handleSearchChange} searchValue={search} />;
@@ -50,12 +49,11 @@ export default function ProductSpecsPage() {
 
 // ==================== List View ====================
 
-function SpecSetList({ search, page, onSearchChange, searchValue }: {
+export function SpecSetList({ search, page, onSearchChange, searchValue }: {
   search: string; page: number; onSearchChange: (v: string) => void; searchValue: string;
 }) {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const [uploadOpen, setUploadOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState<number | null>(null);
 
   const setsQuery = trpc.productSpecs.listSets.useQuery({
@@ -91,7 +89,7 @@ function SpecSetList({ search, page, onSearchChange, searchValue }: {
               className="pl-9 h-9 text-sm w-48 bg-background"
             />
           </div>
-          <Button size="sm" onClick={() => setUploadOpen(true)}>
+          <Button size="sm" onClick={() => setLocation("/import")}>
             <Upload className="w-4 h-4 mr-1" />
             {t('techSpecs.upload')}
           </Button>
@@ -105,7 +103,7 @@ function SpecSetList({ search, page, onSearchChange, searchValue }: {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {sets.map((set: any) => (
-            <Card key={set.id} className="hover:shadow-md transition-all cursor-pointer group" onClick={() => setLocation(`/tech-specs/${set.id}`)}>
+            <Card key={set.id} className="hover:shadow-md transition-all cursor-pointer group" onClick={() => setLocation(`/data/specs/${set.id}`)}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">
@@ -137,8 +135,6 @@ function SpecSetList({ search, page, onSearchChange, searchValue }: {
         </div>
       )}
 
-      <UploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onSuccess={() => setsQuery.refetch()} />
-
       <AlertDialog open={deleteOpen !== null} onOpenChange={() => setDeleteOpen(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -160,7 +156,7 @@ function SpecSetList({ search, page, onSearchChange, searchValue }: {
 
 // ==================== Detail View ====================
 
-function SpecSetDetail({ setId, onBack }: { setId: number; onBack: () => void }) {
+export function SpecSetDetail({ setId, onBack }: { setId: number; onBack: () => void }) {
   const { t } = useTranslation();
   const isMobilePreview = useMobilePreview();
   const [search, setSearch] = useState("");
@@ -282,105 +278,6 @@ function SpecSetDetail({ setId, onBack }: { setId: number; onBack: () => void })
         <AddEntryDialog setId={setId} onClose={() => { setAddOpen(false); setQuery.refetch(); }} />
       )}
     </div>
-  );
-}
-
-// ==================== Upload Dialog ====================
-
-function UploadDialog({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (v: boolean) => void; onSuccess: () => void }) {
-  const { t } = useTranslation();
-  const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [preview, setPreview] = useState<any[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const importMutation = trpc.productSpecs.importSet.useMutation({
-    onSuccess: (data) => {
-      toast.success(t('techSpecs.importSuccess', { count: data.modelCount }));
-      reset();
-      onOpenChange(false);
-      onSuccess();
-    },
-    onError: (err: any) => toast.error(err.message || t('techSpecs.importFailed')),
-  });
-
-  const reset = () => { setFile(null); setName(""); setDescription(""); setPreview([]); };
-
-  const handleFileSelect = async (f: File) => {
-    setFile(f);
-    if (!name) setName(f.name.replace(/\.[^.]+$/, ""));
-    // Preview
-    const XLSX = await import("xlsx");
-    const buffer = await f.arrayBuffer();
-    const wb = XLSX.read(buffer, { type: "array" });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-    setPreview(rows.slice(0, 5));
-  };
-
-  const handleUpload = async () => {
-    if (!file || !name) return;
-    const buffer = await file.arrayBuffer();
-    const uint8 = new Uint8Array(buffer);
-    const base64 = btoa(Array.from(uint8).map(b => String.fromCharCode(b)).join(""));
-    importMutation.mutate({ fileBase64: base64, fileName: file.name, name, description: description || undefined });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={v => { if (!v) reset(); onOpenChange(v); }}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t('techSpecs.upload')}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
-              file ? "border-success-border bg-success-soft/30" : "border-border hover:border-primary/40"
-            }`}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={e => e.preventDefault()}
-            onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFileSelect(f); }}
-          >
-            <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
-            {file ? (
-              <div className="flex flex-col items-center gap-2">
-                <FileSpreadsheet className="w-8 h-8 text-success" />
-                <p className="text-sm font-medium">{file.name}</p>
-                <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB · {t('techSpecs.changeFile')}</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <Upload className="w-8 h-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">{t('techSpecs.dropzone')}</p>
-              </div>
-            )}
-          </div>
-
-          <Input placeholder={t('techSpecs.setName')} value={name} onChange={e => setName(e.target.value)} />
-          <Textarea placeholder={t('techSpecs.setDescription')} value={description} onChange={e => setDescription(e.target.value)} rows={2} />
-
-          {preview.length > 0 && (
-            <div className="text-xs text-muted-foreground">
-              <p>预览：{preview.length} 行数据</p>
-              <div className="mt-1 bg-muted/30 rounded p-2 overflow-x-auto">
-                <table className="w-full">
-                  <thead><tr>{Object.keys(preview[0]).slice(0, 5).map(k => <th key={k} className="px-2 py-1 text-left font-medium">{k}</th>)}</tr></thead>
-                  <tbody>{preview.map((row, i) => <tr key={i}>{Object.values(row).slice(0, 5).map((v: any, j) => <td key={j} className="px-2 py-1">{String(v)}</td>)}</tr>)}</tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>{t('common.cancel')}</Button>
-          <Button onClick={handleUpload} disabled={!file || !name || importMutation.isPending}>
-            {importMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-            {t('techSpecs.upload')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

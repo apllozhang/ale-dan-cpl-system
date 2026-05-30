@@ -1,7 +1,7 @@
 {
   "menu": {
     "dashboard": "Panel",
-    "products": "Productos",
+    "products": "Gestión de Datos",
     "stats": "Análisis de Negocio",
     "summary": "Registro de Cambios",
     "import": "Importar Datos",
@@ -218,7 +218,29 @@
     "productCount": "Productos",
     "historyCleared": "Historial eliminado",
     "confirmClearHistory": "Confirmar eliminación del historial",
-    "clearHistoryWarning": "Se eliminará todo el historial de importaciones. Esta acción no se puede deshacer. ¿Está seguro?"
+    "clearHistoryWarning": "Se eliminará todo el historial de importaciones. Esta acción no se puede deshacer. ¿Está seguro?",
+    "tabProduct": "Importar Datos de Producto",
+    "tabSpec": "Importar Parámetros Técnicos",
+    "specInstructions": "Instrucciones de Importación de Parámetros Técnicos",
+    "specSupportFormat": "Admite archivos de parámetros técnicos en formatos .xlsx / .xls / .csv",
+    "specFormatExplain": "La primera columna es el modelo de producto, las demás son nombres de parámetros (puertos, capacidad, consumo, etc.)",
+    "specDropzone": "Arrastra un archivo Excel/CSV aquí o haz clic para seleccionar",
+    "specFormatHint": "Admite formatos .xlsx / .xls / .csv",
+    "specName": "Nombre del Conjunto de Parámetros",
+    "specDescription": "Descripción (opcional)",
+    "specPreview": "Vista previa: {{count}} filas",
+    "specImportSuccess": "Conjunto de parámetros importado correctamente, {{count}} modelos",
+    "specConfirmTitle": "Confirmar Importación de Parámetros",
+    "specConfirmDesc": "Se importará el conjunto de parámetros \"{{name}}\" del archivo: {{file}}",
+    "specConfirmRows": "{{count}} filas de vista previa",
+    "specHistory": "Historial de Importación de Parámetros",
+    "specExistingData": "{{count}} conjunto(s) de parámetros ya existen.",
+    "specMergeDesc": "Conservar los conjuntos existentes y agregar el nuevo.",
+    "specOverwriteDesc": "Eliminar todos los conjuntos existentes y conservar solo el nuevo. Esta acción es irreversible.",
+    "rows": "{{count}} filas",
+    "invalid": "✗ Inválido",
+    "sheetCount": "{{count}} hojas",
+    "fileCount": "{{count}} archivos"
   },
   "activity": {
     "title": "Registro de Actividad",
@@ -362,6 +384,7 @@
   },
   "data": {
     "category": "Categoría",
+    "specCategories": "Categoría de Producto",
     "title": "Productos",
     "searchPlaceholder": "Buscar en todos los campos...",
     "filter": "Filtro",
@@ -390,7 +413,24 @@
       "isNew": "Nuevo",
       "remark": "Observación"
     },
-    "selectProductsFirst": "Seleccione productos primero"
+    "selectProductsFirst": "Seleccione productos primero",
+    "tabProduct": "Datos de Producto",
+    "tabSpec": "Datos de Parámetros",
+    "colModel": "Modelo",
+    "colSpecs": "Especificaciones",
+    "expandCategory": "Expandir categorías",
+    "collapseCategory": "Contraer categorías",
+    "unlockEdit": "Desbloquear edición",
+    "lockReadonly": "Bloquear solo lectura",
+    "readonly": "Solo lectura",
+    "editing": "Editando",
+    "adjustSearchHint": "Pruebe a ajustar los criterios de búsqueda",
+    "productDescription": "Descripción del producto"
+  },
+  "summary": {
+    "title": "Registro de Cambios",
+    "tabPrice": "Cambios de Precios",
+    "tabSpec": "Cambios de Parámetros"
   },
   "stats": {
     "title": "Estadísticas",
@@ -504,6 +544,8 @@
     "exportExcel": "Exportar Excel",
     "print": "Imprimir",
     "noSpecData": "Sin datos",
+    "models": "modelos",
+    "briefSpecs": "Especificaciones",
     "searchPlaceholder": "Buscar modelos...",
     "createdAt": "Creado",
     "specCount": "Especificaciones",

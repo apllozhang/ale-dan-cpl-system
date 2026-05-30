@@ -1,7 +1,7 @@
 {
   "menu": {
     "dashboard": "Dashboard",
-    "products": "Products",
+    "products": "Data Management",
     "stats": "Business Analysis",
     "summary": "Change Log",
     "import": "Data Import",
@@ -218,7 +218,29 @@
     "productCount": "Products",
     "historyCleared": "History cleared",
     "confirmClearHistory": "Confirm Clear History",
-    "clearHistoryWarning": "All import history records will be deleted. This action cannot be undone. Are you sure you want to proceed?"
+    "clearHistoryWarning": "All import history records will be deleted. This action cannot be undone. Are you sure you want to proceed?",
+    "tabProduct": "Product Data Import",
+    "tabSpec": "Tech Spec Import",
+    "specInstructions": "Tech Spec Import Instructions",
+    "specSupportFormat": "Supports .xlsx / .xls / .csv tech spec files",
+    "specFormatExplain": "First column is product model, remaining columns are parameter names (e.g. ports, switching capacity, power)",
+    "specDropzone": "Drag Excel/CSV file here, or click to select",
+    "specFormatHint": "Supports .xlsx / .xls / .csv formats",
+    "specName": "Spec Set Name",
+    "specDescription": "Description (optional)",
+    "specPreview": "Preview: {{count}} rows",
+    "specImportSuccess": "Spec set imported successfully, {{count}} models",
+    "specConfirmTitle": "Confirm Spec Set Import",
+    "specConfirmDesc": "Importing spec set \"{{name}}\" from file: {{file}}",
+    "specConfirmRows": "{{count}} preview rows detected",
+    "specHistory": "Spec Set Import History",
+    "specExistingData": "{{count}} spec set(s) already exist.",
+    "specMergeDesc": "Keep existing spec sets and add the new one.",
+    "specOverwriteDesc": "Delete all existing spec sets and keep only the new one. This action cannot be undone.",
+    "rows": "{{count}} rows",
+    "invalid": "✗ Invalid",
+    "sheetCount": "{{count}} sheets",
+    "fileCount": "{{count}} files"
   },
   "activity": {
     "title": "Activity Log",
@@ -361,6 +383,9 @@
     "exportPDF": "Export PDF"
   },
   "data": {
+    "tabProduct": "Product Data",
+    "tabSpec": "Spec Data",
+    "specCategories": "Product Categories",
     "category": "Product Category",
     "title": "Product Data",
     "searchPlaceholder": "Search all fields...",
@@ -390,7 +415,17 @@
       "isNew": "New",
       "remark": "Remark"
     },
-    "selectProductsFirst": "Please select products first"
+    "selectProductsFirst": "Please select products first",
+    "colModel": "Model",
+    "colSpecs": "Brief Specs",
+    "expandCategory": "Expand Categories",
+    "collapseCategory": "Collapse Categories",
+    "unlockEdit": "Unlock Editing",
+    "lockReadonly": "Lock Readonly",
+    "readonly": "Readonly",
+    "editing": "Editing",
+    "adjustSearchHint": "Try adjusting search criteria",
+    "productDescription": "Product Description"
   },
   "stats": {
     "title": "Statistics",
@@ -504,11 +539,18 @@
     "exportExcel": "Export Excel",
     "print": "Print",
     "noSpecData": "No spec data",
+    "models": "models",
+    "briefSpecs": "Brief Specs",
     "searchPlaceholder": "Search models...",
     "createdAt": "Created",
     "specCount": "Specs",
     "backToList": "Back to List",
     "dropzone": "Drag Excel/CSV file here, or click to select",
     "changeFile": "Change file"
+  },
+  "summary": {
+    "title": "Change Log",
+    "tabPrice": "Price Change Log",
+    "tabSpec": "Spec Change Log"
   }
 }

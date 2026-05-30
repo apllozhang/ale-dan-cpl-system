@@ -12,6 +12,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState, useMemo, useRef, useCallback } from "react";
+import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";
+import TablePagination from "@/components/TablePagination";
 
 declare global {
   interface Window {
@@ -124,7 +126,17 @@ export default function ActivityLog() {
       setPage(1);
     }, 300);
   }, []);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
+
+  const tableColumns: ColumnDef[] = useMemo(() => [
+    { key: "createdAt", label: t('activity.time'), defaultWidth: 160, sortable: true },
+    { key: "username", label: t('activity.user'), defaultWidth: 100, sortable: true },
+    { key: "action", label: t('activity.action'), defaultWidth: 120, sortable: true },
+    { key: "resourceType", label: t('activity.resourceType'), defaultWidth: 90, sortable: true },
+    { key: "detail", label: t('activity.detail'), defaultWidth: 400, sortable: false },
+  ], [t]);
+
+  const { renderHeader, renderCell, sortData } = useTableFeatures(tableColumns);
 
   const dateParams = useMemo(() => {
     if (dateRange === "today") {
@@ -356,14 +368,10 @@ export default function ActivityLog() {
       {/* Log table */}
       <Card className="flex-1 overflow-hidden">
         <div className="overflow-auto h-full">
-          <table className="w-full min-w-[600px]" style={{ tableLayout: "fixed" }}>
+          <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
             <thead>
               <tr className="bg-muted/30 border-b">
-                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[160px]">{t('activity.time')}</th>
-                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[100px]">{t('activity.user')}</th>
-                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[120px]">{t('activity.action')}</th>
-                <th className="text-xs font-semibold px-4 py-2.5 text-left w-[90px]">{t('activity.resourceType')}</th>
-                <th className="text-xs font-semibold px-4 py-2.5 text-left">{t('activity.detail')}</th>
+                {tableColumns.map((col, i) => renderHeader(col, i === tableColumns.length - 1))}
               </tr>
             </thead>
             <tbody ref={tableRef}>
@@ -373,25 +381,21 @@ export default function ActivityLog() {
                 <tr><td colSpan={5}>
                   <EmptyState icon={Activity} title={t('activity.noLogs')} />
                 </td></tr>
-              ) : data.items.map((log: any) => (
+              ) : sortData(data.items).map((log: any) => (
                 <tr key={log.id} className="stagger-child border-b border-border/50 hover:bg-accent/30">
-                  <td className="px-4 py-2 text-xs text-muted-foreground">
-                    {new Date(log.createdAt).toLocaleString("zh-CN")}
-                  </td>
-                  <td className="px-4 py-2 text-xs font-medium">{log.username || "-"}</td>
-                  <td className="px-4 py-2">
+                  {renderCell(tableColumns[0], false, <span className="text-xs text-muted-foreground">{new Date(log.createdAt).toLocaleString("zh-CN")}</span>)}
+                  {renderCell(tableColumns[1], false, <span className="text-xs font-medium">{log.username || "-"}</span>)}
+                  {renderCell(tableColumns[2], false,
                     <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${ACTION_COLORS[log.action] || ""}`}>
                       {ACTION_LABELS[log.action] || log.action}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-2">
+                  )}
+                  {renderCell(tableColumns[3], false,
                     <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${RESOURCE_COLORS[log.resourceType] || "bg-muted text-muted-foreground"}`}>
                       {RESOURCE_LABELS[log.resourceType] || log.resourceType || "-"}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-muted-foreground" style={{ maxWidth: 400 }}>
-                    {formatDetail(log.action, log.detail, t)}
-                  </td>
+                  )}
+                  {renderCell(tableColumns[4], true, <span className="text-xs text-muted-foreground">{formatDetail(log.action, log.detail, t)}</span>)}
                 </tr>
               ))}
             </tbody>
@@ -400,16 +404,15 @@ export default function ActivityLog() {
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{t('activity.totalRecords', { count: data?.total ?? 0 })}</span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="h-7 text-xs">{t('common.previous')}</Button>
-            <span>{page} / {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="h-7 text-xs">{t('common.next')}</Button>
-          </div>
-        </div>
-      )}
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={data?.total ?? 0}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+        pageSizeOptions={[10, 20, 50]}
+      />
 
       <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
         <AlertDialogContent>

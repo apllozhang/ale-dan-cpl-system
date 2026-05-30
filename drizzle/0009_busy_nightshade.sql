@@ -1,0 +1,1 @@
+ALTER TABLE `product_spec_sets` ADD `summaryContent` text;

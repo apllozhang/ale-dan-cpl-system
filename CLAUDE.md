@@ -49,8 +49,8 @@ drizzle/           → DB schema (schema.ts) and migrations
 - **Entry**: `server/_core/index.ts` — Express server with auto port detection (3000-3019), tRPC mounted at `/api/trpc`
 - **tRPC setup**: `server/_core/trpc.ts` — procedure hierarchy: `publicProcedure` → `protectedProcedure` → `adminProcedure` → `superAdminProcedure` + `permissionProcedure(perm)` factory
 - **Context/auth**: `server/_core/context.ts` — cookie-based session (`app_session_id`), JWT verification
-- **Business logic**: `server/db.ts` — all database operations via Drizzle ORM. **Critical**: `db.execute(rawSQL)` returns `[rows, fields]` tuple in mysql2, always extract with `Array.isArray(result[0]) ? result[0] : result`
-- **Routes**: `server/routers.ts` — single merged `appRouter` with nested routers: `auth`, `products`, `quotations`, `versions`, `templates`, `sharing`, `admin`, `import`, `export`, `analytics`
+- **Business logic**: `server/db.ts` — thin re-export of `server/db/index.ts` which aggregates 14 modular files (users, organizations, userGroups, cpl, importLogs, quotations, activityLogs, templates, versions, searches, suggestions, sharing, productSpecs, customers). **Critical**: `db.execute(rawSQL)` returns `[rows, fields]` tuple in mysql2, always extract with `Array.isArray(result[0]) ? result[0] : result`
+- **Routes**: `server/routers.ts` — thin entry point assembling `appRouter` from 16 modular routers in `server/routers/` (auth, organizations, userGroups, users, quotations, cpl, importLogs, activityLogs, templates, versions, sharing, searches, suggestions, productSpecs, customers). Shared helper `server/routers/helpers.ts` exports `logActivity`.
 
 ### Frontend (client/src/)
 
@@ -72,7 +72,7 @@ drizzle/           → DB schema (schema.ts) and migrations
 
 ### Discount Calculation
 
-Discount rate is a direct multiplier: `subtotal = unitPrice × quantity × (discountRate / 100)`. So 10% discount means multiply by 0.1. This formula must be consistent across `server/routers.ts` (update mutation), `client/src/pages/QuotationDetail.tsx`, and `client/src/lib/quotationExportPro.ts`.
+Discount rate is a direct multiplier: `subtotal = unitPrice × quantity × (discountRate / 100)`. So 10% discount means multiply by 0.1. This formula must be consistent across `server/routers/quotations.ts` (update mutation), `client/src/pages/QuotationDetail.tsx`, and `client/src/lib/quotationExportPro.ts`.
 
 ### Version Tracking
 
@@ -92,7 +92,7 @@ Quotation versioning is automatic on every save (`updateQuotation` in `server/db
 ## Development Workflow
 
 1. **Type check**: `npm run check` — run tsc before committing
-2. **Tests**: `npm run test` — 41 tests across 7 files covering discount calc, version diff, permissions, auth, analytics
+2. **Tests**: `npm run test` — 56 tests across 8 files covering discount calc, version diff, permissions, auth, analytics, import switching
 3. **Auto-format**: `.claude/settings.json` PostToolUse hook runs prettier + eslint on every `.ts`/`.tsx` edit
 4. **Key test files**:
    - `server/discount.test.ts` — discount calculation (rate / 100 formula)

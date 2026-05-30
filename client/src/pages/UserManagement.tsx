@@ -5,9 +5,6 @@ import type { Role } from "@shared/const";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -21,10 +18,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Users, Plus, Pencil, Trash2, Loader2, Shield, Building2, Group } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";
+import TablePagination from "@/components/TablePagination";
 
 type UserForm = {
   username: string;
@@ -132,6 +131,17 @@ function OrgManagement() {
 
   const orgs = orgsQuery.data ?? [];
 
+  const orgColumns: ColumnDef[] = useMemo(() => [
+    { key: "id", label: t('common.id'), defaultWidth: 60, sortable: true },
+    { key: "name", label: t('common.name'), defaultWidth: 200, sortable: true },
+    { key: "createdAt", label: t('common.created'), defaultWidth: 180, sortable: true },
+    { key: "actions", label: t('common.actions'), defaultWidth: 96 },
+  ], [t]);
+
+  const { renderHeader, renderCell, sortData } = useTableFeatures(orgColumns);
+
+  const sortedOrgs = sortData(orgs);
+
   const openCreate = () => { setEditingId(null); setName(""); setDialogOpen(true); };
   const openEdit = (o: any) => { setEditingId(o.id); setName(o.name); setDialogOpen(true); };
 
@@ -167,35 +177,34 @@ function OrgManagement() {
         <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus className="w-4 h-4" />{t('user.createOrg')}</Button>
       </div>
       <div className="flex-1 border rounded-lg bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-xs font-semibold">{t('common.id')}</TableHead>
-              <TableHead className="text-xs font-semibold">{t('common.name')}</TableHead>
-              <TableHead className="text-xs font-semibold">{t('common.created')}</TableHead>
-              <TableHead className="text-xs font-semibold w-24">{t('common.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orgsQuery.isLoading ? (
-              <TableRow><TableCell colSpan={4} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-            ) : orgs.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="h-32 text-center text-muted-foreground text-sm">{t('user.noOrgs')}</TableCell></TableRow>
-            ) : orgs.map((o: any) => (
-              <TableRow key={o.id} className="hover:bg-accent/30">
-                <TableCell className="text-sm">{o.id}</TableCell>
-                <TableCell className="text-sm font-medium">{o.name}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{new Date(o.createdAt).toLocaleString("zh-CN")}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(o)}><Pencil className="w-3.5 h-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteId(o.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="overflow-x-auto">
+          <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
+            <thead>
+              <tr className="bg-muted/30 hover:bg-muted/30 border-b">
+                {orgColumns.map((col, i) => renderHeader(col, i === orgColumns.length - 1))}
+              </tr>
+            </thead>
+            <tbody>
+              {orgsQuery.isLoading ? (
+                <tr><td colSpan={4} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              ) : sortedOrgs.length === 0 ? (
+                <tr><td colSpan={4} className="h-32 text-center text-muted-foreground text-sm">{t('user.noOrgs')}</td></tr>
+              ) : sortedOrgs.map((o: any) => (
+                <tr key={o.id} className="hover:bg-accent/30 border-b border-border/30">
+                  {renderCell(orgColumns[0], false, <span className="text-sm">{o.id}</span>)}
+                  {renderCell(orgColumns[1], false, <span className="text-sm font-medium">{o.name}</span>)}
+                  {renderCell(orgColumns[2], false, <span className="text-xs text-muted-foreground">{new Date(o.createdAt).toLocaleString("zh-CN")}</span>)}
+                  {renderCell(orgColumns[3], true, (
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(o)}><Pencil className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteId(o.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </div>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -242,7 +251,19 @@ function GroupManagement() {
   const groups = groupsQuery.data ?? [];
   const orgs = orgsQuery.data ?? [];
 
+  const groupColumns: ColumnDef[] = useMemo(() => [
+    { key: "id", label: t('common.id'), defaultWidth: 60, sortable: true },
+    { key: "name", label: t('common.name'), defaultWidth: 180, sortable: true },
+    { key: "organizationId", label: t('user.groupOrg'), defaultWidth: 180, sortable: true },
+    { key: "createdAt", label: t('common.created'), defaultWidth: 180, sortable: true },
+    { key: "actions", label: t('common.actions'), defaultWidth: 96 },
+  ], [t]);
+
+  const { renderHeader, renderCell, sortData } = useTableFeatures(groupColumns);
+
   const getOrgName = (id: number) => orgs.find((o: any) => o.id === id)?.name || "-";
+
+  const sortedGroups = sortData(groups);
 
   const openCreate = () => { setEditingId(null); setName(""); setOrgId(orgs[0]?.id || 0); setDialogOpen(true); };
   const openEdit = (g: any) => { setEditingId(g.id); setName(g.name); setOrgId(g.organizationId); setDialogOpen(true); };
@@ -280,37 +301,35 @@ function GroupManagement() {
         <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus className="w-4 h-4" />{t('user.createGroup')}</Button>
       </div>
       <div className="flex-1 border rounded-lg bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-xs font-semibold">{t('common.id')}</TableHead>
-              <TableHead className="text-xs font-semibold">{t('common.name')}</TableHead>
-              <TableHead className="text-xs font-semibold">{t('user.groupOrg')}</TableHead>
-              <TableHead className="text-xs font-semibold">{t('common.created')}</TableHead>
-              <TableHead className="text-xs font-semibold w-24">{t('common.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {groupsQuery.isLoading ? (
-              <TableRow><TableCell colSpan={5} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-            ) : groups.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground text-sm">{t('user.noGroups')}</TableCell></TableRow>
-            ) : groups.map((g: any) => (
-              <TableRow key={g.id} className="hover:bg-accent/30">
-                <TableCell className="text-sm">{g.id}</TableCell>
-                <TableCell className="text-sm font-medium">{g.name}</TableCell>
-                <TableCell className="text-sm">{getOrgName(g.organizationId)}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{new Date(g.createdAt).toLocaleString("zh-CN")}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(g)}><Pencil className="w-3.5 h-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteId(g.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="overflow-x-auto">
+          <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
+            <thead>
+              <tr className="bg-muted/30 hover:bg-muted/30 border-b">
+                {groupColumns.map((col, i) => renderHeader(col, i === groupColumns.length - 1))}
+              </tr>
+            </thead>
+            <tbody>
+              {groupsQuery.isLoading ? (
+                <tr><td colSpan={5} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              ) : sortedGroups.length === 0 ? (
+                <tr><td colSpan={5} className="h-32 text-center text-muted-foreground text-sm">{t('user.noGroups')}</td></tr>
+              ) : sortedGroups.map((g: any) => (
+                <tr key={g.id} className="hover:bg-accent/30 border-b border-border/30">
+                  {renderCell(groupColumns[0], false, <span className="text-sm">{g.id}</span>)}
+                  {renderCell(groupColumns[1], false, <span className="text-sm font-medium">{g.name}</span>)}
+                  {renderCell(groupColumns[2], false, <span className="text-sm">{getOrgName(g.organizationId)}</span>)}
+                  {renderCell(groupColumns[3], false, <span className="text-xs text-muted-foreground">{new Date(g.createdAt).toLocaleString("zh-CN")}</span>)}
+                  {renderCell(groupColumns[4], true, (
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(g)}><Pencil className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteId(g.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </div>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -359,13 +378,45 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<UserForm>(emptyUserForm);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const users = usersQuery.data ?? [];
   const orgs = orgsQuery.data ?? [];
   const groups = groupsQuery.data ?? [];
 
+  const userColumns: ColumnDef[] = useMemo(() => {
+    const cols: ColumnDef[] = [
+      { key: "username", label: t('common.username'), defaultWidth: 160, sortable: true },
+      { key: "name", label: t('common.name'), defaultWidth: 120, sortable: true },
+      { key: "email", label: t('common.email'), defaultWidth: 180, sortable: true },
+    ];
+    if (isSuperAdmin) {
+      cols.push({ key: "organizationId", label: t('common.organization'), defaultWidth: 140, sortable: true });
+      cols.push({ key: "groupId", label: t('common.group'), defaultWidth: 140, sortable: true });
+    }
+    cols.push({ key: "role", label: t('common.role'), defaultWidth: 100, sortable: true });
+    cols.push({ key: "lastSignedIn", label: t('user.lastLogin'), defaultWidth: 160, sortable: true });
+    cols.push({ key: "actions", label: t('common.actions'), defaultWidth: 96 });
+    return cols;
+  }, [t, isSuperAdmin]);
+
+  const { renderHeader, renderCell, sortData } = useTableFeatures(userColumns);
+
   const getOrgName = (id: number | null | undefined) => { if (!id) return "-"; return orgs.find((o: any) => o.id === id)?.name || "-"; };
   const getGroupName = (id: number | null | undefined) => { if (!id) return "-"; return groups.find((g: any) => g.id === id)?.name || "-"; };
+
+  const sortedUsers = sortData(users);
+  const totalPages = Math.ceil(sortedUsers.length / pageSize);
+  const pagedUsers = sortedUsers.slice((page - 1) * pageSize, page * pageSize);
+
+  // Reset page when page size changes
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
+
+  const colCount = userColumns.length;
 
   const openCreate = () => {
     setEditingId(null);
@@ -435,43 +486,51 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus className="w-4 h-4" />{t('user.createUser')}</Button>
       </div>
       <div className="flex-1 border rounded-lg bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-xs font-semibold">{t('common.username')}</TableHead>
-              <TableHead className="text-xs font-semibold">{t('common.name')}</TableHead>
-              <TableHead className="text-xs font-semibold">{t('common.email')}</TableHead>
-              {isSuperAdmin && <TableHead className="text-xs font-semibold">{t('common.organization')}</TableHead>}
-              {isSuperAdmin && <TableHead className="text-xs font-semibold">{t('common.group')}</TableHead>}
-              <TableHead className="text-xs font-semibold">{t('common.role')}</TableHead>
-              <TableHead className="text-xs font-semibold">{t('user.lastLogin')}</TableHead>
-              <TableHead className="text-xs font-semibold w-24">{t('common.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {usersQuery.isLoading ? (
-              <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 6} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-            ) : users.length === 0 ? (
-              <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 6} className="h-32 text-center text-muted-foreground text-sm">{t('user.noUsers')}</TableCell></TableRow>
-            ) : users.map((u: any) => (
-              <TableRow key={u.id} className="hover:bg-accent/30">
-                <TableCell className="text-sm font-medium">{u.username}{u.isSuperAdmin ? <Badge className="ml-1.5 text-[10px] h-4 px-1 bg-warning-soft text-warning border-warning-border">{t('user.superAdminBadge')}</Badge> : null}</TableCell>
-                <TableCell className="text-sm">{u.name || "-"}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{u.email || "-"}</TableCell>
-                {isSuperAdmin && <TableCell className="text-xs">{getOrgName(u.organizationId)}</TableCell>}
-                {isSuperAdmin && <TableCell className="text-xs">{getGroupName(u.groupId)}</TableCell>}
-                <TableCell><Badge className={`text-[10px] h-5 px-1.5 ${roleBadgeStyle(u.role)}`}>{ROLE_LABELS[u.role as Role] || u.role}</Badge></TableCell>
-                <TableCell className="text-xs text-muted-foreground">{u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleString("zh-CN") : "-"}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(u)}><Pencil className="w-3.5 h-3.5" /></Button>
-                    {!u.isSuperAdmin && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteId(u.id)}><Trash2 className="w-3.5 h-3.5" /></Button>}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="overflow-x-auto">
+          <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
+            <thead>
+              <tr className="bg-muted/30 hover:bg-muted/30 border-b">
+                {userColumns.map((col, i) => renderHeader(col, i === userColumns.length - 1))}
+              </tr>
+            </thead>
+            <tbody>
+              {usersQuery.isLoading ? (
+                <tr><td colSpan={colCount} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              ) : pagedUsers.length === 0 ? (
+                <tr><td colSpan={colCount} className="h-32 text-center text-muted-foreground text-sm">{t('user.noUsers')}</td></tr>
+              ) : pagedUsers.map((u: any) => {
+                let cellIdx = 0;
+                return (
+                  <tr key={u.id} className="hover:bg-accent/30 border-b border-border/30">
+                    {renderCell(userColumns[cellIdx++], false, <span className="text-sm font-medium">{u.username}{u.isSuperAdmin ? <Badge className="ml-1.5 text-[10px] h-4 px-1 bg-warning-soft text-warning border-warning-border">{t('user.superAdminBadge')}</Badge> : null}</span>)}
+                    {renderCell(userColumns[cellIdx++], false, <span className="text-sm">{u.name || "-"}</span>)}
+                    {renderCell(userColumns[cellIdx++], false, <span className="text-sm text-muted-foreground">{u.email || "-"}</span>)}
+                    {isSuperAdmin && renderCell(userColumns[cellIdx++], false, <span className="text-xs">{getOrgName(u.organizationId)}</span>)}
+                    {isSuperAdmin && renderCell(userColumns[cellIdx++], false, <span className="text-xs">{getGroupName(u.groupId)}</span>)}
+                    {renderCell(userColumns[cellIdx++], false, <Badge className={`text-[10px] h-5 px-1.5 ${roleBadgeStyle(u.role)}`}>{ROLE_LABELS[u.role as Role] || u.role}</Badge>)}
+                    {renderCell(userColumns[cellIdx++], false, <span className="text-xs text-muted-foreground">{u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleString("zh-CN") : "-"}</span>)}
+                    {renderCell(userColumns[cellIdx], true, (
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(u)}><Pencil className="w-3.5 h-3.5" /></Button>
+                        {!u.isSuperAdmin && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteId(u.id)}><Trash2 className="w-3.5 h-3.5" /></Button>}
+                      </div>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {totalPages > 0 && (
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            total={sortedUsers.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        )}
       </div>
 
       {/* Create/Edit Dialog */}

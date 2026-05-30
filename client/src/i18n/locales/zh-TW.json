@@ -1,7 +1,7 @@
 {
   "menu": {
     "dashboard": "儀表板",
-    "products": "產品資料",
+    "products": "數據管理",
     "stats": "業務分析",
     "summary": "變更記錄",
     "import": "資料匯入",
@@ -218,7 +218,29 @@
     "productCount": "產品",
     "historyCleared": "歷史記錄已清除",
     "confirmClearHistory": "確認清除歷史記錄",
-    "clearHistoryWarning": "清除後將刪除所有匯入歷史記錄，此操作無法復原。確定要繼續嗎？"
+    "clearHistoryWarning": "清除後將刪除所有導入歷史記錄，此操作不可恢復。確定要繼續嗎？",
+    "tabProduct": "產品數據導入",
+    "tabSpec": "技術參數導入",
+    "specInstructions": "技術參數導入說明",
+    "specSupportFormat": "支持 .xlsx / .xls / .csv 格式的技術參數文件",
+    "specFormatExplain": "第一列為產品型號，後續列為參數名（如端口數、交換容量、功耗等）",
+    "specDropzone": "拖拽 Excel/CSV 文件到此處，或點擊選擇",
+    "specFormatHint": "支持 .xlsx / .xls / .csv 格式",
+    "specName": "參數集名稱",
+    "specDescription": "描述（可選）",
+    "specPreview": "預覽：{{count}} 行數據",
+    "specImportSuccess": "參數集導入成功，共 {{count}} 個型號",
+    "specConfirmTitle": "確認導入參數集",
+    "specConfirmDesc": "即將導入參數集「{{name}}」，文件：{{file}}",
+    "specConfirmRows": "預覽到 {{count}} 行數據",
+    "specHistory": "參數集導入記錄",
+    "specExistingData": "目前已有 {{count}} 個參數集。",
+    "specMergeDesc": "保留現有參數集，新增本次導入的參數集。",
+    "specOverwriteDesc": "將刪除所有現有參數集，僅保留本次導入。此操作不可撤銷。",
+    "rows": "{{count}} 行",
+    "invalid": "✗無效",
+    "sheetCount": "{{count}} 個表格",
+    "fileCount": "{{count}} 個文件"
   },
   "activity": {
     "title": "操作日誌",
@@ -361,6 +383,9 @@
     "exportPDF": "匯出PDF"
   },
   "data": {
+    "tabProduct": "產品數據",
+    "tabSpec": "參數數據",
+    "specCategories": "產品分類",
     "category": "產品分類",
     "title": "產品資料",
     "searchPlaceholder": "搜尋所有欄位...",
@@ -390,7 +415,17 @@
       "isNew": "新品",
       "remark": "備註"
     },
-    "selectProductsFirst": "請先選擇產品"
+    "selectProductsFirst": "請先選擇產品",
+    "colModel": "型號",
+    "colSpecs": "簡要參數",
+    "expandCategory": "展開分類",
+    "collapseCategory": "收縮分類",
+    "unlockEdit": "解鎖編輯",
+    "lockReadonly": "鎖定唯讀",
+    "readonly": "唯讀",
+    "editing": "編輯中",
+    "adjustSearchHint": "嘗試調整搜索條件",
+    "productDescription": "產品描述"
   },
   "stats": {
     "title": "分類統計",
@@ -504,11 +539,18 @@
     "exportExcel": "匯出 Excel",
     "print": "列印",
     "noSpecData": "暫無參數資料",
+    "models": "型號",
+    "briefSpecs": "簡要參數",
     "searchPlaceholder": "搜尋型號...",
     "createdAt": "建立時間",
     "specCount": "參數數",
     "backToList": "返回列表",
     "dropzone": "拖曳 Excel/CSV 檔案到此處，或點擊選擇檔案",
     "changeFile": "更換檔案"
+  },
+  "summary": {
+    "title": "變更記錄",
+    "tabPrice": "價格變更記錄",
+    "tabSpec": "參數變更記錄"
   }
 }

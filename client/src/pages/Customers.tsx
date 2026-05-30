@@ -1,21 +1,21 @@
 ﻿import { trpc } from "@/lib/trpc";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import EmptyState from "@/components/EmptyState";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Search, Users, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useMobilePreview } from "@/contexts/MobilePreviewContext";
+import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";
+import TablePagination from "@/components/TablePagination";
 
 export default function Customers() {
   const [, setLocation] = useLocation();
   const isMobilePreview = useMobilePreview();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [page] = useState(1);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -28,11 +28,32 @@ export default function Customers() {
   const customersQuery = trpc.customers.list.useQuery({
     search: debouncedSearch || undefined,
     page,
-    pageSize: 20,
+    pageSize,
   });
 
   const items = customersQuery.data?.items ?? [];
   const total = customersQuery.data?.total ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  const customerColumns: ColumnDef[] = useMemo(() => [
+    { key: "rank", label: "#", defaultWidth: 48 },
+    { key: "customerName", label: "客户名称", defaultWidth: 200, sortable: true },
+    { key: "industries", label: "行业", defaultWidth: 140 },
+    { key: "quotationCount", label: "报价数", defaultWidth: 80, sortable: true },
+    { key: "totalRevenue", label: "总金额", defaultWidth: 120, sortable: true },
+    { key: "completedRevenue", label: "成交额", defaultWidth: 120, sortable: true },
+    { key: "lastQuotationAt", label: "最近报价", defaultWidth: 100, sortable: true },
+    { key: "expand", label: "", defaultWidth: 40 },
+  ], []);
+
+  const { renderHeader, renderCell, sortData } = useTableFeatures(customerColumns);
+
+  const sortedItems = sortData(items);
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
 
   return (
     <div className="space-y-4">
@@ -58,62 +79,69 @@ export default function Customers() {
       {/* Table */}
       <div className="bg-card border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-xs font-semibold w-12 text-center">#</TableHead>
-              <TableHead className="text-xs font-semibold">客户名称</TableHead>
-              <TableHead className="text-xs font-semibold">行业</TableHead>
-              <TableHead className="text-xs font-semibold text-center">报价数</TableHead>
-              <TableHead className="text-xs font-semibold text-right">总金额</TableHead>
-              <TableHead className="text-xs font-semibold text-right">成交额</TableHead>
-              <TableHead className="text-xs font-semibold text-right">最近报价</TableHead>
-              <TableHead className="text-xs font-semibold w-10"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {customersQuery.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-                  加载中...
-                </TableCell>
-              </TableRow>
-            ) : items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8}>
-                  <EmptyState icon={Users} title="暂无客户数据" description="创建报价单后，客户信息会自动汇总到此处" />
-                </TableCell>
-              </TableRow>
-            ) : (
-              items.map((customer: any, idx: number) => (
-                <CustomerRow
-                  key={customer.customerName}
-                  customer={customer}
-                  rank={(page - 1) * 20 + idx + 1}
-                  expanded={expandedCustomer === customer.customerName}
-                  onToggle={() => setExpandedCustomer(
-                    expandedCustomer === customer.customerName ? null : customer.customerName
-                  )}
-                  onViewQuotation={(id: number) => setLocation(`/quotations/${id}`)}
-                />
-              ))
-            )}
-          </TableBody>
-        </Table>
+          <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
+            <thead>
+              <tr className="bg-muted/30 hover:bg-muted/30 border-b">
+                {customerColumns.map((col, i) => renderHeader(col, i === customerColumns.length - 1))}
+              </tr>
+            </thead>
+            <tbody>
+              {customersQuery.isLoading ? (
+                <tr>
+                  <td colSpan={8} className="h-32 text-center text-muted-foreground">
+                    加载中...
+                  </td>
+                </tr>
+              ) : sortedItems.length === 0 ? (
+                <tr>
+                  <td colSpan={8}>
+                    <EmptyState icon={Users} title="暂无客户数据" description="创建报价单后，客户信息会自动汇总到此处" />
+                  </td>
+                </tr>
+              ) : (
+                sortedItems.map((customer: any, idx: number) => (
+                  <CustomerRow
+                    key={customer.customerName}
+                    customer={customer}
+                    rank={(page - 1) * pageSize + idx + 1}
+                    expanded={expandedCustomer === customer.customerName}
+                    onToggle={() => setExpandedCustomer(
+                      expandedCustomer === customer.customerName ? null : customer.customerName
+                    )}
+                    onViewQuotation={(id: number) => setLocation(`/quotations/${id}`)}
+                    columns={customerColumns}
+                    renderCell={renderCell}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+        {totalPages > 0 && (
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        )}
       </div>
     </div>
   );
 }
 
 function CustomerRow({
-  customer, rank, expanded, onToggle, onViewQuotation,
+  customer, rank, expanded, onToggle, onViewQuotation, columns, renderCell,
 }: {
   customer: any;
   rank: number;
   expanded: boolean;
   onToggle: () => void;
   onViewQuotation: (id: number) => void;
+  columns: ColumnDef[];
+  renderCell: (col: ColumnDef, isLast: boolean, content: React.ReactNode) => React.ReactNode;
 }) {
   const quotationsQuery = trpc.quotations.list.useQuery(
     { search: customer.customerName, page: 1, pageSize: 10 },
@@ -124,41 +152,43 @@ function CustomerRow({
 
   return (
     <>
-      <TableRow className="hover:bg-accent/30 cursor-pointer" onClick={onToggle}>
-        <TableCell className="text-center text-xs text-muted-foreground">
-          {rank <= 3 ? (
-            <Badge className={`text-[10px] h-5 w-5 p-0 justify-center ${rank === 1 ? "bg-amber-500/10 text-amber-600 border-amber-200" : rank === 2 ? "bg-slate-400/10 text-slate-500 border-slate-200" : "bg-orange-400/10 text-orange-600 border-orange-200"}`}>
-              {rank}
-            </Badge>
-          ) : (
-            <span className="tabular-nums">{rank}</span>
-          )}
-        </TableCell>
-        <TableCell className="text-sm font-medium">{customer.customerName}</TableCell>
-        <TableCell className="text-xs text-muted-foreground">
-          {customer.industries?.split(",").filter(Boolean).map((ind: string) => (
-            <Badge key={ind} variant="secondary" className="text-[10px] h-4 mr-1">{ind}</Badge>
-          )) || "—"}
-        </TableCell>
-        <TableCell className="text-center text-sm tabular-nums">{customer.quotationCount}</TableCell>
-        <TableCell className="text-right text-sm font-medium tabular-nums">
-          ¥{customer.totalRevenue.toLocaleString()}
-        </TableCell>
-        <TableCell className="text-right text-sm tabular-nums text-success">
-          ¥{customer.completedRevenue.toLocaleString()}
-        </TableCell>
-        <TableCell className="text-right text-xs text-muted-foreground">
-          {customer.lastQuotationAt
-            ? new Date(customer.lastQuotationAt).toLocaleDateString("zh-CN", { month: "short", day: "numeric" })
-            : "—"}
-        </TableCell>
-        <TableCell>
-          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-        </TableCell>
-      </TableRow>
+      <tr className="hover:bg-accent/30 cursor-pointer" onClick={onToggle}>
+        {renderCell(columns[0], false,
+          <span className="flex justify-center text-xs text-muted-foreground">
+            {rank <= 3 ? (
+              <Badge className={`text-[10px] h-5 w-5 p-0 justify-center ${rank === 1 ? "bg-amber-500/10 text-amber-600 border-amber-200" : rank === 2 ? "bg-slate-400/10 text-slate-500 border-slate-200" : "bg-orange-400/10 text-orange-600 border-orange-200"}`}>
+                {rank}
+              </Badge>
+            ) : (
+              <span className="tabular-nums">{rank}</span>
+            )}
+          </span>
+        )}
+        {renderCell(columns[1], false, <span className="text-sm font-medium">{customer.customerName}</span>)}
+        {renderCell(columns[2], false,
+          <span className="text-xs text-muted-foreground">
+            {customer.industries?.split(",").filter(Boolean).map((ind: string) => (
+              <Badge key={ind} variant="secondary" className="text-[10px] h-4 mr-1">{ind}</Badge>
+            )) || "—"}
+          </span>
+        )}
+        {renderCell(columns[3], false, <span className="flex justify-center text-sm tabular-nums">{customer.quotationCount}</span>)}
+        {renderCell(columns[4], false, <span className="flex justify-end text-sm font-medium tabular-nums">¥{customer.totalRevenue.toLocaleString()}</span>)}
+        {renderCell(columns[5], false, <span className="flex justify-end text-sm tabular-nums text-success">¥{customer.completedRevenue.toLocaleString()}</span>)}
+        {renderCell(columns[6], false,
+          <span className="flex justify-end text-xs text-muted-foreground">
+            {customer.lastQuotationAt
+              ? new Date(customer.lastQuotationAt).toLocaleDateString("zh-CN", { month: "short", day: "numeric" })
+              : "—"}
+          </span>
+        )}
+        {renderCell(columns[7], true,
+          expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        )}
+      </tr>
       {expanded && (
-        <TableRow className="bg-muted/10">
-          <TableCell colSpan={8} className="px-8 py-3">
+        <tr className="bg-muted/10">
+          <td colSpan={8} className="px-8 py-3">
             {quotationsQuery.isLoading ? (
               <p className="text-xs text-muted-foreground">加载中...</p>
             ) : quotations.length === 0 ? (
@@ -186,8 +216,8 @@ function CustomerRow({
                 ))}
               </div>
             )}
-          </TableCell>
-        </TableRow>
+          </td>
+        </tr>
       )}
     </>
   );

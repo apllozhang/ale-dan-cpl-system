@@ -9,6 +9,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";
 import gsap from "gsap";
 
 const CHART_COLORS = [
@@ -61,6 +62,14 @@ function useStaggerIn<T extends HTMLElement>(ready: boolean) {
 export default function CategoryStats() {
   const { t } = useTranslation();
   const { data: stats, isLoading } = trpc.cpl.stats.useQuery();
+
+  const tableColumns: ColumnDef[] = useMemo(() => [
+    { key: "sheetName", label: t('stats.seriesName'), defaultWidth: 200, sortable: true },
+    { key: "count", label: t('stats.productCount'), defaultWidth: 120, sortable: true },
+    { key: "proportion", label: t('stats.proportion'), defaultWidth: 200, sortable: false },
+  ], [t]);
+
+  const { renderHeader, renderCell, sortData } = useTableFeatures(tableColumns);
 
   const sheetData = useMemo(() => {
     if (!stats?.bySheet) return [];
@@ -238,20 +247,25 @@ export default function CategoryStats() {
         </CardHeader>
         <CardContent>
           <div className="overflow-auto">
-            <table className="w-full">
+            <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
               <thead>
                 <tr className="border-b bg-muted/30">
-                  <th className="text-xs font-semibold px-4 py-2 text-left">{t('stats.seriesName')}</th>
-                  <th className="text-xs font-semibold px-4 py-2 text-right">{t('stats.productCount')}</th>
-                  <th className="text-xs font-semibold px-4 py-2 text-right">{t('stats.proportion')}</th>
+                  {tableColumns.map((col, i) => renderHeader(col, i === tableColumns.length - 1))}
                 </tr>
               </thead>
               <tbody>
-                {(stats?.bySheet ?? []).map((s: any, i: number) => (
+                {sortData((stats?.bySheet ?? []).map((s: any) => ({
+                  ...s,
+                  sheetName: s.sheetName,
+                  count: Number(s.count),
+                  proportion: ((Number(s.count) / (stats?.total || 1)) * 100).toFixed(1),
+                }))).map((s: any, i: number) => (
                   <tr key={i} className="border-b border-border/50 hover:bg-accent/20">
-                    <td className="px-4 py-2 text-sm">{s.sheetName}</td>
-                    <td className="px-4 py-2 text-sm text-right tabular-nums font-medium">{Number(s.count).toLocaleString()}</td>
-                    <td className="px-4 py-2 text-sm text-right">
+                    {renderCell(tableColumns[0], false, <span className="text-sm">{s.sheetName}</span>)}
+                    {renderCell(tableColumns[1], false,
+                      <span className="text-sm text-right tabular-nums font-medium block">{Number(s.count).toLocaleString()}</span>
+                    )}
+                    {renderCell(tableColumns[2], true,
                       <div className="flex items-center justify-end gap-2">
                         <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                           <div
@@ -260,10 +274,10 @@ export default function CategoryStats() {
                           />
                         </div>
                         <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">
-                          {((Number(s.count) / (stats?.total || 1)) * 100).toFixed(1)}%
+                          {s.proportion}%
                         </span>
                       </div>
-                    </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
