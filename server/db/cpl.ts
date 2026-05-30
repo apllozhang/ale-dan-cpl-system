@@ -241,10 +241,14 @@ export async function importCplOverwrite(data: {
     // 3. Activate this import
     await tx.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 
-    // 4. Tag and insert sheets
+    // 4. Tag and insert sheets in batches
     if (data.sheets.length > 0) {
       const sheetsWithLogId = data.sheets.map(s => ({ ...s, importLogId }));
-      await tx.insert(cplSheets).values(sheetsWithLogId);
+      const batchSize = 50; // Smaller batch size for sheets
+      for (let i = 0; i < sheetsWithLogId.length; i += batchSize) {
+        const batch = sheetsWithLogId.slice(i, i + batchSize);
+        await tx.insert(cplSheets).values(batch);
+      }
     }
 
     // 5. Tag and insert products in batches
