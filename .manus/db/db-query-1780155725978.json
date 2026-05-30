@@ -1,0 +1,31 @@
+{
+  "query": "SELECT COUNT(*) as count FROM cpl_sheets; SELECT * FROM cpl_sheets LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 36JDpBo3zu5AaRu.c009522ec6e2 --database neEWayju942ovVPrciQXjy --execute SELECT COUNT(*) as count FROM cpl_sheets; SELECT * FROM cpl_sheets LIMIT 5;",
+  "rows": [
+    {
+      "count": "27"
+    },
+    {
+      "count": "id\tsheetName\tdisplayOrder\tproductCount\tcreatedAt\tupdatedAt\timportLogId"
+    },
+    {
+      "count": "60001\tOmniSwitch 9900\t0\t57\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL"
+    },
+    {
+      "count": "60002\tOmniSwitch 9500\t1\t18\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL"
+    },
+    {
+      "count": "60003\tOS9500 POL\t2\t28\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL"
+    },
+    {
+      "count": "60004\tOmniSwitch 6920\t3\t26\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL"
+    },
+    {
+      "count": "60005\tOmniSwitch 6900\t4\t62\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "count\n27\nid\tsheetName\tdisplayOrder\tproductCount\tcreatedAt\tupdatedAt\timportLogId\n60001\tOmniSwitch 9900\t0\t57\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL\n60002\tOmniSwitch 9500\t1\t18\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL\n60003\tOS9500 POL\t2\t28\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL\n60004\tOmniSwitch 6920\t3\t26\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL\n60005\tOmniSwitch 6900\t4\t62\t2026-05-23 13:48:32\t2026-05-23 13:48:32\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 343
+}

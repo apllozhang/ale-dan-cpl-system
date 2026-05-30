@@ -176,6 +176,11 @@ export const cplRouter = router({
         }
         importInProgress = true;
         try {
+          // Remove id field from sheetMeta to avoid conflicts with database auto-increment
+          const cleanedSheets = sheetMeta.map((s: any) => {
+            const { id, ...rest } = s;
+            return rest;
+          });
           await db.importCplOverwrite({
             fileName: input.fileName,
             userId: ctx.user!.id,
@@ -186,7 +191,7 @@ export const cplRouter = router({
             sheetsCount: sheetMeta.length,
             productsCount: products.length,
             products: products as any,
-            sheets: sheetMeta as any,
+            sheets: cleanedSheets as any,
             summary: summaryContent ? { content: summaryContent, version: input.fileName } : undefined,
           });
         } finally {
@@ -203,9 +208,13 @@ export const cplRouter = router({
           const activeImportId = await db.getActiveImportLogId();
 
           (products as any[]).forEach((p: any) => { p.importLogId = activeImportId; });
-          (sheetMeta as any[]).forEach((s: any) => { s.importLogId = activeImportId; });
+          // Remove id field from sheetMeta to avoid conflicts with database auto-increment
+          const cleanedSheets = sheetMeta.map((s: any) => {
+            const { id, ...rest } = s;
+            return { ...rest, importLogId: activeImportId };
+          });
 
-          await db.insertSheets(sheetMeta as any);
+          await db.insertSheets(cleanedSheets as any);
           if (products.length > 0) {
             await db.bulkInsertProducts(products as any);
           }

@@ -191,3 +191,9 @@
 - [x] 修复表别名在 WHERE 子句中的使用
 - [x] 添加单元测试验证 analytics API
 - [x] 测试业务分析页面数据加载
+
+## CPL 产品数据导入修复
+
+- [x] 修复批量插入 sheets 时的 MySQL max packet size 错误
+- [x] 将 sheets 批量插入改为 50 条一批处理
+- [x] 验证导入功能正常工作
