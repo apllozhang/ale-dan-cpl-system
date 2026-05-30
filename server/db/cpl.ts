@@ -30,9 +30,10 @@ export async function deactivateAllImports() {
 export async function createImportLogAndGetId(data: InsertImportLog): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result: any = await db.insert(importLogs).values(data);
-  // result is [{ insertId, affectedRows }]
-  const insertId = Number((result && Array.isArray(result) && result[0]) ? result[0].insertId : 0);
+  await db.insert(importLogs).values(data);
+  // Get the last inserted ID using LAST_INSERT_ID()
+  const lastIdResult = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+  const insertId = Number(lastIdResult[0]?.id || 0);
   if (insertId === 0) {
     throw new Error("Failed to get insertId from import log creation");
   }
@@ -227,7 +228,7 @@ export async function importCplOverwrite(data: {
 
   return await db.transaction(async (tx) => {
     // 1. Create import log
-    const result: any = await tx.insert(importLogs).values({
+    await tx.insert(importLogs).values({
       fileName: data.fileName,
       userId: data.userId,
       username: data.username,
@@ -239,11 +240,9 @@ export async function importCplOverwrite(data: {
       productsCount: data.productsCount,
       isActive: true,
     });
-    // Extract insertId from Drizzle result - result is [{ insertId, affectedRows }]
-    let importLogId = 0;
-    if (result && Array.isArray(result) && result[0]) {
-      importLogId = Number(result[0].insertId || 0);
-    }
+    // Get the last inserted ID using LAST_INSERT_ID()
+    const lastIdResult = await tx.execute(sql`SELECT LAST_INSERT_ID() as id`);
+    const importLogId = Number(lastIdResult[0]?.id || 0);
     if (importLogId === 0) {
       throw new Error("Failed to get insertId from import log creation");
     }

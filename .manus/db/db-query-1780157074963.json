@@ -1,0 +1,24 @@
+{
+  "query": "SELECT * FROM import_logs ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 36JDpBo3zu5AaRu.c009522ec6e2 --database neEWayju942ovVPrciQXjy --execute SELECT * FROM import_logs ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "fileName": "Data CPL-(Q2 Apr 2026 CN)).xlsx",
+      "userId": "1",
+      "username": "aletss",
+      "orgName": "NULL",
+      "groupName": "NULL",
+      "mode": "overwrite",
+      "sheetsCount": "27",
+      "productsCount": "1297",
+      "createdAt": "2026-05-20 13:29:13",
+      "sheetNames": "NULL",
+      "isActive": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfileName\tuserId\tusername\torgName\tgroupName\tmode\tsheetsCount\tproductsCount\tcreatedAt\tsheetNames\tisActive\n1\tData CPL-(Q2 Apr 2026 CN)).xlsx\t1\taletss\tNULL\tNULL\toverwrite\t27\t1297\t2026-05-20 13:29:13\tNULL\t0\n",
+  "stderr": "",
+  "execution_time_ms": 286
+}
