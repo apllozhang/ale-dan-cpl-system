@@ -123,7 +123,7 @@ export default function Home() {
     endDate: endDate || undefined,
   });
 
-  const sheets = sheetsQuery.data?.items ?? [];
+  const sheets = sheetsQuery.data ?? [];
   const summary = summaryQuery.data;
   const totalProducts = sheets.reduce((sum, s) => sum + s.productCount, 0);
   const stats = dashboardQuery.data?.stats;

@@ -82,7 +82,7 @@ export async function getImportLogs(params: { page?: number; pageSize?: number }
 // ==================== CPL Sheets helpers ====================
 export async function getCplSheets(params: { importLogId?: number; page?: number; pageSize?: number } = {}) {
   const db = await getDb();
-  if (!db) return { items: [], total: 0 };
+  if (!db) return [];
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 20;
   const offset = (page - 1) * pageSize;
@@ -93,16 +93,13 @@ export async function getCplSheets(params: { importLogId?: number; page?: number
   }
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const countResult = await db.select({ total: sql<number>`COUNT(*)` }).from(cplSheets).where(whereClause);
-  const total = Number(countResult[0]?.total ?? 0);
-
   const items = await db.select().from(cplSheets)
     .where(whereClause)
     .orderBy(asc(cplSheets.displayOrder))
     .limit(pageSize)
     .offset(offset);
 
-  return { items, total };
+  return items;
 }
 
 // ==================== CPL Products helpers ====================
