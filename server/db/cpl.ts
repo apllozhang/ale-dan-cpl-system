@@ -204,10 +204,22 @@ export async function importCplOverwrite(data: {
 // ==================== CPL Stats helpers ====================
 export async function getCplStats() {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return {
+    importLogId: 0,
+    fileName: "",
+    sheetsCount: 0,
+    productsCount: 0,
+    createdAt: new Date(),
+  };
 
   const activeLog = await getActiveImportLog();
-  if (!activeLog) return null;
+  if (!activeLog) return {
+    importLogId: 0,
+    fileName: "",
+    sheetsCount: 0,
+    productsCount: 0,
+    createdAt: new Date(),
+  };
 
   const sheetsCount = await db.select({ count: sql<number>`COUNT(*)` })
     .from(cplSheets)
