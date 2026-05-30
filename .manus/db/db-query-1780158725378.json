@@ -1,0 +1,19 @@
+{
+  "query": "SELECT COUNT(*) as sheets_count FROM cpl_sheets WHERE importLogId = 180001; SELECT COUNT(*) as products_count FROM cpl_products WHERE importLogId = 180001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 36JDpBo3zu5AaRu.c009522ec6e2 --database neEWayju942ovVPrciQXjy --execute SELECT COUNT(*) as sheets_count FROM cpl_sheets WHERE importLogId = 180001; SELECT COUNT(*) as products_count FROM cpl_products WHERE importLogId = 180001;",
+  "rows": [
+    {
+      "sheets_count": "0"
+    },
+    {
+      "sheets_count": "products_count"
+    },
+    {
+      "sheets_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "sheets_count\n0\nproducts_count\n0\n",
+  "stderr": "",
+  "execution_time_ms": 261
+}
