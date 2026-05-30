@@ -31,8 +31,12 @@ export async function createImportLogAndGetId(data: InsertImportLog): Promise<nu
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result: any = await db.insert(importLogs).values(data);
-  const rows = Array.isArray(result[0]) ? result[0] : result;
-  return Number(rows.insertId ?? rows[0]?.insertId ?? 0);
+  // result is [{ insertId, affectedRows }]
+  const insertId = Number((result && Array.isArray(result) && result[0]) ? result[0].insertId : 0);
+  if (insertId === 0) {
+    throw new Error("Failed to get insertId from import log creation");
+  }
+  return insertId;
 }
 
 export async function getImportLogById(id: number) {
@@ -235,8 +239,14 @@ export async function importCplOverwrite(data: {
       productsCount: data.productsCount,
       isActive: true,
     });
-    const rows = Array.isArray(result[0]) ? result[0] : result;
-    const importLogId = Number(rows.insertId ?? rows[0]?.insertId ?? 0);
+    // Extract insertId from Drizzle result - result is [{ insertId, affectedRows }]
+    let importLogId = 0;
+    if (result && Array.isArray(result) && result[0]) {
+      importLogId = Number(result[0].insertId || 0);
+    }
+    if (importLogId === 0) {
+      throw new Error("Failed to get insertId from import log creation");
+    }
 
     // 2. Deactivate all other imports
     await tx.update(importLogs).set({ isActive: false }).where(eq(importLogs.isActive, true));
