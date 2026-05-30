@@ -31,10 +31,14 @@ export async function createImportLogAndGetId(data: InsertImportLog): Promise<nu
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.insert(importLogs).values(data);
-  // Get the last inserted ID using LAST_INSERT_ID()
-  const lastIdResult = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
-  const insertId = Number(lastIdResult[0]?.id || 0);
-  if (insertId === 0) {
+  // Get the last inserted record by querying with the unique combination
+  const lastRecord = await db.select({ id: importLogs.id })
+    .from(importLogs)
+    .where(eq(importLogs.fileName, data.fileName))
+    .orderBy(desc(importLogs.id))
+    .limit(1);
+  const insertId = lastRecord[0]?.id;
+  if (!insertId) {
     throw new Error("Failed to get insertId from import log creation");
   }
   return insertId;
@@ -240,10 +244,14 @@ export async function importCplOverwrite(data: {
       productsCount: data.productsCount,
       isActive: true,
     });
-    // Get the last inserted ID using LAST_INSERT_ID()
-    const lastIdResult = await tx.execute(sql`SELECT LAST_INSERT_ID() as id`);
-    const importLogId = Number(lastIdResult[0]?.id || 0);
-    if (importLogId === 0) {
+    // Get the last inserted record by querying with the unique combination
+    const lastRecord = await tx.select({ id: importLogs.id })
+      .from(importLogs)
+      .where(eq(importLogs.fileName, data.fileName))
+      .orderBy(desc(importLogs.id))
+      .limit(1);
+    const importLogId = lastRecord[0]?.id;
+    if (!importLogId) {
       throw new Error("Failed to get insertId from import log creation");
     }
 
