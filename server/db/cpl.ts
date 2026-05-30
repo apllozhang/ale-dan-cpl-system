@@ -155,7 +155,11 @@ export async function getCplSheets() {
 export async function insertSheets(sheets: InsertCplSheet[]) {
   const db = await getDb();
   if (!db || sheets.length === 0) return;
-  await db.insert(cplSheets).values(sheets);
+  const batchSize = 50;
+  for (let i = 0; i < sheets.length; i += batchSize) {
+    const batch = sheets.slice(i, i + batchSize);
+    await db.insert(cplSheets).values(batch);
+  }
 }
 
 // ==================== CPL Summary helpers ====================
@@ -244,9 +248,9 @@ export async function importCplOverwrite(data: {
     // 4. Tag and insert sheets in batches
     if (data.sheets.length > 0) {
       const sheetsWithLogId = data.sheets.map(s => ({ ...s, importLogId }));
-      const batchSize = 50; // Smaller batch size for sheets
-      for (let i = 0; i < sheetsWithLogId.length; i += batchSize) {
-        const batch = sheetsWithLogId.slice(i, i + batchSize);
+      const sheetBatchSize = 50;
+      for (let i = 0; i < sheetsWithLogId.length; i += sheetBatchSize) {
+        const batch = sheetsWithLogId.slice(i, i + sheetBatchSize);
         await tx.insert(cplSheets).values(batch);
       }
     }
