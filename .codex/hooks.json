@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file=\"$CLAUDE_FILE_PATH\"; case \"$file\" in *.ts|*.tsx) npx prettier --write \"$file\" 2>/dev/null && npx eslint --fix \"$file\" 2>/dev/null ;; esac"
+          }
+        ]
+      }
+    ]
+  }
+}

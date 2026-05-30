@@ -111,7 +111,7 @@ function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]) {
 export const cplRouter = router({
   // Get all sheets
   sheets: publicProcedure.query(async () => {
-    return db.getCplSheets();
+    return db.getCplSheets({ pageSize: 9999 });
   }),
 
   // Get products with filtering, pagination, sorting

@@ -1,4 +1,4 @@
-import { eq, like, and, sql, asc, desc, isNotNull } from "drizzle-orm";
+import { eq, like, or, and, sql, asc, desc, isNotNull, inArray, SQL } from "drizzle-orm";
 import {
   importLogs, cplSheets, cplProducts, cplSummary, InsertImportLog, InsertCplSheet, InsertCplProduct,
 } from "../../drizzle/schema";
@@ -9,6 +9,12 @@ export async function deactivateAllImports() {
   const db = await getDb();
   if (!db) return;
   await db.update(importLogs).set({ isActive: false }).where(eq(importLogs.isActive, true));
+}
+
+export async function activateImport(importLogId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 }
 
 export async function createImportLogAndGetId(data: InsertImportLog): Promise<number> {
@@ -61,23 +67,7 @@ export async function getActiveImportLog() {
   return log || null;
 }
 
-export async function getImportLogs(params: { page?: number; pageSize?: number } = {}) {
-  const db = await getDb();
-  if (!db) return { items: [], total: 0 };
-  const page = params.page ?? 1;
-  const pageSize = params.pageSize ?? 20;
-  const offset = (page - 1) * pageSize;
-
-  const countResult = await db.select({ total: sql<number>`COUNT(*)` }).from(importLogs);
-  const total = Number(countResult[0]?.total ?? 0);
-
-  const items = await db.select().from(importLogs)
-    .orderBy(desc(importLogs.createdAt))
-    .limit(pageSize)
-    .offset(offset);
-
-  return { items, total };
-}
+// getImportLogs is in ./importLogs.ts — do not re-export from here
 
 // ==================== CPL Sheets helpers ====================
 export async function getCplSheets(params: { importLogId?: number; page?: number; pageSize?: number } = {}) {
@@ -103,29 +93,101 @@ export async function getCplSheets(params: { importLogId?: number; page?: number
 }
 
 // ==================== CPL Products helpers ====================
-export async function getCplProducts(params: { sheetId?: number; page?: number; pageSize?: number } = {}) {
+export async function getCplProducts(params: {
+  sheetName?: string;
+  sheetNames?: string[];
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  filters?: Record<string, string>;
+} = {}) {
   const db = await getDb();
   if (!db) return { items: [], total: 0 };
-  const page = params.page ?? 1;
-  const pageSize = params.pageSize ?? 20;
-  const offset = (page - 1) * pageSize;
 
-  const conditions = [];
-  if (params.sheetId) {
-    conditions.push(eq(cplProducts.sheetId, params.sheetId));
+  const activeImportId = await getActiveImportLogId();
+  if (!activeImportId) return { items: [], total: 0 };
+
+  const { sheetName, sheetNames, search, page = 1, pageSize = 50, sortBy, sortOrder = "asc", filters } = params;
+  const conditions: SQL[] = [eq(cplProducts.importLogId, activeImportId)];
+
+  if (sheetNames && sheetNames.length > 0) {
+    conditions.push(inArray(cplProducts.sheetName, sheetNames));
+  } else if (sheetName) {
+    conditions.push(eq(cplProducts.sheetName, sheetName));
   }
+
+  if (search && search.trim()) {
+    const searchTerm = `%${search.trim()}%`;
+    conditions.push(
+      or(
+        like(cplProducts.productGroup, searchTerm),
+        like(cplProducts.taxCategory, searchTerm),
+        like(cplProducts.productModel, searchTerm),
+        like(cplProducts.productDesc, searchTerm),
+        like(cplProducts.salesCategory, searchTerm),
+        like(cplProducts.serviceCategory, searchTerm),
+        like(cplProducts.productStatus, searchTerm),
+        like(cplProducts.listPrice, searchTerm),
+        like(cplProducts.priceNote, searchTerm),
+        like(cplProducts.isNew, searchTerm),
+        like(cplProducts.remark, searchTerm),
+      )!
+    );
+  }
+
+  if (filters) {
+    for (const [key, value] of Object.entries(filters)) {
+      if (!value || !value.trim()) continue;
+      const columnMap: Record<string, any> = {
+        productGroup: cplProducts.productGroup,
+        taxCategory: cplProducts.taxCategory,
+        productModel: cplProducts.productModel,
+        productDesc: cplProducts.productDesc,
+        salesCategory: cplProducts.salesCategory,
+        serviceCategory: cplProducts.serviceCategory,
+        productStatus: cplProducts.productStatus,
+        listPrice: cplProducts.listPrice,
+        priceNote: cplProducts.priceNote,
+        isNew: cplProducts.isNew,
+        remark: cplProducts.remark,
+      };
+      if (columnMap[key]) {
+        conditions.push(like(columnMap[key], `%${value.trim()}%`));
+      }
+    }
+  }
+
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const countResult = await db.select({ total: sql<number>`COUNT(*)` }).from(cplProducts).where(whereClause);
-  const total = Number(countResult[0]?.total ?? 0);
+  const sortColumnMap: Record<string, any> = {
+    productGroup: cplProducts.productGroup,
+    taxCategory: cplProducts.taxCategory,
+    productModel: cplProducts.productModel,
+    productDesc: cplProducts.productDesc,
+    salesCategory: cplProducts.salesCategory,
+    serviceCategory: cplProducts.serviceCategory,
+    productStatus: cplProducts.productStatus,
+    listPrice: cplProducts.listPrice,
+    priceNote: cplProducts.priceNote,
+    isNew: cplProducts.isNew,
+    remark: cplProducts.remark,
+  };
+  const sortColumn = sortBy && sortColumnMap[sortBy] ? sortColumnMap[sortBy] : cplProducts.id;
+  const orderFn = sortOrder === "desc" ? desc : asc;
 
-  const items = await db.select().from(cplProducts)
-    .where(whereClause)
-    .orderBy(asc(cplProducts.productModel))
-    .limit(pageSize)
-    .offset(offset);
+  const offset = (page - 1) * pageSize;
 
-  return { items, total };
+  const [items, countResult] = await Promise.all([
+    db.select().from(cplProducts).where(whereClause).orderBy(orderFn(sortColumn)).limit(pageSize).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(cplProducts).where(whereClause),
+  ]);
+
+  return {
+    items,
+    total: Number(countResult[0]?.count ?? 0),
+  };
 }
 
 // ==================== CPL Import helpers ====================
@@ -199,38 +261,113 @@ export async function importCplOverwrite(data: {
 }
 
 // ==================== CPL Stats helpers ====================
+export async function getActiveImportLogId(): Promise<number | null> {
+  const log = await getActiveImportLog();
+  return log?.id ?? null;
+}
+
+export async function getLatestSummary() {
+  const db = await getDb();
+  if (!db) return null;
+  const activeImportId = await getActiveImportLogId();
+  if (!activeImportId) return null;
+  const result = await db.select().from(cplSummary).where(eq(cplSummary.importLogId, activeImportId)).orderBy(desc(cplSummary.importedAt)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function countCplProducts() {
+  const db = await getDb();
+  if (!db) return 0;
+  const activeImportId = await getActiveImportLogId();
+  if (!activeImportId) return 0;
+  return db.$count(cplProducts, eq(cplProducts.importLogId, activeImportId));
+}
+
+export async function insertSheets(sheets: InsertCplSheet[]) {
+  const db = await getDb();
+  if (!db || sheets.length === 0) return;
+  const batchSize = 50;
+  for (let i = 0; i < sheets.length; i += batchSize) {
+    const batch = sheets.slice(i, i + batchSize);
+    await db.insert(cplSheets).values(batch);
+  }
+}
+
+export async function bulkInsertProducts(products: InsertCplProduct[]) {
+  const db = await getDb();
+  if (!db) return;
+  const batchSize = 200;
+  for (let i = 0; i < products.length; i += batchSize) {
+    const batch = products.slice(i, i + batchSize);
+    await db.insert(cplProducts).values(batch);
+  }
+}
+
+export async function insertSummary(summary: { content: string; version: string; importLogId: number }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(cplSummary).values(summary);
+}
+
 export async function getCplStats() {
   const db = await getDb();
   if (!db) return {
-    importLogId: 0,
-    fileName: "",
-    sheetsCount: 0,
-    productsCount: 0,
-    createdAt: new Date(),
+    importLogId: 0, fileName: "", sheetsCount: 0, productsCount: 0, createdAt: new Date(),
+    bySheet: [], byStatus: [], bySalesCategory: [], total: 0,
+  };
+
+  const activeImportId = await getActiveImportLogId();
+  if (!activeImportId) return {
+    importLogId: 0, fileName: "", sheetsCount: 0, productsCount: 0, createdAt: new Date(),
+    bySheet: [], byStatus: [], bySalesCategory: [], total: 0,
   };
 
   const activeLog = await getActiveImportLog();
-  if (!activeLog) return {
-    importLogId: 0,
-    fileName: "",
-    sheetsCount: 0,
-    productsCount: 0,
-    createdAt: new Date(),
-  };
 
-  const sheetsCount = await db.select({ count: sql<number>`COUNT(*)` })
-    .from(cplSheets)
-    .where(eq(cplSheets.importLogId, activeLog.id));
+  const bySheet = await db.select({
+    sheetName: cplProducts.sheetName,
+    count: sql<number>`count(*)`,
+  }).from(cplProducts)
+    .where(eq(cplProducts.importLogId, activeImportId))
+    .groupBy(cplProducts.sheetName)
+    .orderBy(desc(sql`count(*)`));
 
-  const productsCount = await db.select({ count: sql<number>`COUNT(*)` })
+  const byStatus = await db.select({
+    status: cplProducts.productStatus,
+    count: sql<number>`count(*)`,
+  }).from(cplProducts)
+    .where(and(
+      eq(cplProducts.importLogId, activeImportId),
+      sql`${cplProducts.productStatus} IS NOT NULL AND ${cplProducts.productStatus} != ''`,
+    ))
+    .groupBy(cplProducts.productStatus)
+    .orderBy(desc(sql`count(*)`));
+
+  const bySalesCategory = await db.select({
+    category: cplProducts.salesCategory,
+    count: sql<number>`count(*)`,
+  }).from(cplProducts)
+    .where(and(
+      eq(cplProducts.importLogId, activeImportId),
+      sql`${cplProducts.salesCategory} IS NOT NULL AND ${cplProducts.salesCategory} != ''`,
+    ))
+    .groupBy(cplProducts.salesCategory)
+    .orderBy(desc(sql`count(*)`))
+    .limit(15);
+
+  const [totalRow] = await db.select({ count: sql<number>`count(*)` })
     .from(cplProducts)
-    .where(eq(cplProducts.importLogId, activeLog.id));
+    .where(eq(cplProducts.importLogId, activeImportId));
 
   return {
-    importLogId: activeLog.id,
-    fileName: activeLog.fileName,
-    sheetsCount: Number(sheetsCount[0]?.count ?? 0),
-    productsCount: Number(productsCount[0]?.count ?? 0),
-    createdAt: activeLog.createdAt,
+    importLogId: activeImportId,
+    fileName: activeLog?.fileName ?? "",
+    sheetsCount: activeLog?.sheetsCount ?? 0,
+    productsCount: activeLog?.productsCount ?? 0,
+    createdAt: activeLog?.createdAt ?? new Date(),
+    bySheet,
+    byStatus,
+    bySalesCategory,
+    total: totalRow?.count ?? 0,
   };
 }

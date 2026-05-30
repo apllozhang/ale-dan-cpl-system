@@ -38,7 +38,8 @@ export const importLogsRouter = router({
       const log = await db.getImportLogById(input.id);
       if (!log) throw new Error("导入记录不存在");
       await db.deactivateAllImports();
-      await db.setCplImportActive(input.id);
+      // Activate the target import
+      await db.activateImport(input.id);
       return { success: true };
     }),
   export: superAdminProcedure.query(async () => {

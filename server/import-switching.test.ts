@@ -18,7 +18,7 @@ vi.mock("./db", () => ({
   deleteImportLog: vi.fn(),
   clearImportLogs: vi.fn(),
   deactivateAllImports: vi.fn(),
-  setCplImportActive: vi.fn(),
+  activateImport: vi.fn(),
   getActiveImportLogId: vi.fn(),
   importCplOverwrite: vi.fn(),
   insertSheets: vi.fn(),
@@ -110,21 +110,21 @@ beforeEach(() => {
 // ==================== importLogs.switchActive ====================
 
 describe("importLogs.switchActive", () => {
-  it("calls deactivateAllImports and setCplImportActive with the given ID", async () => {
+  it("calls deactivateAllImports and activateImport with the given ID", async () => {
     const { ctx } = createSuperAdminContext();
     const caller = appRouter.createCaller(ctx);
 
     const mockLog = { id: 5, fileName: "test.xlsx", isActive: false };
     vi.mocked(db.getImportLogById).mockResolvedValue(mockLog as any);
     vi.mocked(db.deactivateAllImports).mockResolvedValue(undefined as any);
-    vi.mocked(db.setCplImportActive).mockResolvedValue(undefined as any);
+    vi.mocked(db.activateImport).mockResolvedValue(undefined as any);
 
     const result = await caller.importLogs.switchActive({ id: 5 });
 
     expect(result).toEqual({ success: true });
     expect(db.getImportLogById).toHaveBeenCalledWith(5);
     expect(db.deactivateAllImports).toHaveBeenCalledOnce();
-    expect(db.setCplImportActive).toHaveBeenCalledWith(5);
+    expect(db.activateImport).toHaveBeenCalledWith(5);
   });
 
   it("throws error when import log does not exist", async () => {
@@ -135,7 +135,7 @@ describe("importLogs.switchActive", () => {
 
     await expect(caller.importLogs.switchActive({ id: 999 })).rejects.toThrow("导入记录不存在");
     expect(db.deactivateAllImports).not.toHaveBeenCalled();
-    expect(db.setCplImportActive).not.toHaveBeenCalled();
+    expect(db.activateImport).not.toHaveBeenCalled();
   });
 
   it("throws FORBIDDEN for non-superAdmin user", async () => {
