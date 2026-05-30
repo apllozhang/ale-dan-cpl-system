@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as count FROM cpl_sheets;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 36JDpBo3zu5AaRu.c009522ec6e2 --database neEWayju942ovVPrciQXjy --execute SELECT COUNT(*) as count FROM cpl_sheets;",
+  "rows": [
+    {
+      "count": "27"
+    }
+  ],
+  "messages": [],
+  "stdout": "count\n27\n",
+  "stderr": "",
+  "execution_time_ms": 266
+}
