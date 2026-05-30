@@ -155,10 +155,9 @@ export async function getCplSheets() {
 export async function insertSheets(sheets: InsertCplSheet[]) {
   const db = await getDb();
   if (!db || sheets.length === 0) return;
-  const batchSize = 50;
-  for (let i = 0; i < sheets.length; i += batchSize) {
-    const batch = sheets.slice(i, i + batchSize);
-    await db.insert(cplSheets).values(batch);
+  // Insert one by one to avoid Drizzle ORM batch insert issues
+  for (const sheet of sheets) {
+    await db.insert(cplSheets).values(sheet);
   }
 }
 
@@ -245,13 +244,11 @@ export async function importCplOverwrite(data: {
     // 3. Activate this import
     await tx.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 
-    // 4. Tag and insert sheets in batches
+    // 4. Tag and insert sheets one by one
     if (data.sheets.length > 0) {
       const sheetsWithLogId = data.sheets.map(s => ({ ...s, importLogId }));
-      const sheetBatchSize = 50;
-      for (let i = 0; i < sheetsWithLogId.length; i += sheetBatchSize) {
-        const batch = sheetsWithLogId.slice(i, i + sheetBatchSize);
-        await tx.insert(cplSheets).values(batch);
+      for (const sheet of sheetsWithLogId) {
+        await tx.insert(cplSheets).values(sheet);
       }
     }
 
