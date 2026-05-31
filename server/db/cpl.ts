@@ -214,7 +214,12 @@ export async function importCplOverwrite(data: {
     // 2a. Deactivate ALL other imports (not just currently-active ones)
     await tx.update(importLogs).set({ isActive: false }).where(ne(importLogs.id, importLogId));
 
-    // 2b. Activate this import
+    // 2b. Delete old data from previous imports to prevent unique constraint conflicts
+    await tx.delete(cplProducts).where(ne(cplProducts.importLogId, importLogId));
+    await tx.delete(cplSheets).where(ne(cplSheets.importLogId, importLogId));
+    await tx.delete(cplSummary).where(ne(cplSummary.importLogId, importLogId));
+
+    // 2c. Activate this import
     await tx.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 
     // 3. Tag and insert sheets one by one
