@@ -1,5 +1,5 @@
 ﻿import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
+import { saveArrayBufferWithPicker } from "./saveFile";
 import { toast } from "sonner";
 
 const FONT_CN = "黑体";
@@ -366,13 +366,9 @@ export async function exportQuotationToExcel(quotation: any, items: any[]) {
 
   // === Generate file ===
   const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-
   const dateStr = new Date().toISOString().slice(0, 10);
   const fileName = `报价单_${quotation.quotationNo || "new"}_${dateStr}.xlsx`;
 
-  saveAs(blob, fileName);
+  await saveArrayBufferWithPicker(buffer, fileName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   toast.success("报价单已导出");
 }

@@ -216,23 +216,8 @@ export default function ActivityLog() {
       const csvContent = "﻿" + result;
       const suggestedName = `activity_log_${new Date().toISOString().split("T")[0]}.csv`;
 
-      if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName,
-          types: [{ description: "CSV", accept: { "text/csv": [".csv"] } }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(new Blob([csvContent], { type: "text/csv;charset=utf-8" }));
-        await writable.close();
-      } else {
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = suggestedName;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
+      const { saveStringWithPicker } = await import("@/lib/saveFile");
+      await saveStringWithPicker(csvContent, suggestedName, "text/csv;charset=utf-8");
       toast.success(t('activity.exportSuccess'));
     } catch (err: any) {
       if (err?.name === "AbortError") return;

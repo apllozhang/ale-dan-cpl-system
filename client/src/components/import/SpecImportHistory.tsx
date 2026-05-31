@@ -109,17 +109,15 @@ export function SpecImportHistory() {
     setClearOpen(false);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const header = `${t('import.time')},${t('import.fileName', { defaultValue: '文件名' })},${t('import.sheetNames', { defaultValue: '表格' })},${t('import.productCount')}`;
     const rows = groups.map(g =>
       `"${new Date(g.createdAt).toLocaleString()}","${g.fileName.replace(/"/g, '""')}","${g.sheetNames.join(", ")}",${g.totalProducts}`
     );
     const csv = [header, ...rows].join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `${t('import.specHistory')}_${new Date().toISOString().split("T")[0]}.csv`; a.click();
-    URL.revokeObjectURL(url);
+    const { saveStringWithPicker } = await import("@/lib/saveFile");
+    const fileName = `${t('import.specHistory')}_${new Date().toISOString().split("T")[0]}.csv`;
+    await saveStringWithPicker("﻿" + csv, fileName, "text/csv;charset=utf-8");
   };
 
   return (

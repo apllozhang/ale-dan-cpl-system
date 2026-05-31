@@ -5,6 +5,7 @@ import * as db from "../db";
 import * as XLSX from "xlsx";
 import { PERMISSIONS } from "@shared/const";
 import { logActivity } from "./helpers";
+import { collectSpecKeys } from "@shared/utils";
 
 export const productSpecsRouter = router({
   listSets: protectedProcedure
@@ -172,5 +173,18 @@ export const productSpecsRouter = router({
     }))
     .query(async ({ input }) => {
       return db.matchQuotationWithSpecs(input.quotationId, input.setId);
+    }),
+
+  autoMatch: protectedProcedure
+    .input(z.object({ quotationId: z.number() }))
+    .query(async ({ input }) => {
+      const sets = await db.getBestMatchSet(input.quotationId);
+      const bestSet = sets[0];
+      if (!bestSet) {
+        return { sets, matched: [], unmatched: [], specKeys: [], quotation: null, bestSetId: null };
+      }
+      const { matched, unmatched, quotation } = await db.matchQuotationWithSpecs(input.quotationId, bestSet.setId);
+      const specKeys = collectSpecKeys(matched);
+      return { sets, matched, unmatched, specKeys, quotation, bestSetId: bestSet.setId };
     }),
 });

@@ -395,7 +395,7 @@ export default function QuotationDetail() {
       notes: notes.trim() || undefined,
       validUntil: validUntil || undefined,
       items: items.map(item => ({
-        productId: item.productId,
+        productId: item.productId ?? undefined,
         productModel: item.productModel,
         productDesc: item.productDesc || undefined,
         listPrice: item.listPrice || undefined,
@@ -509,12 +509,6 @@ export default function QuotationDetail() {
             <Button size="sm" variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-1" />
               {t('quotation.exportExcel')}
-            </Button>
-          )}
-          {!isNew && (
-            <Button size="sm" variant="outline" onClick={() => window.print()}>
-              <Printer className="w-4 h-4 mr-1" />
-              {t('quotation.exportPDF', '导出PDF')}
             </Button>
           )}
           {!isNew && items.length > 0 && (

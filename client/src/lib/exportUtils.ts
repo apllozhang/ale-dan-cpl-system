@@ -15,7 +15,7 @@ export interface ExportData {
  * @param columns Column definitions with key and label
  * @param filename Name of the exported file (without .xlsx extension)
  */
-export function exportToExcel(
+export async function exportToExcel(
   data: ExportData[],
   columns: ExportColumn[],
   filename: string = 'export'
@@ -81,6 +81,9 @@ export function exportToExcel(
   const timestamp = new Date().toISOString().split('T')[0];
   const fullFilename = `${filename}_${timestamp}.xlsx`;
 
-  // Write file
-  XLSX.writeFile(wb, fullFilename);
+  // Write file with save picker
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const { saveArrayBufferWithPicker } = await import("./saveFile");
+  await saveArrayBufferWithPicker(wbout, fullFilename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
+

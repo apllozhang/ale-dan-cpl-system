@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
+import { saveArrayBufferWithPicker } from "./saveFile";
+import type { SpecQuotationInfo, MatchedSpecItem, UnmatchedSpecItem } from "@shared/types";
 
 const FONT_CN = "黑体";
 const FONT_EN = "Trebuchet MS";
@@ -11,26 +12,19 @@ const COLOR_BORDER = "B0B0B0";
 const COLOR_LABEL_BG = "EDEDED";
 const COLOR_TITLE = "1B0033";
 
-interface MatchedItem {
-  productModel: string;
-  productDesc?: string;
-  quantity: number;
-  listPrice?: string;
-  specs: Record<string, string>;
-}
-
 export async function exportSpecTable(params: {
-  quotation: any;
-  matched: MatchedItem[];
-  unmatched: { productModel: string; productDesc?: string; quantity: number }[];
+  quotation: SpecQuotationInfo;
+  matched: MatchedSpecItem[];
+  unmatched: UnmatchedSpecItem[];
   specKeys: string[];
+  fileName?: string;
 }) {
   const { quotation, matched, unmatched, specKeys } = params;
   const wb = new ExcelJS.Workbook();
   wb.creator = "ALE DAN CPL System";
   wb.created = new Date();
 
-  const ws = wb.addWorksheet("技术参数表", {
+  const ws = wb.addWorksheet("Spec Table", {
     properties: { defaultRowHeight: 22 },
     pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1 },
   });
@@ -50,7 +44,7 @@ export async function exportSpecTable(params: {
   // Customer info rows
   const infoRows = [
     ["客户名称", quotation.customerName || "", "项目名称", quotation.projectName || ""],
-    ["报价编号", quotation.quotationNo || "", "报价日期", new Date(quotation.createdAt).toLocaleDateString("zh-CN")],
+    ["报价编号", quotation.quotationNo || "", "报价日期", quotation.createdAt ? new Date(quotation.createdAt).toLocaleDateString("zh-CN") : ""],
   ];
   for (const row of infoRows) {
     const r = ws.getRow(rowIdx);
@@ -106,7 +100,7 @@ export async function exportSpecTable(params: {
       const cell = r.getCell(i + 1);
       cell.value = v;
       cell.font = { name: FONT_CN, size: 9.5 };
-      cell.alignment = { vertical: "middle", wrapText: i >= 2 };
+      cell.alignment = { vertical: "middle", wrapText: true };
       cell.border = {
         top: { style: "thin", color: { argb: COLOR_BORDER } },
         bottom: { style: "thin", color: { argb: COLOR_BORDER } },
@@ -152,12 +146,11 @@ export async function exportSpecTable(params: {
   ws.getColumn(3).width = 30;
   ws.getColumn(4).width = 8;
   specKeys.forEach((_, i) => {
-    ws.getColumn(i + 5).width = 16;
+    ws.getColumn(i + 5).width = 20;
   });
 
   // Export
   const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const fileName = `技术参数表_${quotation.customerName || "unknown"}_${new Date().toISOString().split("T")[0]}.xlsx`;
-  saveAs(blob, fileName);
+  const defaultName = `SpecTable_${quotation.customerName || "unknown"}_${new Date().toISOString().split("T")[0]}.xlsx`;
+  await saveArrayBufferWithPicker(buffer, params.fileName || defaultName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
