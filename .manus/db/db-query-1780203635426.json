@@ -1,0 +1,46 @@
+{
+  "query": "SHOW CREATE TABLE cpl_sheets\\G",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 36JDpBo3zu5AaRu.c009522ec6e2 --database neEWayju942ovVPrciQXjy --execute SHOW CREATE TABLE cpl_sheets\\G",
+  "rows": [
+    {
+      "*************************** 1. row ***************************": "       Table: cpl_sheets"
+    },
+    {
+      "*************************** 1. row ***************************": "Create Table: CREATE TABLE `cpl_sheets` ("
+    },
+    {
+      "*************************** 1. row ***************************": "  `id` int NOT NULL AUTO_INCREMENT,"
+    },
+    {
+      "*************************** 1. row ***************************": "  `sheetName` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,"
+    },
+    {
+      "*************************** 1. row ***************************": "  `displayOrder` int NOT NULL DEFAULT '0',"
+    },
+    {
+      "*************************** 1. row ***************************": "  `productCount` int NOT NULL DEFAULT '0',"
+    },
+    {
+      "*************************** 1. row ***************************": "  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+    },
+    {
+      "*************************** 1. row ***************************": "  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+    },
+    {
+      "*************************** 1. row ***************************": "  `importLogId` int DEFAULT NULL,"
+    },
+    {
+      "*************************** 1. row ***************************": "  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,"
+    },
+    {
+      "*************************** 1. row ***************************": "  UNIQUE KEY `cpl_sheets_sheetName_unique` (`sheetName`)"
+    },
+    {
+      "*************************** 1. row ***************************": ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=420001"
+    }
+  ],
+  "messages": [],
+  "stdout": "*************************** 1. row ***************************\n       Table: cpl_sheets\nCreate Table: CREATE TABLE `cpl_sheets` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `sheetName` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `displayOrder` int NOT NULL DEFAULT '0',\n  `productCount` int NOT NULL DEFAULT '0',\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  `importLogId` int DEFAULT NULL,\n  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,\n  UNIQUE KEY `cpl_sheets_sheetName_unique` (`sheetName`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=420001\n",
+  "stderr": "",
+  "execution_time_ms": 1871
+}
