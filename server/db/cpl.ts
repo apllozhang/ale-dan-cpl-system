@@ -1,4 +1,4 @@
-import { eq, like, or, and, sql, asc, desc, isNotNull, inArray, SQL } from "drizzle-orm";
+import { eq, ne, like, or, and, sql, asc, desc, isNotNull, inArray, SQL } from "drizzle-orm";
 import {
   importLogs, cplSheets, cplProducts, cplSummary, InsertImportLog, InsertCplSheet, InsertCplProduct,
 } from "../../drizzle/schema";
@@ -8,7 +8,7 @@ import { getDb } from "./index";
 export async function deactivateAllImports() {
   const db = await getDb();
   if (!db) return;
-  await db.update(importLogs).set({ isActive: false }).where(eq(importLogs.isActive, true));
+  await db.update(importLogs).set({ isActive: false }).where(ne(importLogs.id, -1));
 }
 
 export async function activateImport(importLogId: number) {
@@ -210,10 +210,10 @@ export async function importCplOverwrite(data: {
 
   // 2. Now use transaction for the rest of the operations
   return await db.transaction(async (tx) => {
-    // 2a. Deactivate all other imports
-    await tx.update(importLogs).set({ isActive: false }).where(eq(importLogs.isActive, true));
+    // 2a. Deactivate all other imports (excluding the new one)
+    await tx.update(importLogs).set({ isActive: false }).where(ne(importLogs.id, importLogId));
 
-    // 2b. Activate this import
+    // 2b. Ensure this import is activated
     await tx.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 
     // 3. Tag and insert sheets one by one

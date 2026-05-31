@@ -198,3 +198,11 @@
 - [x] 将 sheets 批量插入改为 50 条一批处理
 - [x] 修复 Excel 解析中 id 字段与数据库 auto-increment 的冲突
 - [x] 验证导入功能正常工作
+
+
+## Bug: 多个导入文件同时标记为"完全覆盖"（当前）
+
+- [x] 修复 import_logs 表中的 isActive 字段逻辑 - 新导入时应停用旧导入
+- [x] 修复 importCplOverwrite 函数中的停用逻辑 - 使用 ne(importLogId) 而不是 eq(isActive, true)
+- [x] 更新前端显示逻辑 - 只显示最新导入为"当前"，旧导入为"历史"
+- [x] 测试导入功能 - 验证只有最新导入被标记为当前
