@@ -211,15 +211,20 @@ export async function importCplOverwrite(data: {
 
   // 2. Now use transaction for the rest of the operations
   return await db.transaction(async (tx) => {
-    // 2a. Deactivate ALL other imports (not just currently-active ones)
+    // 2a. Find the currently active import BEFORE deactivating
+    const [prevActive] = await tx.select().from(importLogs).where(eq(importLogs.isActive, true)).limit(1);
+
+    // 2b. Deactivate ALL other imports
     await tx.update(importLogs).set({ isActive: false }).where(ne(importLogs.id, importLogId));
 
-    // 2b. Delete old data from previous imports to prevent unique constraint conflicts
-    await tx.delete(cplProducts).where(ne(cplProducts.importLogId, importLogId));
-    await tx.delete(cplSheets).where(ne(cplSheets.importLogId, importLogId));
-    await tx.delete(cplSummary).where(ne(cplSummary.importLogId, importLogId));
+    // 2c. Delete data only from the previous active import (preserve history for switching)
+    if (prevActive) {
+      await tx.delete(cplProducts).where(eq(cplProducts.importLogId, prevActive.id));
+      await tx.delete(cplSheets).where(eq(cplSheets.importLogId, prevActive.id));
+      await tx.delete(cplSummary).where(eq(cplSummary.importLogId, prevActive.id));
+    }
 
-    // 2c. Activate this import
+    // 2d. Activate this import
     await tx.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 
     // 3. Tag and insert sheets one by one
