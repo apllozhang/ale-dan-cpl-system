@@ -25,14 +25,14 @@ function matchItem(itemModel: string, specEntries: SpecEntry[]): SpecEntry | nul
     l3Map.set(norm.noSpace, entry);
   }
 
-  // Prefix matching (longest prefix wins, min 3 chars)
+  // Prefix matching (longest prefix wins, min 2 chars)
   function findByPrefix(model: string): SpecEntry | null {
     const lower = model.trim().toLowerCase();
     let best: SpecEntry | null = null;
     let bestLen = 0;
     for (const entry of specEntries) {
       const entryLower = entry.productModel.trim().toLowerCase();
-      if (entryLower.length >= 3 && lower.startsWith(entryLower) && entryLower.length > bestLen) {
+      if (entryLower.length >= 2 && lower.startsWith(entryLower) && entryLower.length > bestLen) {
         best = entry;
         bestLen = entryLower.length;
       }
@@ -53,7 +53,7 @@ function matchItem(itemModel: string, specEntries: SpecEntry[]): SpecEntry | nul
   let bestLen = 0;
   for (const entry of specEntries) {
     const entryLower = entry.productModel.trim().toLowerCase();
-    if (lower.length >= 3 && entryLower.startsWith(lower) && entryLower.length > bestLen) {
+    if (lower.length >= 2 && entryLower.startsWith(lower) && entryLower.length > bestLen) {
       best = entry;
       bestLen = entryLower.length;
     }
@@ -169,11 +169,13 @@ describe("Prefix matching for slot-based switches", () => {
     expect(result!.specs["v"]).toBe("e-module");
   });
 
-  it("prefix shorter than 3 chars does not match", () => {
+  it("prefix with 2 chars matches (ESR chassis F5 pattern)", () => {
     const shortPrefix: SpecEntry[] = [
       { productModel: "99", specs: { "v": "short" } },
     ];
-    expect(matchItem("9907-E-AC", shortPrefix)).toBeNull();
+    const result = matchItem("9907-E-AC", shortPrefix);
+    expect(result).not.toBeNull();
+    expect(result!.specs["v"]).toBe("short");
   });
 
   it("prefix match is case-insensitive", () => {
@@ -252,11 +254,11 @@ describe("Reverse prefix matching (L5)", () => {
     expect(result!.specs["电源"]).toBe("AC");
   });
 
-  it("item shorter than 3 chars does not trigger L5", () => {
+  it("item shorter than 2 chars does not trigger L5", () => {
     const shortSpecs: SpecEntry[] = [
       { productModel: "ABC-XYZ", specs: { "v": "long" } },
     ];
-    expect(matchItem("AB", shortSpecs)).toBeNull();
+    expect(matchItem("A", shortSpecs)).toBeNull();
   });
 
   it("L5 is case-insensitive", () => {
@@ -276,3 +278,60 @@ describe("Reverse prefix matching (L5)", () => {
     expect(result!.specs["v"]).toBe("e-module");
   });
 });
+
+describe("ESR chassis prefix matching (F5/F10/F30/F40)", () => {
+  const esrSpecs: SpecEntry[] = [
+    { productModel: "F5", specs: { "交换容量": "1.2Tbps", "插槽数": "5" } },
+    { productModel: "F10", specs: { "交换容量": "2.4Tbps", "插槽数": "10" } },
+    { productModel: "F30", specs: { "交换容量": "6.4Tbps", "插槽数": "30" } },
+    { productModel: "F40", specs: { "交换容量": "12.8Tbps", "插槽数": "40" } },
+  ];
+
+  it("F5-E-AC matches F5 via L4", () => {
+    const result = matchItem("F5-E-AC", esrSpecs);
+    expect(result).not.toBeNull();
+    expect(result!.productModel).toBe("F5");
+    expect(result!.specs["插槽数"]).toBe("5");
+  });
+
+  it("F10-E-DC matches F10 via L4", () => {
+    const result = matchItem("F10-E-DC", esrSpecs);
+    expect(result).not.toBeNull();
+    expect(result!.productModel).toBe("F10");
+  });
+
+  it("F30-E-AC matches F30 via L4", () => {
+    const result = matchItem("F30-E-AC", esrSpecs);
+    expect(result).not.toBeNull();
+    expect(result!.productModel).toBe("F30");
+  });
+
+  it("F40-E-DC matches F40 via L4", () => {
+    const result = matchItem("F40-E-DC", esrSpecs);
+    expect(result).not.toBeNull();
+    expect(result!.productModel).toBe("F40");
+  });
+
+  it("F10 has priority over F5 for F10-E-AC (longest prefix wins)", () => {
+    const result = matchItem("F10-E-AC", esrSpecs);
+    expect(result).not.toBeNull();
+    expect(result!.productModel).toBe("F10");
+    expect(result!.specs["插槽数"]).toBe("10");
+  });
+
+  it("L5 reverse: item F5 matches spec F5-E-AC when no exact F5 exists", () => {
+    const moduleSpecs: SpecEntry[] = [
+      { productModel: "F5-E-AC", specs: { "电源": "AC" } },
+      { productModel: "F5-E-DC", specs: { "电源": "DC" } },
+    ];
+    const result = matchItem("F5", moduleSpecs);
+    expect(result).not.toBeNull();
+    expect(result!.productModel).toBe("F5-E-AC");
+  });
+
+  it("case insensitive ESR matching", () => {
+    const result = matchItem("f5-e-ac", esrSpecs);
+    expect(result).not.toBeNull();
+    expect(result!.productModel).toBe("F5");
+  });
+});;

@@ -216,22 +216,22 @@ function buildLookup(entries: SpecEntry[]) {
     if (exact) return exact;
 
     const lower = norm.lower;
-    // L4: item starts with spec entry (e.g. "9907-E-AC" → "9907")
+    // L4: item starts with spec entry (e.g. "9907-E-AC" → "9907", "F5-E-AC" → "F5")
     let best: SpecEntry | null = null;
     let bestLen = 0;
     for (const entry of entries) {
       const entryLower = entry.productModel.trim().toLowerCase();
-      if (entryLower.length >= 3 && lower.startsWith(entryLower) && entryLower.length > bestLen) {
+      if (entryLower.length >= 2 && lower.startsWith(entryLower) && entryLower.length > bestLen) {
         best = entry;
         bestLen = entryLower.length;
       }
     }
     if (best) return best;
 
-    // L5: spec entry starts with item (e.g. item "9907" → spec "9907-E-AC")
+    // L5: spec entry starts with item (e.g. item "9907" → spec "9907-E-AC", item "F5" → spec "F5-E-AC")
     for (const entry of entries) {
       const entryLower = entry.productModel.trim().toLowerCase();
-      if (lower.length >= 3 && entryLower.startsWith(lower) && entryLower.length > bestLen) {
+      if (lower.length >= 2 && entryLower.startsWith(lower) && entryLower.length > bestLen) {
         best = entry;
         bestLen = entryLower.length;
       }
