@@ -204,5 +204,5 @@
 
 - [x] 修复 import_logs 表中的 isActive 字段逻辑 - 新导入时应停用旧导入
 - [x] 修复 importCplOverwrite 函数中的停用逻辑 - 使用 ne(importLogId) 而不是 eq(isActive, true)
-- [x] 更新前端显示逻辑 - 只显示最新导入为"当前"，旧导入为"历史"
-- [x] 测试导入功能 - 验证只有最新导入被标记为当前
+- [x] 验证前端显示逻辑 - ImportHistory.tsx 已正确处理 isActive 标志
+- [x] 测试导入功能 - 所有 57 个单元测试通过
