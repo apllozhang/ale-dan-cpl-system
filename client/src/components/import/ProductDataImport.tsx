@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -24,14 +25,40 @@ export function ProductDataImport() {
   const [sheetInfo, setSheetInfo] = useState<{ name: string; rows: number; hasValidCol: boolean }[]>([]);
   const [selectedSheets, setSelectedSheets] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Progress animation state
+  const [importPhase, setImportPhase] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const rafRef = useRef<number>(0);
+
   const utils = trpc.useUtils();
 
   const hasDataQuery = trpc.cpl.hasData.useQuery();
   const hasExistingData = hasDataQuery.data?.hasData ?? false;
   const existingCount = hasDataQuery.data?.count ?? 0;
 
+  const animateProgress = useCallback((from: number, to: number, duration: number) => {
+    cancelAnimationFrame(rafRef.current);
+    const start = performance.now();
+    const frame = (now: number) => {
+      const elapsed = now - start;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setProgress(from + (to - from) * eased);
+      if (t < 1) rafRef.current = requestAnimationFrame(frame);
+    };
+    rafRef.current = requestAnimationFrame(frame);
+  }, []);
+
   const importMutation = trpc.cpl.import.useMutation({
     onSuccess: (data) => {
+      cancelAnimationFrame(rafRef.current);
+      setProgress(100);
+      setImportPhase(t('import.phaseComplete'));
+      setTimeout(() => {
+        setImportPhase(null);
+        setProgress(0);
+      }, 800);
       setImportResult(data);
       setFile(null); setSheetInfo([]); setSelectedSheets(new Set());
       toast.success(t('import.importSuccess'));
@@ -42,6 +69,9 @@ export function ProductDataImport() {
       utils.importLogs.list.invalidate();
     },
     onError: (err) => {
+      cancelAnimationFrame(rafRef.current);
+      setImportPhase(null);
+      setProgress(0);
       toast.error(err.message || t('import.importFailed'));
     },
   });
@@ -86,8 +116,17 @@ export function ProductDataImport() {
   const doImport = async (mode: "overwrite" | "merge") => {
     if (!file) return;
     setConfirmOpen(false);
+
+    // Phase 1: parsing file
+    setImportPhase(t('import.phaseParsing'));
+    animateProgress(0, 25, 1500);
+
     const reader = new FileReader();
     reader.onload = () => {
+      // Phase 2: uploading data
+      setImportPhase(t('import.phaseUploading'));
+      animateProgress(25, 55, 2000);
+
       const base64 = (reader.result as string).split(",")[1];
       importMutation.mutate({
         fileBase64: base64,
@@ -95,9 +134,19 @@ export function ProductDataImport() {
         mode,
         selectedSheets: Array.from(selectedSheets),
       });
+
+      // Phase 3: processing (after upload completes)
+      setTimeout(() => {
+        if (importMutation.isPending) {
+          setImportPhase(t('import.phaseProcessing'));
+          animateProgress(55, 90, 8000);
+        }
+      }, 2500);
     };
     reader.readAsDataURL(file);
   };
+
+  const isImporting = importMutation.isPending || (importPhase !== null && progress < 100 && progress > 0);
 
   return (
     <>
@@ -188,16 +237,29 @@ export function ProductDataImport() {
         );
       })()}
 
-      {/* Import button */}
+      {/* Import button or Progress bar */}
       {file && (
-        <div className="flex gap-2">
-          <Button onClick={handleStartImport} disabled={importMutation.isPending || selectedSheets.size === 0} className="flex-1 h-11 gap-2 shadow-sm">
-            {importMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" />{t('import.importing')}</> : <><Upload className="w-4 h-4" />{t('import.startImport')}</>}
-          </Button>
-          <Button variant="outline" onClick={() => { setFile(null); setSheetInfo([]); setSelectedSheets(new Set()); if (fileInputRef.current) fileInputRef.current.value = ""; }} disabled={importMutation.isPending} className="h-11 gap-2">
-            <X className="w-4 h-4" />{t('import.cancelImport')}
-          </Button>
-        </div>
+        isImporting ? (
+          <div className="bg-card border rounded-lg p-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{importPhase}...</p>
+                <p className="text-xs text-muted-foreground">{Math.round(progress)}%</p>
+              </div>
+            </div>
+            <Progress value={progress} className="h-2 transition-all" />
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button onClick={handleStartImport} disabled={selectedSheets.size === 0} className="flex-1 h-11 gap-2 shadow-sm">
+              <Upload className="w-4 h-4" />{t('import.startImport')}
+            </Button>
+            <Button variant="outline" onClick={() => { setFile(null); setSheetInfo([]); setSelectedSheets(new Set()); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="h-11 gap-2">
+              <X className="w-4 h-4" />{t('import.cancelImport')}
+            </Button>
+          </div>
+        )
       )}
 
       {/* Confirmation Dialog */}

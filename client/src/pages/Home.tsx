@@ -53,15 +53,16 @@ function StatCard({ icon: Icon, label, value, color, loading }: {
   icon: any; label: string; value: string; color: string; loading?: boolean;
 }) {
   return (
-    <div className="bg-card border rounded-lg p-5 hover:shadow-md transition-all stagger-child flex items-center gap-4">
-      <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center shrink-0`}>
+    <div className="group relative overflow-hidden bg-card border rounded-xl p-5 hover:shadow-md transition-all stagger-child flex items-center gap-4">
+      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+      <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center shrink-0`}>
         <Icon className="w-5 h-5 text-white" />
       </div>
       <div className="min-w-0">
         {loading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
         ) : (
-          <p className="text-2xl font-bold tabular-nums text-foreground">{value}</p>
+          <p className="text-3xl font-extrabold tracking-tight tabular-nums text-foreground group-hover:scale-[1.02] origin-left transition-transform duration-200">{value}</p>
         )}
         <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
       </div>
@@ -118,6 +119,8 @@ export default function Home() {
 
   const sheetsQuery = trpc.cpl.sheets.useQuery();
   const summaryQuery = trpc.cpl.summary.useQuery();
+  const activeImportQuery = trpc.cpl.activeImport.useQuery();
+  const specSummaryQuery = trpc.productSpecs.specSummary.useQuery();
   const dashboardQuery = trpc.quotations.myDashboard.useQuery({
     startDate: startDate || undefined,
     endDate: endDate || undefined,
@@ -177,10 +180,10 @@ export default function Home() {
       {/* Row 1: Welcome + Quick Actions */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
             欢迎回来{user?.name ? `，${user.name}` : ""}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">今日是 {dateStr}</p>
+          <p className="text-sm font-medium text-muted-foreground/80 mt-1.5">今日是 {dateStr}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => setLocation("/quotations/new")}>
@@ -202,7 +205,7 @@ export default function Home() {
             onClick={() => setDatePreset(p.key)}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
               datePreset === p.key
-                ? "bg-primary text-primary-foreground"
+                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}
           >
@@ -228,7 +231,8 @@ export default function Home() {
           loading={dashboardQuery.isLoading}
         />
         {/* Merged status card */}
-        <div className="bg-card border rounded-lg p-5 hover:shadow-md transition-all stagger-child">
+        <div className="group relative overflow-hidden bg-card border rounded-xl p-5 hover:shadow-md transition-all stagger-child">
+	          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           {dashboardQuery.isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
           ) : (
@@ -284,7 +288,7 @@ export default function Home() {
                   <col style={{ width: colWidths.date }} />
                 </colgroup>
                 <thead>
-                  <tr className="bg-muted/20 border-b text-xs text-muted-foreground">
+                  <tr className="bg-muted/20 border-b text-xs font-semibold text-foreground/70 uppercase tracking-wider">
                     <ResizableTh width={colWidths.seq} onResize={w => updateColWidth("seq", w)}>
                       <button onClick={() => toggleSort("quotationNo")} className="flex items-center gap-1 hover:text-foreground transition-colors">序号 <SortIcon col="quotationNo" /></button>
                     </ResizableTh>
@@ -313,7 +317,7 @@ export default function Home() {
                     <tr
                       key={q.id}
                       onClick={() => setLocation(`/quotations/${q.id}`)}
-                      className="border-b border-border/50 hover:bg-accent/20 cursor-pointer transition-colors"
+                      className="border-b border-border/50 border-l-2 border-l-transparent hover:border-l-primary hover:bg-primary/[0.03] cursor-pointer transition-all"
                     >
                       <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">{String(idx + 1).padStart(3, "0")}</td>
                       <td className="px-4 py-2.5 text-sm font-medium text-foreground truncate">{q.customerName || "未命名客户"}</td>
@@ -339,7 +343,7 @@ export default function Home() {
         {/* Quick Data Cards */}
         <div className="space-y-4">
           <div
-            className="bg-card border rounded-lg p-5 hover:shadow-md transition-all cursor-pointer group stagger-child flex items-center gap-4"
+            className="bg-card border rounded-xl p-5 hover:shadow-md transition-all cursor-pointer group stagger-child flex items-center gap-4"
             onClick={() => setLocation("/data")}
           >
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -357,34 +361,29 @@ export default function Home() {
           </div>
 
           <div
-            className="bg-card border rounded-lg p-5 hover:shadow-md transition-all cursor-pointer group stagger-child flex items-center gap-4"
+            className="bg-card border rounded-xl p-5 hover:shadow-md transition-all cursor-pointer group stagger-child flex items-center gap-4"
             onClick={() => setLocation("/data")}
           >
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Layers className="w-5 h-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              {sheetsQuery.isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              ) : (
-                <p className="text-2xl font-bold tabular-nums text-foreground">{sheets.length}</p>
-              )}
-              <p className="text-sm text-muted-foreground mt-0.5">产品系列</p>
+              <p className="text-sm font-bold text-foreground">产品数据</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{activeImportQuery.data?.fileName || "未导入"}</p>
             </div>
             <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </div>
 
-          {summary?.version && (
+          {(specSummaryQuery.data) && (
             <div
-              className="bg-card border rounded-lg p-5 hover:shadow-md transition-all cursor-pointer group stagger-child flex items-center gap-4"
-              onClick={() => setLocation("/summary")}
-            >
+              className="bg-card border rounded-xl p-5 hover:shadow-md transition-all cursor-pointer group stagger-child flex items-center gap-4"
+              onClick={() => { setLocation("/data"); window.location.hash = "spec"; }}>
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <FileText className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-foreground truncate">{summary.version}</p>
-                <p className="text-sm text-muted-foreground mt-0.5">CPL 最新版本</p>
+                <p className="text-sm font-bold text-foreground">参数数据</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">{specSummaryQuery.data.fileName || "未导入"}</p>
               </div>
               <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             </div>
@@ -397,13 +396,14 @@ export default function Home() {
         <div>
           <h2 className="text-base font-semibold text-foreground mb-3">产品系列概览</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {sheets.map((sheet) => (
+            {sheets.map((sheet, idx) => (
               <button
                 key={sheet.sheetName}
                 onClick={() => setLocation(`/data?sheet=${encodeURIComponent(sheet.sheetName)}`)}
-                className="bg-card border rounded-lg p-3 text-left hover:shadow-md hover:border-primary/30 transition-all group stagger-child"
+                className="relative overflow-hidden bg-card border rounded-lg p-3 text-left hover:shadow-md hover:border-primary/30 transition-all group stagger-child"
               >
-                <div className="flex items-center gap-2 mb-2">
+                <div className={`absolute top-0 left-0 right-0 h-1 ${["bg-gradient-to-r from-kpi-blue to-kpi-blue/60","bg-gradient-to-r from-kpi-emerald to-kpi-emerald/60","bg-gradient-to-r from-kpi-amber to-kpi-amber/60","bg-gradient-to-r from-kpi-violet to-kpi-violet/60","bg-gradient-to-r from-primary to-primary/60"][idx % 5]} group-hover:h-1.5 transition-all duration-300`} />
+                <div className="flex items-center gap-2 mb-2 mt-1">
                   <FileSpreadsheet className="w-4 h-4 text-primary/60 group-hover:text-primary transition-colors" />
                 </div>
                 <p className="text-xs font-medium text-foreground truncate">{sheet.sheetName}</p>

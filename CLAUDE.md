@@ -1,13 +1,23 @@
-﻿# CLAUDE.md
+# CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides strict architectural guidelines, business rules, and context for Claude Code (claude.ai/code) when working in this repository.
 
 ## Project Overview
 
-ALE DAN CPL System — a full-stack quotation management platform for DAN (Digital Age Networking) product pricing. Users import monthly CPL (Customer Price List) Excel data, then create professional quotations with product selection, discounting, version tracking, and Excel export.
+ALE DAN CPL System — a full-stack enterprise quotation management platform for DAN (Digital Age Networking) product pricing.
 
 **Live site**: https://www.extremecloudiq.cn/
 **Repo**: https://github.com/apllozhang/ale-dan-cpl-system
+
+## AI Agent Directives & Coding Conventions
+
+When writing or modifying code in this repository, you MUST adhere to the following strict rules:
+
+1.  **TypeScript Strictness:** You are forbidden from using `any`. Always define explicit types or interfaces for new Drizzle schemas, tRPC routers, and React components.
+2.  **Strict Boundaries:** The `client` folder MUST NOT import anything from the `server` folder. All shared logic, types, and permission matrices must reside in `@shared/`.
+3.  **Data Fetching:** Strictly use the `@/lib/trpc` React Query hooks for all API interactions in the frontend. Do not use standard `fetch` or `axios`.
+4.  **Localization (i18n):** DO NOT hardcode user-facing text in JSX. You must use `react-i18next` and the `useTranslation()` hook (locales: zh, zh-TW, en, ja, es, fr).
+5.  **UI/Styling:** Strictly utilize existing Tailwind utility classes and GSAP for animations (`@gsap/react`). Do not introduce new external CSS files or UI animation libraries unless explicitly requested.
 
 ## Commands
 
@@ -89,8 +99,8 @@ Quotation versioning is automatic on every save (`updateQuotation` in `server/db
 
 ## Development Workflow
 
-1. **Type check**: `npm run check` — run tsc before committing
-2. **Tests**: `npm run test` — 56 tests across 8 files covering discount calc, version diff, permissions, auth, analytics, import switching
+1. **Type check**: `pnpm check` — run tsc before committing
+2. **Tests**: `pnpm test` — 57 tests across 8 files covering discount calc, version diff, permissions, auth, analytics, import switching
 3. **Auto-format**: `.claude/settings.json` PostToolUse hook runs prettier + eslint on every `.ts`/`.tsx` edit
 4. **Key test files**:
    - `server/discount.test.ts` — discount calculation (rate / 100 formula)
@@ -107,3 +117,7 @@ Quotation versioning is automatic on every save (`updateQuotation` in `server/db
 - Login input capped at 128 chars (bcrypt DoS prevention)
 - Excel import base64 capped at 50MB
 - Super admin passwords are immutable via API
+
+## gstack
+
+gstack plugin installed at `~/.claude/skills/gstack`. Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /design-shotgun, /design-html, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /open-gstack-browser, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /pair-agent, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade, /learn.

@@ -100,6 +100,8 @@ export default function ProductSelectorDialog({
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const [selectedSheetTab, setSelectedSheetTab] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -110,6 +112,7 @@ export default function ProductSelectorDialog({
       setSelectedMap(new Map());
       setWiredExpanded(true);
       setSidebarCollapsed(false);
+      setCurrentPage(1);
     }
   }, [open]);
 
@@ -181,6 +184,17 @@ export default function ProductSelectorDialog({
     }
     return result;
   }, [productsQuery.data?.items, modelPatterns]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeNav, debouncedSearch, selectedSheetTab]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const pagedProducts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, currentPage, pageSize]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchText(value);
@@ -428,7 +442,8 @@ export default function ProductSelectorDialog({
                       <input
                         type="checkbox"
                         checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedMap.has(p.id))}
-                        onChange={toggleSelectAll}
+                        onChange={(e) => { e.stopPropagation(); toggleSelectAll(); }}
+                        onClick={(e) => e.stopPropagation()}
                         className="w-4 h-4 cursor-pointer"
                       />
                     </th>
@@ -467,7 +482,7 @@ export default function ProductSelectorDialog({
                       </td>
                     </tr>
                   ) : (
-                    filteredProducts.map((p: any) => {
+                    pagedProducts.map((p: any) => {
                       const isSelected = selectedMap.has(p.id);
                       const isExisting = existingProductIds.has(p.id);
                       return (
@@ -486,7 +501,8 @@ export default function ProductSelectorDialog({
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => !isExisting && toggleProduct(p)}
+                              onChange={(e) => { e.stopPropagation(); if (!isExisting) toggleProduct(p); }}
+                              onClick={(e) => e.stopPropagation()}
                               disabled={isExisting}
                               className="w-4 h-4 cursor-pointer"
                             />
@@ -523,6 +539,72 @@ export default function ProductSelectorDialog({
                 </tbody>
               </table>
             </ScrollArea>
+
+            {/* Pagination */}
+            {filteredProducts.length > 0 && (
+              <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/10 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">每页</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                    className="h-6 text-xs border rounded px-1 bg-background"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span className="text-xs text-muted-foreground">
+                    {filteredProducts.length} 条
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="h-6 px-2 text-xs border rounded disabled:opacity-30 hover:bg-accent/50 transition-colors"
+                  >
+                    ‹
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => {
+                      if (totalPages <= 7) return true;
+                      if (page === 1 || page === totalPages) return true;
+                      if (Math.abs(page - currentPage) <= 1) return true;
+                      return false;
+                    })
+                    .reduce<(number | string)[]>((acc, page, i, arr) => {
+                      if (i > 0 && page - (arr[i - 1] as number) > 1) acc.push("...");
+                      acc.push(page);
+                      return acc;
+                    }, [])
+                    .map((item, i) =>
+                      typeof item === "string" ? (
+                        <span key={`ellipsis-${i}`} className="text-xs text-muted-foreground px-1">...</span>
+                      ) : (
+                        <button
+                          key={item}
+                          onClick={() => setCurrentPage(item)}
+                          className={`h-6 w-6 text-xs rounded border transition-colors ${
+                            currentPage === item
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "hover:bg-accent/50"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      )
+                    )}
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="h-6 px-2 text-xs border rounded disabled:opacity-30 hover:bg-accent/50 transition-colors"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

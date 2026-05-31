@@ -376,10 +376,10 @@ export default function Login() {
 
           {/* Center - Main headline + rotating text */}
           <div className="flex-1 flex flex-col justify-center max-w-lg -mt-8">
-            <h1 className="text-5xl font-bold text-white leading-tight mb-4 tracking-tight">
+            <h1 className="text-6xl font-black text-white leading-none mb-4 tracking-tighter">
               DAN CPL
               <br />
-              <span className="text-white/70 text-3xl font-light">管理系统</span>
+              <span className="text-white/50 text-2xl font-light tracking-wide">管理系统</span>
             </h1>
 
             {/* Rotating feature text */}
@@ -396,40 +396,40 @@ export default function Login() {
         <div className="w-full lg:w-[480px] xl:w-[520px] flex items-center justify-center p-6 sm:p-12" ref={visibilityRef}>
           <div className="w-full max-w-[380px]">
             {/* Glassmorphism card */}
-            <div className="login-card group relative rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 border border-white/15 bg-white/[0.06] backdrop-blur-sm transition-all duration-500 ease-out hover:bg-white/95 hover:border-white/40 hover:backdrop-blur-xl" style={{ willChange: "transform, opacity, background-color" }}>
+            <div className="login-card relative rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 border border-white/[0.12] bg-white/[0.07] backdrop-blur-md transition-all duration-300 focus-within:bg-white/[0.10] focus-within:border-white/[0.20]" style={{ willChange: "transform, opacity" }}>
               {/* Mobile logo */}
               <div className="lg:hidden mb-8 text-center">
                 <div className="inline-flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center group-hover:bg-purple-100 group-hover:border-purple-300 transition-colors duration-500">
-                    <span className="text-white/80 font-bold text-xs group-hover:text-purple-600 transition-colors duration-500">D</span>
+                  <div className="w-8 h-8 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center">
+                    <span className="text-white/80 font-bold text-xs">D</span>
                   </div>
-                  <span className="text-white/80 font-medium group-hover:text-gray-900 transition-colors duration-500">DAN CPL</span>
+                  <span className="text-white/80 font-medium">DAN CPL</span>
                 </div>
               </div>
 
               <div className="space-y-1 mb-8">
-                <h2 className="text-2xl font-semibold text-white/90 group-hover:text-gray-900 tracking-tight transition-colors duration-500">
+                <h2 className="text-2xl font-semibold text-white/90 tracking-tight">
                   欢迎登录
                 </h2>
-                <p className="text-sm text-white/50 group-hover:text-gray-500 transition-colors duration-500">
+                <p className="text-sm text-white/50">
                   请输入您的账号信息以访问系统
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium text-white/70 group-hover:text-gray-700 transition-colors duration-500">
+                  <Label htmlFor="username" className="text-sm font-medium text-white/70 ">
                     用户名
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 group-hover:text-gray-400 transition-colors duration-500" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 " />
                     <Input
                       id="username"
                       type="text"
                       placeholder="请输入用户名"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="pl-11 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl focus:bg-white/20 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-all group-hover:bg-white/60 group-hover:border-gray-300 group-hover:text-gray-900 group-hover:placeholder:text-gray-400"
+                      className="pl-11 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl focus:bg-white/20 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-all"
                       autoComplete="username"
                       autoFocus
                     />
@@ -437,18 +437,18 @@ export default function Login() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-white/70 group-hover:text-gray-700 transition-colors duration-500">
+                  <Label htmlFor="password" className="text-sm font-medium text-white/70 ">
                     密码
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 group-hover:text-gray-400 transition-colors duration-500" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 " />
                     <Input
                       id="password"
                       type="password"
                       placeholder="请输入密码"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-11 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl focus:bg-white/20 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-all group-hover:bg-white/60 group-hover:border-gray-300 group-hover:text-gray-900 group-hover:placeholder:text-gray-400"
+                      className="pl-11 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl focus:bg-white/20 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-all"
                       autoComplete="current-password"
                     />
                   </div>
@@ -462,9 +462,13 @@ export default function Login() {
 
                 <Button
                   type="submit"
-                  className="login-btn w-full h-12 text-sm font-medium rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-purple-900/30 transition-all active:scale-[0.98]"
+                  className="login-btn w-full h-12 text-sm font-medium rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-purple-900/30 transition-all active:scale-[0.98] relative overflow-hidden"
                   disabled={loginMutation.isPending || loading}
                 >
+                  <span className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <span className="btn-shimmer-layer absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                  </span>
+                  <span className="relative">
                   {loginMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -473,11 +477,12 @@ export default function Login() {
                   ) : (
                     "登 录"
                   )}
+                  </span>
                 </Button>
               </form>
 
               {/* Footer */}
-              <div className="mt-8 text-center text-xs text-white/40 group-hover:text-gray-500 transition-colors duration-500">
+              <div className="mt-8 text-center text-xs text-white/40 ">
                 DAN CPL 系统 - 仅授权用户访问
               </div>
             </div>

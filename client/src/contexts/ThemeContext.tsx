@@ -32,6 +32,10 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = document.documentElement;
+    if (switchable) {
+      root.classList.add("theme-transitioning");
+      setTimeout(() => root.classList.remove("theme-transitioning"), 300);
+    }
     if (theme === "dark") {
       root.classList.add("dark");
     } else {

@@ -135,6 +135,11 @@ export const cplRouter = router({
     return db.getLatestSummary();
   }),
 
+  // Get active import log info
+  activeImport: publicProcedure.query(async () => {
+    return db.getActiveImportLog();
+  }),
+
   // Check if existing data exists
   hasData: publicProcedure.query(async () => {
     const count = await db.countCplProducts();

@@ -6,7 +6,9 @@ import { SpecDataTab } from "@/components/product/SpecDataTab";
 
 export default function ProductDataPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"product" | "spec">("product");
+  const [tab, setTab] = useState<"product" | "spec">(
+    window.location.hash === "#spec" ? "spec" : "product"
+  );
 
   const tabs = [
     { key: "product" as const, icon: Database, label: t('data.tabProduct') },
