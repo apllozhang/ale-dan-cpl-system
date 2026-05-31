@@ -12,18 +12,16 @@ ALE DAN CPL System — a full-stack quotation management platform for DAN (Digit
 ## Commands
 
 ```bash
-npm run dev          # Start dev server (tsx watch, auto port detection starting 3000)
-npm run build        # Production build (vite build + esbuild server bundle)
-npm run start        # Run production server from dist/
-npm run check        # TypeScript type checking (tsc --noEmit)
-npm run test         # Run vitest (server tests only)
-npm run format       # Prettier format all files
-npm run db:push      # Generate + apply Drizzle migrations
+pnpm dev          # Start dev server (tsx watch, auto port detection starting 3000)
+pnpm build        # Production build (vite build + esbuild server bundle)
+pnpm start        # Run production server from dist/
+pnpm check        # TypeScript type checking (tsc --noEmit)
+pnpm test         # Run vitest (server tests only)
+pnpm format       # Prettier format all files
+pnpm db:push      # Generate + apply Drizzle migrations
 ```
 
-Run a single test: `npx vitest run server/quotations.analytics.test.ts`
-
-**Note**: Use `npm install --legacy-peer-deps` if install fails with ERESOLVE.
+Run a single test: `pnpm vitest run server/quotations.analytics.test.ts`
 
 ## Architecture
 

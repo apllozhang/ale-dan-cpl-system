@@ -21,32 +21,20 @@ export async function createImportLogAndGetId(data: InsertImportLog): Promise<nu
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const insertResult = await db.insert(importLogs).values(data);
-  console.log('[DEBUG] insertResult:', insertResult);
-  
-  // Get the last inserted record by querying with the unique combination
-  const lastRecord = await db.select({ id: importLogs.id })
-    .from(importLogs)
-    .where(eq(importLogs.fileName, data.fileName))
-    .orderBy(desc(importLogs.id))
-    .limit(1);
-  console.log('[DEBUG] lastRecord:', lastRecord);
-  
-  const rawId = lastRecord[0]?.id;
-  console.log('[DEBUG] raw id:', rawId, 'type:', typeof rawId);
-  
+
+  // mysql2 returns ResultSetHeader; insertId may be BigInt on Node 22
+  const rawId = (insertResult as any).insertId ?? (insertResult as any)[0]?.insertId;
   let insertId: number;
-  if (typeof rawId === 'bigint') {
+  if (typeof rawId === "bigint") {
     insertId = Number(rawId);
-  } else if (typeof rawId === 'number') {
+  } else if (typeof rawId === "number") {
     insertId = rawId;
-  } else if (typeof rawId === 'string') {
-    insertId = parseInt(rawId, 10);
   } else {
-    insertId = 0;
+    // Fallback: query by max id
+    const [row] = await db.select({ id: sql<number>`LAST_INSERT_ID()` }).from(importLogs).limit(1);
+    insertId = typeof row?.id === "bigint" ? Number(row.id) : Number(row?.id ?? 0);
   }
-  
-  console.log('[DEBUG] converted insertId:', insertId);
-  
+
   if (!insertId || insertId <= 0) {
     throw new Error("Failed to get insertId from import log creation");
   }
@@ -73,18 +61,17 @@ export async function getActiveImportLog() {
 export async function getCplSheets(params: { importLogId?: number; page?: number; pageSize?: number } = {}) {
   const db = await getDb();
   if (!db) return [];
+
+  // Default to active import log so stale sheets from old imports don't leak
+  const importLogId = params.importLogId ?? await getActiveImportLogId();
+  if (!importLogId) return [];
+
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 20;
   const offset = (page - 1) * pageSize;
 
-  const conditions = [];
-  if (params.importLogId) {
-    conditions.push(eq(cplSheets.importLogId, params.importLogId));
-  }
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
   const items = await db.select().from(cplSheets)
-    .where(whereClause)
+    .where(eq(cplSheets.importLogId, importLogId))
     .orderBy(asc(cplSheets.displayOrder))
     .limit(pageSize)
     .offset(offset);
