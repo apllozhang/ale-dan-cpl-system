@@ -425,7 +425,20 @@
     "readonly": "読み取り専用",
     "editing": "編集中",
     "adjustSearchHint": "検索条件を調整してみてください",
-    "productDescription": "製品説明"
+    "productDescription": "製品説明",
+    "productCategories": "製品カテゴリ",
+    "productData": "製品データ",
+    "records": "{{count}} 件",
+    "searchAllFields": "全フィールドを検索...",
+    "selectSubcategory": "カテゴリを選択して製品を表示",
+    "deselectAll": "全選択解除",
+    "columnFilters": "列フィルター",
+    "clearAll": "すべてクリア",
+    "selectAll": "すべて選択",
+    "export": "エクスポート",
+    "pleaseSelectProducts": "製品を選択してください",
+    "exportFilename": "製品データ",
+    "dragToResize": "ドラッグで列幅を調整"
   },
   "summary": {
     "title": "変更記録",

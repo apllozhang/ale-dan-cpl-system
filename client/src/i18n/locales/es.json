@@ -425,7 +425,20 @@
     "readonly": "Solo lectura",
     "editing": "Editando",
     "adjustSearchHint": "Pruebe a ajustar los criterios de búsqueda",
-    "productDescription": "Descripción del producto"
+    "productDescription": "Descripción del producto",
+    "productCategories": "Categorías de productos",
+    "productData": "Datos de productos",
+    "records": "{{count}} registros",
+    "searchAllFields": "Buscar en todos los campos...",
+    "selectSubcategory": "Seleccione una categoría para ver productos",
+    "deselectAll": "Deseleccionar todo",
+    "columnFilters": "Filtros de columna",
+    "clearAll": "Borrar todo",
+    "selectAll": "Seleccionar todo",
+    "export": "Exportar",
+    "pleaseSelectProducts": "Seleccione productos primero",
+    "exportFilename": "DatosProductos",
+    "dragToResize": "Arrastrar para redimensionar"
   },
   "summary": {
     "title": "Registro de Cambios",

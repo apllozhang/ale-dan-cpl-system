@@ -425,7 +425,20 @@
     "readonly": "唯讀",
     "editing": "編輯中",
     "adjustSearchHint": "嘗試調整搜索條件",
-    "productDescription": "產品描述"
+    "productDescription": "產品描述",
+    "productCategories": "產品分類",
+    "productData": "產品資料",
+    "records": "{{count}} 筆記錄",
+    "searchAllFields": "搜尋所有欄位...",
+    "selectSubcategory": "請選擇左側分類查看產品資料",
+    "deselectAll": "取消全選",
+    "columnFilters": "欄位篩選",
+    "clearAll": "清除所有",
+    "selectAll": "全選",
+    "export": "匯出",
+    "pleaseSelectProducts": "請先選擇產品",
+    "exportFilename": "產品資料",
+    "dragToResize": "拖曳調整欄寬"
   },
   "stats": {
     "title": "分類統計",

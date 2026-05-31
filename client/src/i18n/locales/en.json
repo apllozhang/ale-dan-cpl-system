@@ -425,7 +425,20 @@
     "readonly": "Readonly",
     "editing": "Editing",
     "adjustSearchHint": "Try adjusting search criteria",
-    "productDescription": "Product Description"
+    "productDescription": "Product Description",
+    "productCategories": "Product Categories",
+    "productData": "Product Data",
+    "records": "{{count}} records",
+    "searchAllFields": "Search all fields...",
+    "selectSubcategory": "Select a category to view products",
+    "deselectAll": "Deselect All",
+    "columnFilters": "Column Filters",
+    "clearAll": "Clear All",
+    "selectAll": "Select All",
+    "export": "Export",
+    "pleaseSelectProducts": "Please select products first",
+    "exportFilename": "ProductData",
+    "dragToResize": "Drag to resize column"
   },
   "stats": {
     "title": "Statistics",

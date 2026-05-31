@@ -425,7 +425,20 @@
     "readonly": "Lecture seule",
     "editing": "Modification",
     "adjustSearchHint": "Essayez d'ajuster les critères de recherche",
-    "productDescription": "Description du produit"
+    "productDescription": "Description du produit",
+    "productCategories": "Catégories de produits",
+    "productData": "Données produits",
+    "records": "{{count}} enregistrements",
+    "searchAllFields": "Rechercher dans tous les champs...",
+    "selectSubcategory": "Sélectionnez une catégorie pour voir les produits",
+    "deselectAll": "Tout désélectionner",
+    "columnFilters": "Filtres de colonne",
+    "clearAll": "Tout effacer",
+    "selectAll": "Tout sélectionner",
+    "export": "Exporter",
+    "pleaseSelectProducts": "Veuillez d'abord sélectionner des produits",
+    "exportFilename": "DonneesProduits",
+    "dragToResize": "Glisser pour redimensionner"
   },
   "summary": {
     "title": "Journal des Modifications",

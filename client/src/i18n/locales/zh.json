@@ -426,7 +426,20 @@
     "readonly": "只读",
     "editing": "编辑中",
     "adjustSearchHint": "尝试调整搜索条件",
-    "productDescription": "产品描述"
+    "productDescription": "产品描述",
+    "productCategories": "产品分类",
+    "productData": "产品数据",
+    "records": "{{count}} 条记录",
+    "searchAllFields": "搜索所有字段...",
+    "selectSubcategory": "请选择左侧分类查看产品数据",
+    "deselectAll": "取消全选",
+    "columnFilters": "列筛选",
+    "clearAll": "清除所有",
+    "selectAll": "全选",
+    "export": "导出",
+    "pleaseSelectProducts": "请先选择产品",
+    "exportFilename": "产品数据",
+    "dragToResize": "拖动调整列宽"
   },
   "stats": {
     "title": "分类统计",
