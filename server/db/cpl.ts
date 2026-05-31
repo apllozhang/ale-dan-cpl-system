@@ -195,6 +195,7 @@ export async function importCplOverwrite(data: {
   if (!db) throw new Error("Database not available");
 
   // 1. Create import log OUTSIDE transaction to get reliable insertId
+  // Start as inactive to avoid race condition with concurrent imports
   const importLogId = await createImportLogAndGetId({
     fileName: data.fileName,
     userId: data.userId,
@@ -205,15 +206,15 @@ export async function importCplOverwrite(data: {
     sheetNames: data.sheetNames,
     sheetsCount: data.sheetsCount,
     productsCount: data.productsCount,
-    isActive: true,
+    isActive: false,
   });
 
   // 2. Now use transaction for the rest of the operations
   return await db.transaction(async (tx) => {
-    // 2a. Deactivate all other imports (excluding the new one)
+    // 2a. Deactivate ALL other imports (not just currently-active ones)
     await tx.update(importLogs).set({ isActive: false }).where(ne(importLogs.id, importLogId));
 
-    // 2b. Ensure this import is activated
+    // 2b. Activate this import
     await tx.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 
     // 3. Tag and insert sheets one by one
