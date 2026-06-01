@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { eq, ne, like, or, and, sql, asc, desc, isNotNull, inArray, SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
@@ -21,8 +22,12 @@ export async function activateImport(importLogId: number) {
   await db.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 }
 
-async function createImportLogAndGetId(tx: DbTransaction, data: InsertImportLog): Promise<number> {
+async function createImportLogAndGetId(tx: DbTransaction, data: Omit<InsertImportLog, "batchId">): Promise<number> {
+  // Generate a unique batchId so we can reliably find the exact row we just inserted,
+  // regardless of TiDB's non-monotonic auto-increment behavior
+  const batchId = randomUUID();
   await tx.insert(importLogs).values({
+    batchId,
     fileName: data.fileName,
     userId: data.userId,
     username: data.username,
@@ -34,19 +39,15 @@ async function createImportLogAndGetId(tx: DbTransaction, data: InsertImportLog)
     sheetsCount: data.sheetsCount,
     productsCount: data.productsCount,
   });
-  // Query back the most recent row with this fileName from this user within the same transaction
+  // Query back by batchId — guaranteed to find exactly our row
   const [row] = await tx.select({ id: importLogs.id })
     .from(importLogs)
-    .where(and(
-      eq(importLogs.fileName, data.fileName),
-      eq(importLogs.userId, data.userId),
-    ))
-    .orderBy(desc(importLogs.id))
+    .where(eq(importLogs.batchId, batchId))
     .limit(1);
   if (!row || !row.id || row.id <= 0) {
-    throw new Error(`Failed to retrieve import log after insert for fileName=${data.fileName}`);
+    throw new Error(`Failed to retrieve import log after insert for batchId=${batchId}`);
   }
-  console.log(`[import] Created import_log id=${row.id}, fileName=${data.fileName}`);
+  console.log(`[import] Created import_log id=${row.id}, batchId=${batchId}, fileName=${data.fileName}`);
   return row.id;
 }
 

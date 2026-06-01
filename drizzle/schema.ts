@@ -144,6 +144,7 @@ export type InsertQuotationItem = typeof quotationItems.$inferInsert;
 // Import log table
 export const importLogs = mysqlTable("import_logs", {
   id: int("id").autoincrement().primaryKey(),
+  batchId: varchar("batchId", { length: 36 }).notNull(),
   isActive: boolean("isActive").default(false).notNull(),
   fileName: varchar("fileName", { length: 256 }).notNull(),
   userId: int("userId").notNull(),
