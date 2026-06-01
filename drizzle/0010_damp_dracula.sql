@@ -1,0 +1,1 @@
+ALTER TABLE `import_logs` ADD `batchId` varchar(36) NOT NULL;
