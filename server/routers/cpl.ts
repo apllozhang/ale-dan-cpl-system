@@ -125,9 +125,40 @@ export const cplRouter = router({
       sortBy: z.string().optional(),
       sortOrder: z.enum(["asc", "desc"]).default("asc"),
       filters: z.record(z.string(), z.string()).optional(),
+      statusFilter: z.string().optional(),
+      newOnly: z.boolean().optional(),
+      priceMin: z.number().optional(),
+      priceMax: z.number().optional(),
     }))
     .query(async ({ input }) => {
       return db.getCplProducts(input);
+    }),
+
+  // Get products by IDs (for quotation pre-fill)
+  productsByIds: publicProcedure
+    .input(z.object({
+      ids: z.array(z.number()).min(1).max(200),
+    }))
+    .query(async ({ input }) => {
+      return db.getCplProductsByIds(input.ids);
+    }),
+
+  // Export all filtered products (no pagination limit)
+  exportProducts: publicProcedure
+    .input(z.object({
+      sheetName: z.string().optional(),
+      sheetNames: z.array(z.string()).optional(),
+      search: z.string().optional(),
+      sortBy: z.string().optional(),
+      sortOrder: z.enum(["asc", "desc"]).default("asc"),
+      filters: z.record(z.string(), z.string()).optional(),
+      statusFilter: z.string().optional(),
+      newOnly: z.boolean().optional(),
+      priceMin: z.number().optional(),
+      priceMax: z.number().optional(),
+    }))
+    .query(async ({ input }) => {
+      return db.getCplProducts({ ...input, page: 1, pageSize: 50000 });
     }),
 
   // Get latest summary

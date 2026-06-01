@@ -17,6 +17,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
+  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -37,6 +38,7 @@ import {
   FileSpreadsheet,
   ChevronRight,
   ChevronLeft,
+  Rows3,
 } from "lucide-react";
 import TablePagination from "@/components/TablePagination";
 import {
@@ -149,6 +151,34 @@ export function ProductDataContent() {
   const [resizingColumn, setResizingColumn] = useState<string | null>(null);
   const [resizeStartX, setResizeStartX] = useState(0);
   const [resizeStartWidth, setResizeStartWidth] = useState(0);
+
+  // Quick filter state
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [newOnly, setNewOnly] = useState(false);
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+
+  // Table density
+  const [density, setDensity] = useState<"comfortable" | "compact">(() => {
+    try {
+      return localStorage.getItem("ale-cpl-density") === "compact" ? "compact" : "comfortable";
+    } catch { return "comfortable"; }
+  });
+
+  // Sticky scroll state
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Export all loading state
+  const [exportingAll, setExportingAll] = useState(false);
+
+  // Existing quotations for "add to existing" dropdown
+  const existingQuotationsQuery = trpc.quotations.list.useQuery(
+    { page: 1, pageSize: 50 },
+    { enabled: selectedRows.size > 0 }
+  );
+
+  const utils = trpc.useUtils();
 
   // Save selected category
   useEffect(() => {
@@ -268,6 +298,10 @@ export function ProductDataContent() {
       filters: Object.fromEntries(
         Object.entries(filters).filter(([, v]) => v && v.trim())
       ),
+      statusFilter: statusFilter !== "all" ? statusFilter : undefined,
+      newOnly: newOnly || undefined,
+      priceMin: priceMin ? parseFloat(priceMin) : undefined,
+      priceMax: priceMax ? parseFloat(priceMax) : undefined,
     },
     { enabled: !!selectedSheet }
   );
@@ -387,6 +421,49 @@ export function ProductDataContent() {
 
   const visibleColumnsList = COLUMNS.filter((c) => visibleColumns.has(c.key));
   const activeFilterCount = Object.values(filters).filter((v) => v && v.trim()).length;
+  const hasQuickFilters = statusFilter !== "all" || newOnly || priceMin || priceMax;
+
+  // Persist density
+  useEffect(() => {
+    localStorage.setItem("ale-cpl-density", density);
+  }, [density]);
+
+  // Scroll listener for sticky shadow
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const handler = () => setIsScrolled(el.scrollLeft > 10);
+    el.addEventListener("scroll", handler);
+    return () => el.removeEventListener("scroll", handler);
+  }, []);
+
+  // Export all filtered data
+  const handleExportAll = async () => {
+    setExportingAll(true);
+    try {
+      const allData = await utils.cpl.exportProducts.fetch({
+        sheetName: selectedSheet || undefined,
+        search: debouncedSearch,
+        sortBy,
+        sortOrder,
+        filters: Object.fromEntries(Object.entries(filters).filter(([, v]) => v && v.trim())),
+        statusFilter: statusFilter !== "all" ? statusFilter : undefined,
+        newOnly: newOnly || undefined,
+        priceMin: priceMin ? parseFloat(priceMin) : undefined,
+        priceMax: priceMax ? parseFloat(priceMax) : undefined,
+      });
+      const exportData = (allData?.items || []).map((product: any) => {
+        const row: Record<string, any> = {};
+        visibleColumnsList.forEach(col => { row[col.key] = (product as any)[col.key] || ""; });
+        return row;
+      });
+      const fileName = `${t('data.exportFilename')}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const exportColumns = visibleColumnsList.map(c => ({ key: c.key, label: t(c.labelKey, { defaultValue: c.label }) }));
+      exportToExcel(exportData, exportColumns, fileName);
+    } finally {
+      setExportingAll(false);
+    }
+  };
 
   const getSortIcon = (column: string) => {
     if (sortBy !== column) return <ChevronsUpDown className="w-3.5 h-3.5 text-muted-foreground/40" />;
@@ -598,6 +675,26 @@ export function ProductDataContent() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5"
+              disabled={exportingAll || !selectedSheet}
+              onClick={handleExportAll}
+            >
+              {exportingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              {t('data.exportAll')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5"
+              onClick={() => setDensity(density === "comfortable" ? "compact" : "comfortable")}
+              title={density === "comfortable" ? t('data.switchToCompact') : t('data.switchToComfortable')}
+            >
+              <Rows3 className="w-3.5 h-3.5" />
+              {density === "comfortable" ? t('data.compactMode') : t('data.comfortableMode')}
+            </Button>
           </div>
         </div>
 
@@ -626,6 +723,65 @@ export function ProductDataContent() {
           </div>
         )}
 
+        {/* Quick filter pills */}
+        {selectedSheet && (
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">{t('data.quickFilter.status')}:</span>
+              {["all", "Active", "EOL"].map(status => (
+                <button
+                  key={status}
+                  onClick={() => { setStatusFilter(status); setPage(1); }}
+                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                    statusFilter === status
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-primary/30"
+                  }`}
+                >
+                  {status === "all" ? t('data.quickFilter.all') : status}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { setNewOnly(!newOnly); setPage(1); }}
+              className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                newOnly
+                  ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t('data.quickFilter.newOnly')}
+            </button>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span>{t('data.quickFilter.price')}:</span>
+              <Input
+                type="number"
+                placeholder={t('data.quickFilter.min')}
+                value={priceMin}
+                onChange={e => { setPriceMin(e.target.value); setPage(1); }}
+                className="h-7 w-20 text-xs"
+              />
+              <span>-</span>
+              <Input
+                type="number"
+                placeholder={t('data.quickFilter.max')}
+                value={priceMax}
+                onChange={e => { setPriceMax(e.target.value); setPage(1); }}
+                className="h-7 w-20 text-xs"
+              />
+            </div>
+            {hasQuickFilters && (
+              <button
+                onClick={() => { setStatusFilter("all"); setNewOnly(false); setPriceMin(""); setPriceMax(""); setPage(1); }}
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                {t('data.quickFilter.clear')}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Batch operation toolbar */}
         {selectedRows.size > 0 && (
           <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between">
@@ -646,6 +802,35 @@ export function ProductDataContent() {
                 <FileSpreadsheet className="w-4 h-4 mr-1" />
                 {t('data.createQuotation')}
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1">
+                    <FileSpreadsheet className="w-4 h-4" />
+                    {t('data.addToExisting')}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-72 max-h-60 overflow-auto">
+                  <div className="px-2 py-1.5 text-sm font-medium">{t('data.selectQuotation')}</div>
+                  <DropdownMenuSeparator />
+                  {(existingQuotationsQuery.data?.items || []).map((q: any) => (
+                    <DropdownMenuItem
+                      key={q.id}
+                      onClick={() => {
+                        const ids = Array.from(selectedRows).join(",");
+                        setLocation(`/quotations/${q.id}?addProductIds=${ids}`);
+                      }}
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium">{q.quotationNumber || q.quotationNo} - {q.customerName}</span>
+                        <span className="text-xs text-muted-foreground">{q.projectName}</span>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                  {(!existingQuotationsQuery.data?.items || existingQuotationsQuery.data.items.length === 0) && (
+                    <div className="px-2 py-3 text-xs text-muted-foreground text-center">{t('data.noQuotations')}</div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 size="sm"
                 variant="outline"
@@ -715,11 +900,11 @@ export function ProductDataContent() {
 
         {/* Data table */}
         <div className="flex-1 border rounded-lg bg-card overflow-hidden flex flex-col">
-          <div className="overflow-x-auto flex-1">
+          <div ref={scrollContainerRef} className="overflow-x-auto flex-1">
             <Table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="w-12 px-3 py-2 border-r border-border/50">
+                  <TableHead className={`w-12 border-r border-border/50 sticky left-0 z-20 bg-muted/30 ${density === "compact" ? "px-2 py-1" : "px-3 py-2"}`}>
                     <input
                       type="checkbox"
                       checked={selectAll}
@@ -728,11 +913,16 @@ export function ProductDataContent() {
                       title={t('data.selectAll')}
                     />
                   </TableHead>
-                  {visibleColumnsList.map((col) => (
+                  {visibleColumnsList.map((col) => {
+                    const isSticky = col.key === "productModel";
+                    return (
                     <TableHead
                       key={col.key}
-                      className="cursor-pointer select-none text-xs font-semibold text-foreground/80 hover:text-foreground transition-colors border-r border-border/50 last:border-r-0 px-3 py-2 whitespace-nowrap relative group"
-                      style={{ width: `${columnWidths[col.key] || col.defaultWidth}px` }}
+                      className={`cursor-pointer select-none text-xs font-semibold text-foreground/80 hover:text-foreground transition-colors border-r border-border/50 last:border-r-0 whitespace-nowrap relative group ${isSticky ? `sticky z-20 bg-muted/30 ${isScrolled ? "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""}` : ""} ${density === "compact" ? "px-2 py-1" : "px-3 py-2"}`}
+                      style={{
+                        width: `${columnWidths[col.key] || col.defaultWidth}px`,
+                        ...(isSticky ? { left: "48px" } : {}),
+                      }}
                       onClick={() => handleSort(col.key)}
                     >
                       <div className="flex items-center gap-1">
@@ -745,7 +935,8 @@ export function ProductDataContent() {
                         title={t('data.dragToResize')}
                       />
                     </TableHead>
-                  ))}
+                    );
+                  })}
                 </TableRow>
               </TableHeader>
               <TableBody ref={tableBodyRef}>
@@ -790,7 +981,7 @@ export function ProductDataContent() {
                           : 'hover:bg-accent/30'
                       }`}
                     >
-                      <TableCell className="w-12 px-3 py-3 border-r border-border/50 align-middle">
+                      <TableCell className={`w-12 border-r border-border/50 align-middle sticky left-0 z-10 bg-card ${selectedRows.has(product.id.toString()) ? "!bg-primary/15" : ""} ${density === "compact" ? "px-2 py-1.5" : "px-3 py-3"}`}>
                         <input
                           type="checkbox"
                           checked={selectedRows.has(product.id.toString())}
@@ -799,11 +990,16 @@ export function ProductDataContent() {
                           className="w-4 h-4 cursor-pointer"
                         />
                       </TableCell>
-                      {visibleColumnsList.map((col) => (
+                      {visibleColumnsList.map((col) => {
+                        const isSticky = col.key === "productModel";
+                        return (
                     <TableCell
                       key={col.key}
-                      className="text-xs py-3 px-3 border-r border-border/50 last:border-r-0 align-top"
-                      style={{ width: `${columnWidths[col.key] || col.defaultWidth}px` }}
+                      className={`${density === "compact" ? "text-[11px] py-1.5 px-2" : "text-xs py-3 px-3"} border-r border-border/50 last:border-r-0 align-top ${isSticky ? `sticky z-10 bg-card ${isScrolled ? "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""}` : ""} ${isSticky && selectedRows.has(product.id.toString()) ? "!bg-primary/15" : ""}`}
+                      style={{
+                        width: `${columnWidths[col.key] || col.defaultWidth}px`,
+                        ...(isSticky ? { left: "48px" } : {}),
+                      }}
                     >
                       <div className="break-words whitespace-normal">
                         {col.key === "isNew" && getCellValue(product as any, col.key) ? (
@@ -815,7 +1011,8 @@ export function ProductDataContent() {
                             )}
                           </div>
                         </TableCell>
-                      ))}
+                        );
+                      })}
                     </TableRow>
                   ))
                 )}

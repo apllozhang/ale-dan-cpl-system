@@ -89,6 +89,10 @@ export async function getCplProducts(params: {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   filters?: Record<string, string>;
+  statusFilter?: string;
+  newOnly?: boolean;
+  priceMin?: number;
+  priceMax?: number;
 } = {}) {
   const db = await getDb();
   if (!db) return { items: [], total: 0 };
@@ -96,7 +100,7 @@ export async function getCplProducts(params: {
   const activeImportId = await getActiveImportLogId();
   if (!activeImportId) return { items: [], total: 0 };
 
-  const { sheetName, sheetNames, search, page = 1, pageSize = 50, sortBy, sortOrder = "asc", filters } = params;
+  const { sheetName, sheetNames, search, page = 1, pageSize = 50, sortBy, sortOrder = "asc", filters, statusFilter, newOnly, priceMin, priceMax } = params;
   const conditions: SQL[] = [eq(cplProducts.importLogId, activeImportId)];
 
   if (sheetNames && sheetNames.length > 0) {
@@ -146,6 +150,28 @@ export async function getCplProducts(params: {
     }
   }
 
+  if (statusFilter && statusFilter !== "all") {
+    conditions.push(eq(cplProducts.productStatus, statusFilter));
+  }
+
+  if (newOnly) {
+    conditions.push(
+      or(
+        like(cplProducts.isNew, "%新品%"),
+        like(cplProducts.isNew, "%New%"),
+        like(cplProducts.isNew, "%Yes%"),
+        eq(cplProducts.isNew, "1"),
+      )!
+    );
+  }
+
+  if (priceMin !== undefined) {
+    conditions.push(sql`CAST(${cplProducts.listPrice} AS DECIMAL(20,2)) >= ${priceMin}`);
+  }
+  if (priceMax !== undefined) {
+    conditions.push(sql`CAST(${cplProducts.listPrice} AS DECIMAL(20,2)) <= ${priceMax}`);
+  }
+
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const sortColumnMap: Record<string, any> = {
@@ -175,6 +201,16 @@ export async function getCplProducts(params: {
     items,
     total: Number(countResult[0]?.count ?? 0),
   };
+}
+
+export async function getCplProductsByIds(ids: number[]) {
+  const db = await getDb();
+  if (!db || ids.length === 0) return [];
+  const activeImportId = await getActiveImportLogId();
+  if (!activeImportId) return [];
+  return db.select().from(cplProducts).where(
+    and(eq(cplProducts.importLogId, activeImportId), inArray(cplProducts.id, ids))
+  );
 }
 
 // ==================== CPL Import helpers ====================

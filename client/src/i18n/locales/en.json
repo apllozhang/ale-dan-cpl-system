@@ -442,7 +442,24 @@
     "export": "Export",
     "pleaseSelectProducts": "Please select products first",
     "exportFilename": "ProductData",
-    "dragToResize": "Drag to resize column"
+    "dragToResize": "Drag to resize column",
+    "exportAll": "Export All",
+    "compactMode": "Compact",
+    "comfortableMode": "Comfortable",
+    "switchToCompact": "Switch to compact view",
+    "switchToComfortable": "Switch to comfortable view",
+    "addToExisting": "Add to Quotation",
+    "selectQuotation": "Select Quotation",
+    "noQuotations": "No quotations found",
+    "quickFilter": {
+      "status": "Status",
+      "all": "All",
+      "newOnly": "New Only",
+      "price": "Price",
+      "min": "Min",
+      "max": "Max",
+      "clear": "Clear filters"
+    }
   },
   "stats": {
     "title": "Statistics",

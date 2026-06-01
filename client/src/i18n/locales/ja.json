@@ -442,7 +442,24 @@
     "export": "エクスポート",
     "pleaseSelectProducts": "製品を選択してください",
     "exportFilename": "製品データ",
-    "dragToResize": "ドラッグで列幅を調整"
+    "dragToResize": "ドラッグで列幅を調整",
+    "exportAll": "全てエクスポート",
+    "compactMode": "コンパクト",
+    "comfortableMode": "快適",
+    "switchToCompact": "コンパクト表示に切り替え",
+    "switchToComfortable": "快適表示に切り替え",
+    "addToExisting": "既存の見積りに追加",
+    "selectQuotation": "見積りを選択",
+    "noQuotations": "見積りがありません",
+    "quickFilter": {
+      "status": "ステータス",
+      "all": "すべて",
+      "newOnly": "新製品のみ",
+      "price": "価格",
+      "min": "最小",
+      "max": "最大",
+      "clear": "フィルターをクリア"
+    }
   },
   "summary": {
     "title": "変更記録",

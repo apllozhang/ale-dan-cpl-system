@@ -442,7 +442,24 @@
     "export": "Exporter",
     "pleaseSelectProducts": "Veuillez d'abord sélectionner des produits",
     "exportFilename": "DonneesProduits",
-    "dragToResize": "Glisser pour redimensionner"
+    "dragToResize": "Glisser pour redimensionner",
+    "exportAll": "Tout exporter",
+    "compactMode": "Compact",
+    "comfortableMode": "Confortable",
+    "switchToCompact": "Vue compacte",
+    "switchToComfortable": "Vue confortable",
+    "addToExisting": "Ajouter au devis",
+    "selectQuotation": "Sélectionner un devis",
+    "noQuotations": "Aucun devis trouvé",
+    "quickFilter": {
+      "status": "Statut",
+      "all": "Tout",
+      "newOnly": "Nouveautés",
+      "price": "Prix",
+      "min": "Min",
+      "max": "Max",
+      "clear": "Effacer les filtres"
+    }
   },
   "summary": {
     "title": "Journal des Modifications",

@@ -442,7 +442,24 @@
     "export": "Exportar",
     "pleaseSelectProducts": "Seleccione productos primero",
     "exportFilename": "DatosProductos",
-    "dragToResize": "Arrastrar para redimensionar"
+    "dragToResize": "Arrastrar para redimensionar",
+    "exportAll": "Exportar todo",
+    "compactMode": "Compacto",
+    "comfortableMode": "Cómodo",
+    "switchToCompact": "Vista compacta",
+    "switchToComfortable": "Vista cómoda",
+    "addToExisting": "Agregar a cotización",
+    "selectQuotation": "Seleccionar cotización",
+    "noQuotations": "Sin cotizaciones",
+    "quickFilter": {
+      "status": "Estado",
+      "all": "Todo",
+      "newOnly": "Solo nuevos",
+      "price": "Precio",
+      "min": "Mín",
+      "max": "Máx",
+      "clear": "Limpiar filtros"
+    }
   },
   "summary": {
     "title": "Registro de Cambios",

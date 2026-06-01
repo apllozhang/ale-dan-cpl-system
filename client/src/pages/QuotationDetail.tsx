@@ -207,6 +207,23 @@ export default function QuotationDetail() {
   const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [specPreviewOpen, setSpecPreviewOpen] = useState(false);
 
+  // Parse productIds / addProductIds from URL query params
+  const preselectedProductIds = useMemo(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const idsParam = searchParams.get("productIds") || searchParams.get("addProductIds");
+    if (!idsParam) return [];
+    return idsParam.split(",").map(Number).filter(n => !isNaN(n));
+  }, []);
+
+  const isAddMode = useMemo(() => {
+    return !!new URLSearchParams(window.location.search).get("addProductIds");
+  }, []);
+
+  const preselectedProductsQuery = trpc.cpl.productsByIds.useQuery(
+    { ids: preselectedProductIds },
+    { enabled: preselectedProductIds.length > 0 }
+  );
+
   // Quick search state
   const [quickSearch, setQuickSearch] = useState("");
   const [quickResults, setQuickResults] = useState<any[]>([]);
@@ -242,6 +259,31 @@ export default function QuotationDetail() {
       })));
     }
   }, [quotationQuery.data]);
+
+  // Pre-fill items from URL productIds / addProductIds
+  const preselectedLoaded = useRef(false);
+  useEffect(() => {
+    if (preselectedLoaded.current) return;
+    const products = preselectedProductsQuery.data;
+    if (!products || products.length === 0) return;
+
+    preselectedLoaded.current = true;
+    const newItems: ItemRow[] = products.map(product => ({
+      productId: product.id,
+      productModel: product.productModel || "",
+      productDesc: product.productDesc || "",
+      listPrice: product.listPrice || "",
+      quantity: 1,
+      discountRate,
+      subtotal: parseFloat(product.listPrice || "0") * 1 * (discountRate / 100),
+    }));
+
+    if (isAddMode) {
+      setItems(prev => [...prev, ...newItems]);
+    } else {
+      setItems(newItems);
+    }
+  }, [preselectedProductsQuery.data, isAddMode, discountRate]);
 
   const updateItem = (index: number, field: keyof ItemRow, value: any) => {
     setItems(prev => prev.map((item, i) => {

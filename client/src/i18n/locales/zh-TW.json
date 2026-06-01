@@ -442,7 +442,24 @@
     "export": "匯出",
     "pleaseSelectProducts": "請先選擇產品",
     "exportFilename": "產品資料",
-    "dragToResize": "拖曳調整欄寬"
+    "dragToResize": "拖曳調整欄寬",
+    "exportAll": "匯出全部",
+    "compactMode": "緊湊",
+    "comfortableMode": "舒適",
+    "switchToCompact": "切換到緊湊視圖",
+    "switchToComfortable": "切換到舒適視圖",
+    "addToExisting": "加入現有報價單",
+    "selectQuotation": "選擇報價單",
+    "noQuotations": "暫無報價單",
+    "quickFilter": {
+      "status": "狀態",
+      "all": "全部",
+      "newOnly": "僅新品",
+      "price": "價格",
+      "min": "最低",
+      "max": "最高",
+      "clear": "清除篩選"
+    }
   },
   "stats": {
     "title": "分類統計",
