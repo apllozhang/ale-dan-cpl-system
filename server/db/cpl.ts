@@ -316,32 +316,6 @@ export async function countCplProducts() {
   return db.$count(cplProducts, eq(cplProducts.importLogId, activeImportId));
 }
 
-export async function insertSheets(sheets: InsertCplSheet[]) {
-  const db = await getDb();
-  if (!db || sheets.length === 0) return;
-  const batchSize = 50;
-  for (let i = 0; i < sheets.length; i += batchSize) {
-    const batch = sheets.slice(i, i + batchSize);
-    await db.insert(cplSheets).values(batch);
-  }
-}
-
-export async function bulkInsertProducts(products: InsertCplProduct[]) {
-  const db = await getDb();
-  if (!db) return;
-  const batchSize = 200;
-  for (let i = 0; i < products.length; i += batchSize) {
-    const batch = products.slice(i, i + batchSize);
-    await db.insert(cplProducts).values(batch);
-  }
-}
-
-export async function insertSummary(summary: { content: string; version: string; importLogId: number }) {
-  const db = await getDb();
-  if (!db) return;
-  await db.insert(cplSummary).values(summary);
-}
-
 export async function getCplStats() {
   const db = await getDb();
   if (!db) return {

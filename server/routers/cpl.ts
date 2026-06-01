@@ -181,116 +181,66 @@ export const cplRouter = router({
     return db.getCplStats();
   }),
 
-  // Import Excel file
+  // Import Excel file — always overwrite (old data preserved for switching)
   import: superAdminProcedure
     .input(z.object({
       fileBase64: z.string().max(50_000_000),
       fileName: z.string(),
-      mode: z.enum(["merge", "overwrite"]).default("overwrite"),
       selectedSheets: z.array(z.string()).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const buffer = Buffer.from(input.fileBase64, "base64");
-      const { products, sheetMeta, summaryContent } = parseExcelBuffer(buffer, input.selectedSheets);
-
-      // Fetch org/group names for logging
-      let orgName = "";
-      let groupName = "";
-      if (ctx.user!.organizationId) {
-        const orgs = await db.getAllOrganizations();
-        orgName = orgs.find((o: any) => o.id === ctx.user!.organizationId)?.name || "";
+      if (importInProgress) {
+        throw new TRPCError({ code: "CONFLICT", message: "Another import is in progress, please wait" });
       }
-      if (ctx.user!.groupId) {
-        const groups = await db.getAllUserGroups();
-        groupName = groups.find((g: any) => g.id === ctx.user!.groupId)?.name || "";
+      importInProgress = true;
+      try {
+        const buffer = Buffer.from(input.fileBase64, "base64");
+        const { products, sheetMeta, summaryContent } = parseExcelBuffer(buffer, input.selectedSheets);
+
+        // Fetch org/group names for logging
+        let orgName = "";
+        let groupName = "";
+        if (ctx.user!.organizationId) {
+          const orgs = await db.getAllOrganizations();
+          orgName = orgs.find((o: any) => o.id === ctx.user!.organizationId)?.name || "";
+        }
+        if (ctx.user!.groupId) {
+          const groups = await db.getAllUserGroups();
+          groupName = groups.find((g: any) => g.id === ctx.user!.groupId)?.name || "";
+        }
+
+        const cleanedSheets = sheetMeta.map((s: any) => {
+          const { id, ...rest } = s;
+          return rest;
+        });
+        await db.importCplOverwrite({
+          fileName: input.fileName,
+          userId: ctx.user!.id,
+          username: ctx.user!.username || "unknown",
+          orgName: orgName || null,
+          groupName: groupName || null,
+          sheetNames: sheetMeta.map((s: any) => s.sheetName),
+          sheetsCount: sheetMeta.length,
+          productsCount: products.length,
+          products: products as any,
+          sheets: cleanedSheets as any,
+          summary: summaryContent ? { content: summaryContent, version: input.fileName } : undefined,
+        });
+
+        // Audit log
+        await logActivity(ctx, {
+          action: "import_data", resourceType: "import",
+          detail: { fileName: input.fileName, mode: "overwrite", productsCount: products.length },
+        });
+
+        return {
+          success: true,
+          sheetsImported: sheetMeta.length,
+          productsImported: products.length,
+          hasSummary: !!summaryContent,
+        };
+      } finally {
+        importInProgress = false;
       }
-
-      if (input.mode === "overwrite") {
-        // Check import lock
-        if (importInProgress) {
-          throw new TRPCError({ code: "CONFLICT", message: "Another import is in progress, please wait" });
-        }
-        importInProgress = true;
-        try {
-          // Remove id field from sheetMeta to avoid conflicts with database auto-increment
-          const cleanedSheets = sheetMeta.map((s: any) => {
-            const { id, ...rest } = s;
-            return rest;
-          });
-          await db.importCplOverwrite({
-            fileName: input.fileName,
-            userId: ctx.user!.id,
-            username: ctx.user!.username || "unknown",
-            orgName: orgName || null,
-            groupName: groupName || null,
-            sheetNames: sheetMeta.map((s: any) => s.sheetName),
-            sheetsCount: sheetMeta.length,
-            productsCount: products.length,
-            products: products as any,
-            sheets: cleanedSheets as any,
-            summary: summaryContent ? { content: summaryContent, version: input.fileName } : undefined,
-          });
-        } finally {
-          importInProgress = false;
-        }
-      } else {
-        // Merge: check import lock
-        if (importInProgress) {
-          throw new TRPCError({ code: "CONFLICT", message: "Another import is in progress, please wait" });
-        }
-        importInProgress = true;
-        try {
-          // Merge: add to current active import
-          let activeImportId = await db.getActiveImportLogId();
-
-          // If no active import, create one first
-          if (!activeImportId) {
-            activeImportId = await db.createImportLogAndGetId({
-              fileName: input.fileName,
-              userId: ctx.user!.id,
-              username: ctx.user!.username || "unknown",
-              orgName: orgName || null,
-              groupName: groupName || null,
-              mode: input.mode,
-              sheetNames: sheetMeta.map((s: any) => s.sheetName),
-              sheetsCount: sheetMeta.length,
-              productsCount: products.length,
-              isActive: true,  // Activate immediately
-            } as any);
-            // Activate the newly created import
-            await db.activateImport(activeImportId);
-          }
-
-          (products as any[]).forEach((p: any) => { p.importLogId = activeImportId; });
-          // Remove id field from sheetMeta to avoid conflicts with database auto-increment
-          const cleanedSheets = sheetMeta.map((s: any) => {
-            const { id, ...rest } = s;
-            return { ...rest, importLogId: activeImportId };
-          });
-
-          await db.insertSheets(cleanedSheets as any);
-          if (products.length > 0) {
-            await db.bulkInsertProducts(products as any);
-          }
-          if (summaryContent) {
-            await db.insertSummary({ content: summaryContent, version: input.fileName, importLogId: activeImportId } as any);
-          }
-        } finally {
-          importInProgress = false;
-        }
-      }
-
-      // Audit log
-      await logActivity(ctx, {
-        action: "import_data", resourceType: "import",
-        detail: { fileName: input.fileName, mode: input.mode, productsCount: products.length },
-      });
-
-      return {
-        success: true,
-        sheetsImported: sheetMeta.length,
-        productsImported: products.length,
-        hasSummary: !!summaryContent,
-      };
     }),
 });

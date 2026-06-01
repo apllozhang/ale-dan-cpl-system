@@ -36,12 +36,9 @@ export function SpecDataImport() {
     onError: (err: any) => toast.error(err.message || t('techSpecs.importFailed')),
   });
 
-  const deleteSetMutation = trpc.productSpecs.deleteSet.useMutation();
-
   // Check existing sets
   const setsQuery = trpc.productSpecs.listSets.useQuery({ page: 1, pageSize: 100 });
-  const existingSets = setsQuery.data?.items ?? [];
-  const existingCount = existingSets.length;
+  const existingCount = setsQuery.data?.items?.length ?? 0;
   const hasExistingData = existingCount > 0;
 
   const reset = () => { setFile(null); setName(""); setDescription(""); setPreview([]); setSheetInfo([]); setSelectedSheets(new Set()); };
@@ -96,21 +93,13 @@ export function SpecDataImport() {
     if (hasExistingData) {
       setConfirmOpen(true);
     } else {
-      doImport("merge");
+      doImport();
     }
   };
 
-  const doImport = async (mode: "merge" | "overwrite") => {
+  const doImport = async () => {
     setConfirmOpen(false);
     if (!file || !name) return;
-
-    // Overwrite: delete all existing sets first
-    if (mode === "overwrite") {
-      for (const s of existingSets) {
-        await deleteSetMutation.mutateAsync({ id: s.id });
-      }
-      utils.productSpecs.listSets.invalidate();
-    }
 
     const buffer = await file.arrayBuffer();
     const uint8 = new Uint8Array(buffer);
@@ -251,30 +240,19 @@ export function SpecDataImport() {
         </div>
       )}
 
-      {/* Confirmation Dialog — same style as product import */}
+      {/* Confirmation Dialog */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('import.specConfirmTitle')}</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
+            <AlertDialogDescription className="space-y-2">
+              <p>{t('import.specOverwriteDesc')}</p>
               <p className="text-destructive font-medium">{t('import.specExistingData', { count: existingCount })}</p>
-              <p>{t('import.selectMode')}</p>
-              <div className="space-y-2">
-                <div className="border rounded p-3 bg-yellow-50/50">
-                  <p className="font-medium text-sm">{t('import.merge')} (Merge)</p>
-                  <p className="text-xs text-muted-foreground">{t('import.specMergeDesc')}</p>
-                </div>
-                <div className="border rounded p-3 bg-destructive/5">
-                  <p className="font-medium text-sm text-destructive">{t('import.overwrite')} (Overwrite)</p>
-                  <p className="text-xs text-destructive">⚠ {t('import.specOverwriteDesc')}</p>
-                </div>
-              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <Button variant="outline" onClick={() => doImport("merge")} className="gap-1.5">{t('import.merge')}</Button>
-            <Button variant="destructive" onClick={() => doImport("overwrite")} className="gap-1.5">{t('import.overwrite')}</Button>
+            <AlertDialogAction onClick={doImport} className="bg-primary text-primary-foreground hover:bg-primary/90">{t('import.overwrite')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

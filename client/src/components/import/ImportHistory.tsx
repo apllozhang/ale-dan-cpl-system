@@ -30,7 +30,6 @@ export function ImportHistory() {
     { key: "createdAt", label: t('import.time'), defaultWidth: 160, sortable: true },
     { key: "fileName", label: t('import.fileName', { defaultValue: '文件名' }), defaultWidth: 220, sortable: true },
     { key: "sheetNames", label: t('import.sheetNames', { defaultValue: '表格' }), defaultWidth: 280, sortable: false },
-    { key: "mode", label: t('import.mode'), defaultWidth: 80, sortable: true },
     { key: "actions", label: "", defaultWidth: 120, sortable: false },
   ];
   const { renderHeader, renderCell, sortData } = useTableFeatures(columns);
@@ -121,10 +120,7 @@ export function ImportHistory() {
                     <span className="text-muted-foreground">{t('import.sheetCount', { count: l.sheetsCount, defaultValue: `${l.sheetsCount} 个表格` })}</span>
                   )
                 )}
-                {renderCell(columns[3], false,
-                  <Badge variant={l.mode === "overwrite" ? "destructive" : "secondary"} className="text-[10px] h-5 px-1.5">{l.mode === "overwrite" ? t('import.overwrite') : t('import.merge')}</Badge>
-                )}
-                {renderCell(columns[4], true,
+                {renderCell(columns[3], true,
                   <div className="flex items-center gap-1">
                     {l.isActive ? (
                       <Badge className="text-[10px] h-5 px-1.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">

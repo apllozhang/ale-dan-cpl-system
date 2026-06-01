@@ -21,9 +21,6 @@ vi.mock("./db", () => ({
   activateImport: vi.fn(),
   getActiveImportLogId: vi.fn(),
   importCplOverwrite: vi.fn(),
-  insertSheets: vi.fn(),
-  bulkInsertProducts: vi.fn(),
-  insertSummary: vi.fn(),
   createImportLogAndGetId: vi.fn(),
   createActivityLog: vi.fn().mockResolvedValue(undefined),
   getAllOrganizations: vi.fn().mockResolvedValue([]),
@@ -246,9 +243,9 @@ describe("importLogs.list", () => {
   });
 });
 
-// ==================== cpl.import overwrite mode ====================
+// ==================== cpl.import ====================
 
-describe("cpl.import overwrite mode", () => {
+describe("cpl.import", () => {
   it("calls importCplOverwrite with correct params", async () => {
     const { ctx } = createSuperAdminContext();
     const caller = appRouter.createCaller(ctx);
@@ -273,7 +270,6 @@ describe("cpl.import overwrite mode", () => {
     const result = await caller.cpl.import({
       fileBase64,
       fileName: "test.xlsx",
-      mode: "overwrite",
     });
 
     expect(result.success).toBe(true);
@@ -295,89 +291,7 @@ describe("cpl.import overwrite mode", () => {
     const caller = appRouter.createCaller(ctx);
 
     await expect(
-      caller.cpl.import({ fileBase64: "dGVzdA==", fileName: "test.xlsx", mode: "overwrite" })
+      caller.cpl.import({ fileBase64: "dGVzdA==", fileName: "test.xlsx" })
     ).rejects.toThrow("需要超级管理员权限");
-  });
-});
-
-// ==================== cpl.import merge mode ====================
-
-describe("cpl.import merge mode", () => {
-  it("inserts products with the active importLogId", async () => {
-    const { ctx } = createSuperAdminContext();
-    const caller = appRouter.createCaller(ctx);
-
-    const activeImportId = 7;
-    vi.mocked(db.getActiveImportLogId).mockResolvedValue(activeImportId);
-    vi.mocked(db.insertSheets).mockResolvedValue(undefined as any);
-    vi.mocked(db.bulkInsertProducts).mockResolvedValue(undefined as any);
-    vi.mocked(db.createImportLogAndGetId).mockResolvedValue(8 as any);
-    vi.mocked(db.createActivityLog).mockResolvedValue(undefined as any);
-
-    // Create a valid xlsx with a product
-    const XLSX = await import("xlsx");
-    const wb = XLSX.utils.book_new();
-    const wsData = [
-      ["产品型号", "产品说明", "媒体价"],
-      ["OS9910-CHAS", "OS9910机箱", "500000"],
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, "OmniSwitch 9900");
-    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-    const fileBase64 = buffer.toString("base64");
-
-    const result = await caller.cpl.import({
-      fileBase64,
-      fileName: "merge-test.xlsx",
-      mode: "merge",
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.productsImported).toBe(1);
-
-    // Verify products were tagged with the active importLogId
-    expect(db.bulkInsertProducts).toHaveBeenCalledOnce();
-    const productsArg = vi.mocked(db.bulkInsertProducts).mock.calls[0][0] as any[];
-    expect(productsArg[0].importLogId).toBe(activeImportId);
-    expect(productsArg[0].productModel).toBe("OS9910-CHAS");
-
-    // Verify sheets were tagged with the active importLogId
-    expect(db.insertSheets).toHaveBeenCalledOnce();
-    const sheetsArg = vi.mocked(db.insertSheets).mock.calls[0][0] as any[];
-    expect(sheetsArg[0].importLogId).toBe(activeImportId);
-
-    // Verify createImportLogAndGetId was NOT called (since activeImportId exists)
-    expect(db.createImportLogAndGetId).not.toHaveBeenCalled();
-    // Verify activateImport was NOT called (since activeImportId already exists and is active)
-    expect(db.activateImport).not.toHaveBeenCalled();
-  });
-
-  it("does not call bulkInsertProducts when no products parsed", async () => {
-    const { ctx } = createSuperAdminContext();
-    const caller = appRouter.createCaller(ctx);
-
-    vi.mocked(db.getActiveImportLogId).mockResolvedValue(1);
-    vi.mocked(db.insertSheets).mockResolvedValue(undefined as any);
-    vi.mocked(db.createImportLogAndGetId).mockResolvedValue(2 as any);
-    vi.mocked(db.createActivityLog).mockResolvedValue(undefined as any);
-
-    // Create an xlsx with only headers (no product rows)
-    const XLSX = await import("xlsx");
-    const wb = XLSX.utils.book_new();
-    const wsData = [["产品型号", "产品说明"]];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, "EmptySheet");
-    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-    const fileBase64 = buffer.toString("base64");
-
-    const result = await caller.cpl.import({
-      fileBase64,
-      fileName: "empty.xlsx",
-      mode: "merge",
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.productsImported).toBe(0);
-    expect(db.bulkInsertProducts).not.toHaveBeenCalled();
   });
 });

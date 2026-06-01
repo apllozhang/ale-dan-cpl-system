@@ -18,7 +18,6 @@ export function ProductDataImport() {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingMode, setPendingMode] = useState<"overwrite" | "merge" | null>(null);
   const [importResult, setImportResult] = useState<{
     sheetsImported: number; productsImported: number; hasSummary: boolean;
   } | null>(null);
@@ -109,11 +108,11 @@ export function ProductDataImport() {
     if (hasExistingData) {
       setConfirmOpen(true);
     } else {
-      doImport("overwrite");
+      doImport();
     }
   };
 
-  const doImport = async (mode: "overwrite" | "merge") => {
+  const doImport = async () => {
     if (!file) return;
     setConfirmOpen(false);
 
@@ -131,7 +130,6 @@ export function ProductDataImport() {
       importMutation.mutate({
         fileBase64: base64,
         fileName: file.name,
-        mode,
         selectedSheets: Array.from(selectedSheets),
       });
 
@@ -155,7 +153,7 @@ export function ProductDataImport() {
         <h3 className="text-sm font-medium text-foreground">{t('import.instructions')}</h3>
         <ul className="space-y-1 text-sm text-muted-foreground">
           <li>· {t('import.supportFormat')}</li>
-          <li>· {t('import.mergeExplain')}</li>
+          <li>· {t('import.overwriteExplain')}</li>
           <li>· {t('import.patience')}</li>
         </ul>
       </div>
@@ -266,26 +264,15 @@ export function ProductDataImport() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('import.confirmMode')}</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
+            <AlertDialogTitle>{t('import.confirmOverwrite')}</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>{t('import.overwriteDesc')}</p>
               <p className="text-destructive font-medium">{t('import.existingData', { count: existingCount })}</p>
-              <p>{t('import.selectMode')}</p>
-              <div className="space-y-2">
-                <div className="border rounded p-3 bg-yellow-50/50">
-                  <p className="font-medium text-sm">{t('import.merge')} (Merge)</p>
-                  <p className="text-xs text-muted-foreground">{t('import.mergeDesc')}</p>
-                </div>
-                <div className="border rounded p-3 bg-destructive/5">
-                  <p className="font-medium text-sm text-destructive">{t('import.overwrite')} (Overwrite)</p>
-                  <p className="text-xs text-destructive">⚠ {t('import.overwriteDesc')}</p>
-                </div>
-              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <Button variant="outline" onClick={() => doImport("merge")} className="gap-1.5">{t('import.merge')}</Button>
-            <Button variant="destructive" onClick={() => doImport("overwrite")} className="gap-1.5">{t('import.overwrite')}</Button>
+            <AlertDialogAction onClick={doImport} className="bg-primary text-primary-foreground hover:bg-primary/90">{t('import.overwrite')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
