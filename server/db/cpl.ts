@@ -20,20 +20,11 @@ export async function activateImport(importLogId: number) {
 export async function createImportLogAndGetId(data: InsertImportLog): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const insertResult = await db.insert(importLogs).values(data);
+  await db.insert(importLogs).values(data);
 
-  // mysql2 returns ResultSetHeader; insertId may be BigInt on Node 22
-  const rawId = (insertResult as any).insertId ?? (insertResult as any)[0]?.insertId;
-  let insertId: number;
-  if (typeof rawId === "bigint") {
-    insertId = Number(rawId);
-  } else if (typeof rawId === "number") {
-    insertId = rawId;
-  } else {
-    // Fallback: query by max id
-    const [row] = await db.select({ id: sql<number>`LAST_INSERT_ID()` }).from(importLogs).limit(1);
-    insertId = typeof row?.id === "bigint" ? Number(row.id) : Number(row?.id ?? 0);
-  }
+  // Query MAX(id) right after insert — reliable across all Drizzle versions
+  const [row] = await db.select({ id: sql<number>`MAX(id)` }).from(importLogs);
+  const insertId = typeof row?.id === "bigint" ? Number(row.id) : Number(row?.id ?? 0);
 
   if (!insertId || insertId <= 0) {
     throw new Error("Failed to get insertId from import log creation");
