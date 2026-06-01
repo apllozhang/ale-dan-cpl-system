@@ -211,23 +211,13 @@ export async function importCplOverwrite(data: {
 
   // 2. Now use transaction for the rest of the operations
   return await db.transaction(async (tx) => {
-    // 2a. Find the currently active import BEFORE deactivating
-    const [prevActive] = await tx.select().from(importLogs).where(eq(importLogs.isActive, true)).limit(1);
-
-    // 2b. Deactivate ALL other imports
+    // 2a. Deactivate ALL other imports (keep their data intact for future switching)
     await tx.update(importLogs).set({ isActive: false }).where(ne(importLogs.id, importLogId));
 
-    // 2c. Delete data only from the previous active import (preserve history for switching)
-    if (prevActive) {
-      await tx.delete(cplProducts).where(eq(cplProducts.importLogId, prevActive.id));
-      await tx.delete(cplSheets).where(eq(cplSheets.importLogId, prevActive.id));
-      await tx.delete(cplSummary).where(eq(cplSummary.importLogId, prevActive.id));
-    }
-
-    // 2d. Activate this import
+    // 2b. Activate this import
     await tx.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 
-    // 3. Tag and insert sheets one by one
+    // 2c. Tag and insert sheets one by one
     if (data.sheets.length > 0) {
       const sheetsWithLogId = data.sheets.map(s => ({ ...s, importLogId }));
       for (const sheet of sheetsWithLogId) {
@@ -235,7 +225,7 @@ export async function importCplOverwrite(data: {
       }
     }
 
-    // 4. Tag and insert products in batches
+    // 3. Tag and insert products in batches
     if (data.products.length > 0) {
       const productsWithLogId = data.products.map(p => ({ ...p, importLogId }));
       const batchSize = 200;
@@ -245,7 +235,7 @@ export async function importCplOverwrite(data: {
       }
     }
 
-    // 5. Insert summary
+    // 4. Insert summary
     if (data.summary) {
       await tx.insert(cplSummary).values({
         content: data.summary.content,
