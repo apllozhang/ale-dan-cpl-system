@@ -21,7 +21,6 @@ vi.mock("./db", () => ({
   activateImport: vi.fn(),
   getActiveImportLogId: vi.fn(),
   importCplOverwrite: vi.fn(),
-  createImportLogAndGetId: vi.fn(),
   createActivityLog: vi.fn().mockResolvedValue(undefined),
   getAllOrganizations: vi.fn().mockResolvedValue([]),
   getAllUserGroups: vi.fn().mockResolvedValue([]),

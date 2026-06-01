@@ -1,8 +1,12 @@
 import { eq, ne, like, or, and, sql, asc, desc, isNotNull, inArray, SQL } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
 import {
   importLogs, cplSheets, cplProducts, cplSummary, InsertImportLog, InsertCplSheet, InsertCplProduct,
 } from "../../drizzle/schema";
 import { getDb } from "./index";
+
+type DbInstance = ReturnType<typeof drizzle>;
+type DbTransaction = Parameters<Parameters<DbInstance["transaction"]>[0]>[0];
 
 // ==================== Import Logs helpers ====================
 export async function deactivateAllImports() {
@@ -17,11 +21,8 @@ export async function activateImport(importLogId: number) {
   await db.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 }
 
-export async function createImportLogAndGetId(data: InsertImportLog): Promise<number> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  // Insert via Drizzle ORM, then query back the row by unique combination
-  await db.insert(importLogs).values({
+async function createImportLogAndGetId(tx: DbTransaction, data: InsertImportLog): Promise<number> {
+  await tx.insert(importLogs).values({
     fileName: data.fileName,
     userId: data.userId,
     username: data.username,
@@ -33,8 +34,8 @@ export async function createImportLogAndGetId(data: InsertImportLog): Promise<nu
     sheetsCount: data.sheetsCount,
     productsCount: data.productsCount,
   });
-  // Query back the most recent row with this fileName from this user
-  const [row] = await db.select({ id: importLogs.id })
+  // Query back the most recent row with this fileName from this user within the same transaction
+  const [row] = await tx.select({ id: importLogs.id })
     .from(importLogs)
     .where(and(
       eq(importLogs.fileName, data.fileName),
@@ -238,31 +239,31 @@ export async function importCplOverwrite(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // 1. Create import log OUTSIDE transaction to get reliable insertId
-  // Start as inactive to avoid race condition with concurrent imports
-  const importLogId = await createImportLogAndGetId({
-    fileName: data.fileName,
-    userId: data.userId,
-    username: data.username,
-    orgName: data.orgName,
-    groupName: data.groupName,
-    mode: "overwrite",
-    sheetNames: data.sheetNames,
-    sheetsCount: data.sheetsCount,
-    productsCount: data.productsCount,
-    isActive: false,
-  });
-  console.log(`[import] Starting overwrite importLogId=${importLogId}, sheets=${data.sheets.length}, products=${data.products.length}`);
-
-  // 2. Now use transaction for the rest of the operations
+  // Everything in ONE transaction — if any step fails, the entire thing rolls back
+  // (including the import_log row), so failed imports never appear in history.
   return await db.transaction(async (tx) => {
-    // 2a. Deactivate ALL other imports (keep their data intact for future switching)
+    // 1. Create import log (inactive initially)
+    const importLogId = await createImportLogAndGetId(tx, {
+      fileName: data.fileName,
+      userId: data.userId,
+      username: data.username,
+      orgName: data.orgName,
+      groupName: data.groupName,
+      mode: "overwrite",
+      sheetNames: data.sheetNames,
+      sheetsCount: data.sheetsCount,
+      productsCount: data.productsCount,
+      isActive: false,
+    });
+    console.log(`[import] Starting overwrite importLogId=${importLogId}, sheets=${data.sheets.length}, products=${data.products.length}`);
+
+    // 2. Deactivate ALL other imports
     await tx.update(importLogs).set({ isActive: false }).where(ne(importLogs.id, importLogId));
 
-    // 2b. Activate this import
+    // 3. Activate this import
     await tx.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
 
-    // 2c. Tag and insert sheets one by one
+    // 4. Insert sheets one by one
     if (data.sheets.length > 0) {
       const sheetsWithLogId = data.sheets.map(s => ({ ...s, importLogId }));
       for (const sheet of sheetsWithLogId) {
@@ -276,7 +277,7 @@ export async function importCplOverwrite(data: {
       }
     }
 
-    // 3. Tag and insert products in batches
+    // 5. Insert products in batches
     if (data.products.length > 0) {
       const productsWithLogId = data.products.map(p => ({ ...p, importLogId }));
       const batchSize = 200;
@@ -286,7 +287,7 @@ export async function importCplOverwrite(data: {
       }
     }
 
-    // 4. Insert summary
+    // 6. Insert summary
     if (data.summary) {
       await tx.insert(cplSummary).values({
         content: data.summary.content,
