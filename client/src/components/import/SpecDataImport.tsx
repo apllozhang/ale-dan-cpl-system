@@ -41,6 +41,14 @@ export function SpecDataImport() {
   const existingCount = setsQuery.data?.items?.length ?? 0;
   const hasExistingData = existingCount > 0;
 
+  // Duplicate file detection
+  const duplicateCheck = trpc.productSpecs.checkDuplicate.useQuery(
+    { fileName: file?.name ?? "" },
+    { enabled: !!file }
+  );
+  const duplicates = duplicateCheck.data ?? [];
+  const hasDuplicates = duplicates.length > 0;
+
   const reset = () => { setFile(null); setName(""); setDescription(""); setPreview([]); setSheetInfo([]); setSelectedSheets(new Set()); };
 
   const [sheetInfo, setSheetInfo] = useState<{ name: string; rows: number; hasModelCol: boolean }[]>([]);
@@ -90,7 +98,7 @@ export function SpecDataImport() {
 
   const handleStartImport = () => {
     if (!file || !name) return;
-    if (hasExistingData) {
+    if (hasExistingData || hasDuplicates) {
       setConfirmOpen(true);
     } else {
       doImport();
@@ -244,15 +252,37 @@ export function SpecDataImport() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('import.specConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {hasDuplicates ? t('import.duplicateTitle') : t('import.specConfirmTitle')}
+            </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
+              {hasDuplicates && (
+                <>
+                  <p className="font-medium text-amber-600">
+                    {t('import.duplicateSpecWarning', { count: duplicates.length, fileName: file?.name ?? "" })}
+                  </p>
+                  <div className="bg-muted/50 rounded p-2 text-xs space-y-1 max-h-32 overflow-y-auto">
+                    {duplicates.map((d: any) => (
+                      <div key={d.id} className="flex gap-2 items-center">
+                        <span className="text-muted-foreground">{new Date(d.createdAt).toLocaleDateString()}</span>
+                        <span className="font-medium">{d.name}</span>
+                        <span>{d.modelCount} {t('techSpecs.models')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {hasExistingData && (
+                <p className="text-destructive font-medium">{t('import.specExistingData', { count: existingCount })}</p>
+              )}
               <p>{t('import.specOverwriteDesc')}</p>
-              <p className="text-destructive font-medium">{t('import.specExistingData', { count: existingCount })}</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={doImport} className="bg-primary text-primary-foreground hover:bg-primary/90">{t('import.overwrite')}</AlertDialogAction>
+            <AlertDialogAction onClick={doImport} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {hasDuplicates ? t('import.proceedAnyway') : t('import.overwrite')}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -90,6 +90,22 @@ export async function deleteProductSpecEntry(id: number) {
   await db.delete(productSpecs).where(eq(productSpecs.id, id));
 }
 
+export async function getSpecSetsByFileName(fileName: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: productSpecSets.id,
+    name: productSpecSets.name,
+    fileName: productSpecSets.fileName,
+    modelCount: productSpecSets.modelCount,
+    createdAt: productSpecSets.createdAt,
+  })
+    .from(productSpecSets)
+    .where(eq(productSpecSets.fileName, fileName))
+    .orderBy(desc(productSpecSets.createdAt))
+    .limit(10);
+}
+
 type SpecEntry = { productModel: string; productDesc: string | null; specs: Record<string, string> };
 
 function normalizeForMatch(model: string) {

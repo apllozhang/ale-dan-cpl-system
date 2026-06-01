@@ -58,3 +58,22 @@ export async function deleteImportLog(id: number) {
   await db.delete(cplSummary).where(eq(cplSummary.importLogId, id));
   await db.delete(importLogs).where(eq(importLogs.id, id));
 }
+
+export async function getImportLogsByFileName(fileName: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: importLogs.id,
+    fileName: importLogs.fileName,
+    sheetNames: importLogs.sheetNames,
+    sheetsCount: importLogs.sheetsCount,
+    productsCount: importLogs.productsCount,
+    createdAt: importLogs.createdAt,
+    isActive: importLogs.isActive,
+    username: importLogs.username,
+  })
+    .from(importLogs)
+    .where(eq(importLogs.fileName, fileName))
+    .orderBy(desc(importLogs.createdAt))
+    .limit(10);
+}

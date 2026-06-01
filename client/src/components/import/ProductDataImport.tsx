@@ -36,6 +36,14 @@ export function ProductDataImport() {
   const hasExistingData = hasDataQuery.data?.hasData ?? false;
   const existingCount = hasDataQuery.data?.count ?? 0;
 
+  // Duplicate file detection
+  const duplicateCheck = trpc.importLogs.checkDuplicate.useQuery(
+    { fileName: file?.name ?? "" },
+    { enabled: !!file }
+  );
+  const duplicates = duplicateCheck.data ?? [];
+  const hasDuplicates = duplicates.length > 0;
+
   const animateProgress = useCallback((from: number, to: number, duration: number) => {
     cancelAnimationFrame(rafRef.current);
     const start = performance.now();
@@ -105,7 +113,7 @@ export function ProductDataImport() {
 
   const handleStartImport = () => {
     if (!file) return;
-    if (hasExistingData) {
+    if (hasExistingData || hasDuplicates) {
       setConfirmOpen(true);
     } else {
       doImport();
@@ -264,15 +272,40 @@ export function ProductDataImport() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('import.confirmOverwrite')}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {hasDuplicates ? t('import.duplicateTitle') : t('import.confirmOverwrite')}
+            </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
+              {hasDuplicates && (
+                <>
+                  <p className="font-medium text-amber-600">
+                    {t('import.duplicateWarning', { count: duplicates.length, fileName: file?.name ?? "" })}
+                  </p>
+                  <div className="bg-muted/50 rounded p-2 text-xs space-y-1 max-h-32 overflow-y-auto">
+                    {duplicates.map((d: any) => (
+                      <div key={d.id} className="flex gap-2 items-center">
+                        <span className="text-muted-foreground">{new Date(d.createdAt).toLocaleDateString()}</span>
+                        <span>{d.sheetsCount} {t('import.sheetNames', { defaultValue: '表格' })}</span>
+                        <span>{d.productsCount} {t('import.rows', { count: 0, defaultValue: '产品' })}</span>
+                        {d.isActive && (
+                          <span className="text-xs text-amber-600 font-medium">{t('import.duplicateActive')}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {hasExistingData && (
+                <p className="text-destructive font-medium">{t('import.existingData', { count: existingCount })}</p>
+              )}
               <p>{t('import.overwriteDesc')}</p>
-              <p className="text-destructive font-medium">{t('import.existingData', { count: existingCount })}</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={doImport} className="bg-primary text-primary-foreground hover:bg-primary/90">{t('import.overwrite')}</AlertDialogAction>
+            <AlertDialogAction onClick={doImport} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {hasDuplicates ? t('import.proceedAnyway') : t('import.overwrite')}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

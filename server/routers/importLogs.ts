@@ -1,4 +1,4 @@
-import { router, superAdminProcedure } from "../_core/trpc";
+import { router, publicProcedure, superAdminProcedure } from "../_core/trpc";
 import { z } from "zod";
 import * as db from "../db";
 
@@ -41,6 +41,11 @@ export const importLogsRouter = router({
       // Activate the target import
       await db.activateImport(input.id);
       return { success: true };
+    }),
+  checkDuplicate: publicProcedure
+    .input(z.object({ fileName: z.string() }))
+    .query(async ({ input }) => {
+      return db.getImportLogsByFileName(input.fileName);
     }),
   export: superAdminProcedure.query(async () => {
     const { items } = await db.getImportLogs({ page: 1, pageSize: 10000 });

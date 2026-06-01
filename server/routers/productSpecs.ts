@@ -18,6 +18,12 @@ export const productSpecsRouter = router({
       return db.getProductSpecSets(input);
     }),
 
+  checkDuplicate: protectedProcedure
+    .input(z.object({ fileName: z.string() }))
+    .query(async ({ input }) => {
+      return db.getSpecSetsByFileName(input.fileName);
+    }),
+
   getSetById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
