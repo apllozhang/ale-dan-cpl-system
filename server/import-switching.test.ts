@@ -346,12 +346,10 @@ describe("cpl.import merge mode", () => {
     const sheetsArg = vi.mocked(db.insertSheets).mock.calls[0][0] as any[];
     expect(sheetsArg[0].importLogId).toBe(activeImportId);
 
-    // Verify a new import log was created with isActive: false
-    expect(db.createImportLogAndGetId).toHaveBeenCalledOnce();
-    const logArg = vi.mocked(db.createImportLogAndGetId).mock.calls[0][0] as any;
-    expect(logArg.fileName).toBe("merge-test.xlsx");
-    expect(logArg.mode).toBe("merge");
-    expect(logArg.isActive).toBe(false);
+    // Verify createImportLogAndGetId was NOT called (since activeImportId exists)
+    expect(db.createImportLogAndGetId).not.toHaveBeenCalled();
+    // Verify activateImport was NOT called (since activeImportId already exists and is active)
+    expect(db.activateImport).not.toHaveBeenCalled();
   });
 
   it("does not call bulkInsertProducts when no products parsed", async () => {

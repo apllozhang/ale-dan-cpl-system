@@ -241,7 +241,25 @@ export const cplRouter = router({
         importInProgress = true;
         try {
           // Merge: add to current active import
-          const activeImportId = await db.getActiveImportLogId();
+          let activeImportId = await db.getActiveImportLogId();
+
+          // If no active import, create one first
+          if (!activeImportId) {
+            activeImportId = await db.createImportLogAndGetId({
+              fileName: input.fileName,
+              userId: ctx.user!.id,
+              username: ctx.user!.username || "unknown",
+              orgName: orgName || null,
+              groupName: groupName || null,
+              mode: input.mode,
+              sheetNames: sheetMeta.map((s: any) => s.sheetName),
+              sheetsCount: sheetMeta.length,
+              productsCount: products.length,
+              isActive: true,  // Activate immediately
+            } as any);
+            // Activate the newly created import
+            await db.activateImport(activeImportId);
+          }
 
           (products as any[]).forEach((p: any) => { p.importLogId = activeImportId; });
           // Remove id field from sheetMeta to avoid conflicts with database auto-increment
@@ -257,20 +275,6 @@ export const cplRouter = router({
           if (summaryContent) {
             await db.insertSummary({ content: summaryContent, version: input.fileName, importLogId: activeImportId } as any);
           }
-
-          // Create a new import log entry
-          const logId = await db.createImportLogAndGetId({
-            fileName: input.fileName,
-            userId: ctx.user!.id,
-            username: ctx.user!.username || "unknown",
-            orgName: orgName || null,
-            groupName: groupName || null,
-            mode: input.mode,
-            sheetNames: sheetMeta.map((s: any) => s.sheetName),
-            sheetsCount: sheetMeta.length,
-            productsCount: products.length,
-            isActive: false,
-          } as any);
         } finally {
           importInProgress = false;
         }
