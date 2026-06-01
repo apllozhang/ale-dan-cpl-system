@@ -1,5 +1,4 @@
 import { eq, ne, like, or, and, sql, asc, desc, isNotNull, inArray, SQL } from "drizzle-orm";
-import mysql from "mysql2/promise";
 import {
   importLogs, cplSheets, cplProducts, cplSummary, InsertImportLog, InsertCplSheet, InsertCplProduct,
 } from "../../drizzle/schema";
@@ -21,29 +20,33 @@ export async function activateImport(importLogId: number) {
 export async function createImportLogAndGetId(data: InsertImportLog): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  // Use transaction to ensure INSERT and SELECT are on the same connection
-  return await db.transaction(async (tx) => {
-    // Insert the import log
-    await tx.insert(importLogs).values(data);
-    
-    // Get the ID using LAST_INSERT_ID() in the same transaction
-    const [result] = await tx.execute(sql`SELECT LAST_INSERT_ID() as id`);
-    const insertId = Number((result as any)?.id ?? 0);
-    
-    if (!insertId || insertId <= 0) {
-      throw new Error(`Failed to get insertId from import log creation, got: ${insertId}`);
-    }
-    
-    // Verify the row actually exists
-    const [verify] = await tx.select({ id: importLogs.id, fileName: importLogs.fileName }).from(importLogs).where(eq(importLogs.id, insertId));
-    if (!verify) {
-      throw new Error(`Import log verification failed: no row with id=${insertId}`);
-    }
-    
-    console.log(`[import] Created import_log id=${insertId}, fileName=${verify.fileName}`);
-    return insertId;
+  // Insert via Drizzle ORM, then query back the row by unique combination
+  await db.insert(importLogs).values({
+    fileName: data.fileName,
+    userId: data.userId,
+    username: data.username,
+    orgName: data.orgName ?? null,
+    groupName: data.groupName ?? null,
+    mode: data.mode,
+    isActive: data.isActive,
+    sheetNames: data.sheetNames,
+    sheetsCount: data.sheetsCount,
+    productsCount: data.productsCount,
   });
+  // Query back the most recent row with this fileName from this user
+  const [row] = await db.select({ id: importLogs.id })
+    .from(importLogs)
+    .where(and(
+      eq(importLogs.fileName, data.fileName),
+      eq(importLogs.userId, data.userId),
+    ))
+    .orderBy(desc(importLogs.id))
+    .limit(1);
+  if (!row || !row.id || row.id <= 0) {
+    throw new Error(`Failed to retrieve import log after insert for fileName=${data.fileName}`);
+  }
+  console.log(`[import] Created import_log id=${row.id}, fileName=${data.fileName}`);
+  return row.id;
 }
 
 export async function getImportLogById(id: number) {
