@@ -21,15 +21,22 @@ export async function activateImport(importLogId: number) {
 export async function createImportLogAndGetId(data: InsertImportLog): Promise<number> {
   const conn = await mysql.createConnection(process.env.DATABASE_URL!);
   try {
-    const [result] = await conn.query(
+    await conn.query(
       "INSERT INTO import_logs (fileName, userId, username, orgName, groupName, mode, isActive, sheetNames, sheetsCount, productsCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [data.fileName, data.userId, data.username, data.orgName ?? null, data.groupName ?? null, data.mode, data.isActive ? 1 : 0, JSON.stringify(data.sheetNames), data.sheetsCount, data.productsCount]
     );
-    const header = result as mysql.ResultSetHeader;
-    const insertId = typeof header.insertId === "bigint" ? Number(header.insertId) : Number(header.insertId);
+    const [idRows] = await conn.query("SELECT LAST_INSERT_ID() AS id");
+    const insertId = Number((idRows as Record<string, number>[])[0].id);
     if (!insertId || insertId <= 0) {
-      throw new Error("Failed to get insertId from import log creation");
+      throw new Error(`Failed to get insertId via LAST_INSERT_ID(), got: ${insertId}`);
     }
+    // Verify the row actually exists
+    const [verifyRows] = await conn.query("SELECT id, fileName FROM import_logs WHERE id = ?", [insertId]);
+    const verify = (verifyRows as Record<string, unknown>[])[0];
+    if (!verify) {
+      throw new Error(`Import log verification failed: no row with id=${insertId}`);
+    }
+    console.log(`[import] Created import_log id=${insertId}, fileName=${verify.fileName}`);
     return insertId;
   } finally {
     await conn.end();
@@ -239,6 +246,7 @@ export async function importCplOverwrite(data: {
     productsCount: data.productsCount,
     isActive: false,
   });
+  console.log(`[import] Starting overwrite importLogId=${importLogId}, sheets=${data.sheets.length}, products=${data.products.length}`);
 
   // 2. Now use transaction for the rest of the operations
   return await db.transaction(async (tx) => {
@@ -252,7 +260,13 @@ export async function importCplOverwrite(data: {
     if (data.sheets.length > 0) {
       const sheetsWithLogId = data.sheets.map(s => ({ ...s, importLogId }));
       for (const sheet of sheetsWithLogId) {
-        await tx.insert(cplSheets).values(sheet);
+        try {
+          await tx.insert(cplSheets).values(sheet);
+        } catch (sheetErr: unknown) {
+          const msg = sheetErr instanceof Error ? sheetErr.message : String(sheetErr);
+          console.error(`[import] Failed to insert sheet importLogId=${importLogId} sheetName=${sheet.sheetName}: ${msg}`);
+          throw sheetErr;
+        }
       }
     }
 
