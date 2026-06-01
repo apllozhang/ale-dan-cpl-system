@@ -23,7 +23,8 @@ export async function createImportLogAndGetId(data: InsertImportLog): Promise<nu
   await db.insert(importLogs).values(data);
 
   // Query MAX(id) right after insert — reliable across all Drizzle versions
-  const [row] = await db.select({ id: sql<number>`MAX(id)` }).from(importLogs);
+  const rows = await db.select({ id: sql<number>`MAX(id)` }).from(importLogs);
+  const row = rows[0];
   const insertId = typeof row?.id === "bigint" ? Number(row.id) : Number(row?.id ?? 0);
 
   if (!insertId || insertId <= 0) {
