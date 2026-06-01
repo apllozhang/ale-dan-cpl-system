@@ -1,4 +1,5 @@
 import { eq, ne, like, or, and, sql, asc, desc, isNotNull, inArray, SQL } from "drizzle-orm";
+import mysql from "mysql2/promise";
 import {
   importLogs, cplSheets, cplProducts, cplSummary, InsertImportLog, InsertCplSheet, InsertCplProduct,
 } from "../../drizzle/schema";
@@ -18,19 +19,21 @@ export async function activateImport(importLogId: number) {
 }
 
 export async function createImportLogAndGetId(data: InsertImportLog): Promise<number> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  await db.insert(importLogs).values(data);
-
-  // Query MAX(id) right after insert — reliable across all Drizzle versions
-  const rows = await db.select({ id: sql<number>`MAX(id)` }).from(importLogs);
-  const row = rows[0];
-  const insertId = typeof row?.id === "bigint" ? Number(row.id) : Number(row?.id ?? 0);
-
-  if (!insertId || insertId <= 0) {
-    throw new Error("Failed to get insertId from import log creation");
+  const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+  try {
+    const [result] = await conn.query(
+      "INSERT INTO import_logs (fileName, userId, username, orgName, groupName, mode, isActive, sheetNames, sheetsCount, productsCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [data.fileName, data.userId, data.username, data.orgName ?? null, data.groupName ?? null, data.mode, data.isActive ? 1 : 0, JSON.stringify(data.sheetNames), data.sheetsCount, data.productsCount]
+    );
+    const header = result as mysql.ResultSetHeader;
+    const insertId = typeof header.insertId === "bigint" ? Number(header.insertId) : Number(header.insertId);
+    if (!insertId || insertId <= 0) {
+      throw new Error("Failed to get insertId from import log creation");
+    }
+    return insertId;
+  } finally {
+    await conn.end();
   }
-  return insertId;
 }
 
 export async function getImportLogById(id: number) {
