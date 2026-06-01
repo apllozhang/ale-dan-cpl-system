@@ -19,28 +19,31 @@ export async function activateImport(importLogId: number) {
 }
 
 export async function createImportLogAndGetId(data: InsertImportLog): Promise<number> {
-  const conn = await mysql.createConnection(process.env.DATABASE_URL!);
-  try {
-    await conn.query(
-      "INSERT INTO import_logs (fileName, userId, username, orgName, groupName, mode, isActive, sheetNames, sheetsCount, productsCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [data.fileName, data.userId, data.username, data.orgName ?? null, data.groupName ?? null, data.mode, data.isActive ? 1 : 0, JSON.stringify(data.sheetNames), data.sheetsCount, data.productsCount]
-    );
-    const [idRows] = await conn.query("SELECT LAST_INSERT_ID() AS id");
-    const insertId = Number((idRows as Record<string, number>[])[0].id);
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Use transaction to ensure INSERT and SELECT are on the same connection
+  return await db.transaction(async (tx) => {
+    // Insert the import log
+    await tx.insert(importLogs).values(data);
+    
+    // Get the ID using LAST_INSERT_ID() in the same transaction
+    const [result] = await tx.execute(sql`SELECT LAST_INSERT_ID() as id`);
+    const insertId = Number((result as any)?.id ?? 0);
+    
     if (!insertId || insertId <= 0) {
-      throw new Error(`Failed to get insertId via LAST_INSERT_ID(), got: ${insertId}`);
+      throw new Error(`Failed to get insertId from import log creation, got: ${insertId}`);
     }
+    
     // Verify the row actually exists
-    const [verifyRows] = await conn.query("SELECT id, fileName FROM import_logs WHERE id = ?", [insertId]);
-    const verify = (verifyRows as Record<string, unknown>[])[0];
+    const [verify] = await tx.select({ id: importLogs.id, fileName: importLogs.fileName }).from(importLogs).where(eq(importLogs.id, insertId));
     if (!verify) {
       throw new Error(`Import log verification failed: no row with id=${insertId}`);
     }
+    
     console.log(`[import] Created import_log id=${insertId}, fileName=${verify.fileName}`);
     return insertId;
-  } finally {
-    await conn.end();
-  }
+  });
 }
 
 export async function getImportLogById(id: number) {
