@@ -178,13 +178,19 @@ export const productSpecsRouter = router({
   autoMatch: protectedProcedure
     .input(z.object({ quotationId: z.number() }))
     .query(async ({ input }) => {
-      const sets = await db.getBestMatchSet(input.quotationId);
+      const [sets, matchResult] = await Promise.all([
+        db.getBestMatchSet(input.quotationId),
+        db.matchQuotationWithAllSpecs(input.quotationId),
+      ]);
       const bestSet = sets[0];
-      if (!bestSet) {
-        return { sets, matched: [], unmatched: [], specKeys: [], quotation: null, bestSetId: null };
-      }
-      const { matched, unmatched, quotation } = await db.matchQuotationWithSpecs(input.quotationId, bestSet.setId);
-      const specKeys = collectSpecKeys(matched);
-      return { sets, matched, unmatched, specKeys, quotation, bestSetId: bestSet.setId };
+      const specKeys = collectSpecKeys(matchResult.matched);
+      return {
+        sets,
+        matched: matchResult.matched,
+        unmatched: matchResult.unmatched,
+        specKeys,
+        quotation: matchResult.quotation,
+        bestSetId: bestSet?.setId ?? null,
+      };
     }),
 });

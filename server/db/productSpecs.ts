@@ -151,6 +151,44 @@ export async function getLatestSpecSummary() {
   return row ?? null;
 }
 
+export async function matchQuotationWithAllSpecs(quotationId: number): Promise<SpecMatchResult> {
+  const db = await getDb();
+  if (!db) return { matched: [], unmatched: [], quotation: null };
+
+  const quotation = await getQuotationById(quotationId);
+  if (!quotation) return { matched: [], unmatched: [], quotation: null };
+
+  const allSpecEntries = await db.select().from(productSpecs);
+  const lookup = buildLookup(allSpecEntries);
+
+  const matched: MatchedSpecItem[] = [];
+  const unmatched: UnmatchedSpecItem[] = [];
+
+  if (quotation.items) {
+    for (const item of quotation.items) {
+      const specEntry = lookup.find(item.productModel || "");
+      if (specEntry) {
+        matched.push({
+          productModel: item.productModel,
+          productDesc: specEntry.productDesc || item.productDesc,
+          quantity: item.quantity,
+          listPrice: item.listPrice,
+          specs: specEntry.specs,
+        });
+      } else {
+        unmatched.push({
+          productModel: item.productModel,
+          productDesc: item.productDesc,
+          quantity: item.quantity,
+          listPrice: item.listPrice,
+        });
+      }
+    }
+  }
+
+  return { matched, unmatched, quotation };
+}
+
 export async function getBestMatchSet(quotationId: number): Promise<SpecSetCoverage[]> {
   const db = await getDb();
   if (!db) return [];
