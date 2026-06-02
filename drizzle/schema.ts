@@ -259,6 +259,8 @@ export const certifications = mysqlTable("certifications", {
   certNo: varchar("certNo", { length: 128 }).notNull().unique(),
   certName: varchar("certName", { length: 256 }).notNull(),
   standardType: varchar("standardType", { length: 64 }),
+  productCategory: varchar("productCategory", { length: 64 }),
+  productSeries: varchar("productSeries", { length: 128 }),
   issuer: varchar("issuer", { length: 256 }).notNull(),
   holder: varchar("holder", { length: 256 }).notNull(),
   factoryNo: varchar("factoryNo", { length: 128 }),
@@ -274,6 +276,7 @@ export const certifications = mysqlTable("certifications", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [
   index("certifications_certType_idx").on(table.certType),
+  index("certifications_productCategory_idx").on(table.productCategory),
   index("certifications_expiryDate_idx").on(table.expiryDate),
   index("certifications_status_idx").on(table.status),
 ]);
@@ -283,7 +286,7 @@ export type InsertCertification = typeof certifications.$inferInsert;
 
 export const productCertifications = mysqlTable("product_certifications", {
   id: int("id").autoincrement().primaryKey(),
-  certificationId: int("certificationId").notNull(),
+  certificationId: int("certificationId").notNull().references(() => certifications.id, { onDelete: "cascade" }),
   productModel: varchar("productModel", { length: 256 }).notNull(),
 }, (table) => [
   index("product_certifications_certificationId_idx").on(table.certificationId),
@@ -292,3 +295,66 @@ export const productCertifications = mysqlTable("product_certifications", {
 
 export type ProductCertification = typeof productCertifications.$inferSelect;
 export type InsertProductCertification = typeof productCertifications.$inferInsert;
+
+// ==================== eFlash ====================
+
+export const eflashRecords = mysqlTable("eflash_records", {
+  id: int("id").autoincrement().primaryKey(),
+  eflashId: varchar("eflashId", { length: 20 }).notNull().unique(),
+  type: mysqlEnum("type", ["phase_in", "phase_out", "service", "pricing", "program"]).notNull(),
+  division: mysqlEnum("division", ["communications", "network", "general"]).notNull(),
+  scope: mysqlEnum("scope", ["global", "china"]).notNull(),
+  subjectEn: text("subjectEn"),
+  subjectCn: text("subjectCn"),
+  globalDate: timestamp("globalDate"),
+  chinaDate: timestamp("chinaDate"),
+  effectiveDate: timestamp("effectiveDate"),
+  authorEn: varchar("authorEn", { length: 200 }),
+  authorCn: varchar("authorCn", { length: 200 }),
+  comments: text("comments"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("eflash_records_type_idx").on(table.type),
+  index("eflash_records_division_idx").on(table.division),
+  index("eflash_records_scope_idx").on(table.scope),
+  index("eflash_records_effectiveDate_idx").on(table.effectiveDate),
+]);
+
+export type EFlashRecord = typeof eflashRecords.$inferSelect;
+export type InsertEFlashRecord = typeof eflashRecords.$inferInsert;
+
+export const eflashTags = mysqlTable("eflash_tags", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  category: mysqlEnum("category", ["region", "product"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("eflash_tags_category_idx").on(table.category),
+]);
+
+export type EFlashTag = typeof eflashTags.$inferSelect;
+export type InsertEFlashTag = typeof eflashTags.$inferInsert;
+
+export const eflashRecordTags = mysqlTable("eflash_record_tags", {
+  recordId: int("recordId").notNull().references(() => eflashRecords.id, { onDelete: "cascade" }),
+  tagId: int("tagId").notNull().references(() => eflashTags.id, { onDelete: "cascade" }),
+}, (table) => [
+  index("eflash_record_tags_tagId_idx").on(table.tagId),
+]);
+
+export const eflashAttachments = mysqlTable("eflash_attachments", {
+  id: int("id").autoincrement().primaryKey(),
+  recordId: int("recordId").notNull().references(() => eflashRecords.id, { onDelete: "cascade" }),
+  fileName: varchar("fileName", { length: 500 }).notNull(),
+  filePath: varchar("filePath", { length: 1000 }).notNull(),
+  fileSize: int("fileSize"),
+  uploadedBy: int("uploadedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("eflash_attachments_recordId_idx").on(table.recordId),
+]);
+
+export type EFlashAttachment = typeof eflashAttachments.$inferSelect;
+export type InsertEFlashAttachment = typeof eflashAttachments.$inferInsert;

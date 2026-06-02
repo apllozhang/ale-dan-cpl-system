@@ -31,6 +31,7 @@ export const PERMISSIONS = {
   VIEW_ACTIVITY_LOGS: "view_activity_logs",
   MANAGE_SPECS: "manage_specs",
   MANAGE_CERTIFICATIONS: "manage_certifications",
+  EFLASH_MANAGE: "manage_eflash",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -51,6 +52,7 @@ export const ROLE_PERMISSIONS: Record<Permission, RoleOrSuper[]> = {
   [PERMISSIONS.VIEW_ACTIVITY_LOGS]: [SUPER_ADMIN_ROLE, "admin"],
   [PERMISSIONS.MANAGE_SPECS]: [SUPER_ADMIN_ROLE, "admin"],
   [PERMISSIONS.MANAGE_CERTIFICATIONS]: [SUPER_ADMIN_ROLE, "admin", "sales_manager"],
+  [PERMISSIONS.EFLASH_MANAGE]: [SUPER_ADMIN_ROLE, "admin", "sales_manager"],
 };
 
 export function hasPermission(user: { role: string; isSuperAdmin: boolean }, permission: Permission): boolean {
@@ -58,6 +60,41 @@ export function hasPermission(user: { role: string; isSuperAdmin: boolean }, per
   const allowed = ROLE_PERMISSIONS[permission];
   return allowed.includes(user.role as Role);
 }
+
+// Certification constants
+export const CERT_PRODUCT_CATEGORIES = [
+  "switch", "wireless_ap", "pon", "firewall", "wireless_controller", "software", "international", "other",
+] as const;
+export type CertProductCategory = (typeof CERT_PRODUCT_CATEGORIES)[number];
+
+// 国内认证 + 国际认证 + 其他，覆盖实际证书仓库中所有类型
+export const CERT_STANDARD_TYPES = [
+  // 国内认证
+  "network_access_permit",  // 进网许可证
+  "ccc",                    // CCC (3C认证)
+  "cqc",                    // CQC (自愿认证)
+  "srrc",                   // SRRC (无线电型号核准)
+  "isccc",                  // ISCCC (信息安全认证)
+  "security_cert",          // 安全性证书
+  "public_security_license", // 公安部销售许可证
+  "ipv6_ready",             // 泰尔实验室IPv6
+  "software_copyright",     // 软件著作权
+  // 国际认证
+  "ce_emc",                 // CE / EMC
+  "fcc",                    // FCC
+  "ul",                     // UL / UL2043
+  "cb",                     // CB
+  "tuv",                    // TUV (莱茵)
+  "dnv",                    // DNV (船级社)
+  "rohs_weee",              // RoHS / WEEE
+  "wifi_alliance",          // Wi-Fi Alliance (WFA)
+  // 其他国家/地区认证
+  "nom",                    // NOM (墨西哥)
+  "anatel",                 // ANATEL (巴西)
+  "bsmi",                   // BSMI (台湾)
+  "other",                  // 其他
+] as const;
+export type CertStandardType = (typeof CERT_STANDARD_TYPES)[number];
 
 export const QUOTATION_STATUS_LABELS: Record<string, string> = {
   draft: "草稿",
