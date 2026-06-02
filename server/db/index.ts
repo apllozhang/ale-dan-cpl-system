@@ -29,3 +29,4 @@ export * from "./suggestions";
 export * from "./sharing";
 export * from "./productSpecs";
 export * from "./customers";
+export * from "./certifications";
