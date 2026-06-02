@@ -250,3 +250,45 @@ export const productSpecs = mysqlTable("product_specs", {
 
 export type ProductSpec = typeof productSpecs.$inferSelect;
 export type InsertProductSpec = typeof productSpecs.$inferInsert;
+
+// ==================== Certifications ====================
+
+export const certifications = mysqlTable("certifications", {
+  id: int("id").autoincrement().primaryKey(),
+  certType: varchar("certType", { length: 32 }).notNull(),
+  certNo: varchar("certNo", { length: 128 }).notNull().unique(),
+  certName: varchar("certName", { length: 256 }).notNull(),
+  standardType: varchar("standardType", { length: 64 }),
+  issuer: varchar("issuer", { length: 256 }).notNull(),
+  holder: varchar("holder", { length: 256 }).notNull(),
+  factoryNo: varchar("factoryNo", { length: 128 }),
+  testReportNo: varchar("testReportNo", { length: 128 }),
+  certScope: text("certScope"),
+  issueDate: varchar("issueDate", { length: 10 }).notNull(),
+  expiryDate: varchar("expiryDate", { length: 10 }),
+  status: varchar("status", { length: 32 }).notNull().default("active"),
+  attachmentUrl: varchar("attachmentUrl", { length: 512 }),
+  remark: text("remark"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("certifications_certType_idx").on(table.certType),
+  index("certifications_expiryDate_idx").on(table.expiryDate),
+  index("certifications_status_idx").on(table.status),
+]);
+
+export type Certification = typeof certifications.$inferSelect;
+export type InsertCertification = typeof certifications.$inferInsert;
+
+export const productCertifications = mysqlTable("product_certifications", {
+  id: int("id").autoincrement().primaryKey(),
+  certificationId: int("certificationId").notNull(),
+  productModel: varchar("productModel", { length: 256 }).notNull(),
+}, (table) => [
+  index("product_certifications_certificationId_idx").on(table.certificationId),
+  index("product_certifications_productModel_idx").on(table.productModel),
+]);
+
+export type ProductCertification = typeof productCertifications.$inferSelect;
+export type InsertProductCertification = typeof productCertifications.$inferInsert;
