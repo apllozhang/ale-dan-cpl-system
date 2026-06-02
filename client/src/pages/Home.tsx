@@ -8,6 +8,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
 import gsap from "gsap";
 import { ExpiringCertsCard } from "@/components/certifications/ExpiringCertsCard";
+import { RecentEFlashCard } from "@/components/eflash/RecentEFlashCard";
 
 const DATE_PRESETS = [
   { key: "thisMonth", label: "本月" },
@@ -391,6 +392,8 @@ export default function Home() {
           )}
 
           <ExpiringCertsCard />
+
+          <RecentEFlashCard />
         </div>
       </div>
 
