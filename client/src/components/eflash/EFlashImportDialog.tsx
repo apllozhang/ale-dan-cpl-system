@@ -20,11 +20,16 @@ interface EFlashImportDialogProps {
   onImported: () => void;
 }
 
+interface ImportError {
+  row: number;
+  reason: string;
+}
+
 interface ImportResult {
   created: number;
   updated: number;
   failed: number;
-  errors: string[];
+  errors: ImportError[];
 }
 
 export function EFlashImportDialog({ open, onClose, onImported }: EFlashImportDialogProps) {
@@ -44,7 +49,7 @@ export function EFlashImportDialog({ open, onClose, onImported }: EFlashImportDi
         `${t("eflash.import.success")}: ${data.created} ${t("eflash.import.created")}, ${data.updated} ${t("eflash.import.updated")}`,
       );
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: { message: string }) => toast.error(e.message),
   });
 
   const resetState = () => {
@@ -140,7 +145,7 @@ export function EFlashImportDialog({ open, onClose, onImported }: EFlashImportDi
       const base64 = (reader.result as string).split(",")[1];
       importMut.mutate({
         fileBase64: base64,
-        sheets: Array.from(selectedSheets),
+        sheetNames: Array.from(selectedSheets),
       });
     };
     reader.onerror = () => {
@@ -222,7 +227,7 @@ export function EFlashImportDialog({ open, onClose, onImported }: EFlashImportDi
                     {result.errors.length > 0 && (
                       <ul className="list-disc ml-4 mt-1">
                         {result.errors.slice(0, 10).map((e, i) => (
-                          <li key={i}>{e}</li>
+                          <li key={i}>Row {e.row}: {e.reason}</li>
                         ))}
                         {result.errors.length > 10 && <li>...</li>}
                       </ul>

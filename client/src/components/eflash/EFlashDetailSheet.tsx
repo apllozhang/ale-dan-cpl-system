@@ -63,7 +63,7 @@ export function EFlashDetailSheet({ open, onClose, recordId, onEdit }: EFlashDet
   const { t } = useTranslation();
 
   const { data: record, isLoading } = trpc.eflash.getById.useQuery(
-    recordId!,
+    { id: recordId! },
     { enabled: !!recordId && open },
   );
 

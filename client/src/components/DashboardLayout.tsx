@@ -49,6 +49,7 @@ import {
   Smartphone,
   Monitor,
   Info,
+  Megaphone,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -69,6 +70,7 @@ const menuItems = [
   { icon: HardDriveUpload, labelKey: "menu.import", path: "/import", permission: PERMISSIONS.IMPORT_DATA },
   { icon: Database, labelKey: "menu.products", path: "/data" },
   { icon: Shield, labelKey: "menu.certifications", path: "/certifications", permission: PERMISSIONS.VIEW_PRODUCTS },
+  { icon: Megaphone, labelKey: "menu.eflash", path: "/eflash", permission: PERMISSIONS.VIEW_PRODUCTS },
   { icon: Activity, labelKey: "menu.activity", path: "/activity", permission: PERMISSIONS.VIEW_ACTIVITY_LOGS },
   { icon: Users, labelKey: "menu.users", path: "/users", permission: PERMISSIONS.MANAGE_USERS },
 ];

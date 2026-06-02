@@ -15,10 +15,10 @@ interface EFlashItem {
   scope: "global" | "china";
   subjectCn: string | null;
   subjectEn: string | null;
-  effectiveDate: string | null;
-  globalDate: string | null;
-  chinaDate: string | null;
-  createdAt: string;
+  effectiveDate: Date | null;
+  globalDate: Date | null;
+  chinaDate: Date | null;
+  createdAt: Date;
 }
 
 interface EFlashTableProps {
@@ -42,9 +42,9 @@ const SCOPE_BADGE_COLORS: Record<string, string> = {
   china: "bg-red-100 text-red-800",
 };
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
+function formatDate(dateVal: Date | string | null): string {
+  if (!dateVal) return "-";
+  const d = dateVal instanceof Date ? dateVal : new Date(dateVal);
   if (isNaN(d.getTime())) return "-";
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
