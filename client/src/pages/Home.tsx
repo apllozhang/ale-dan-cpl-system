@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
 import gsap from "gsap";
+import { ExpiringCertsCard } from "@/components/certifications/ExpiringCertsCard";
 
 const DATE_PRESETS = [
   { key: "thisMonth", label: "本月" },
@@ -388,6 +389,8 @@ export default function Home() {
               <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             </div>
           )}
+
+          <ExpiringCertsCard />
         </div>
       </div>
 
