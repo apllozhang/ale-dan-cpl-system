@@ -1,4 +1,6 @@
-﻿export const COOKIE_NAME = "app_session_id";
+﻿export const APP_VERSION = "1.0.0";
+
+export const COOKIE_NAME = "app_session_id";
 export const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 export const AXIOS_TIMEOUT_MS = 30_000;
 export const UNAUTHED_ERR_MSG = 'Please login (10001)';
@@ -28,6 +30,7 @@ export const PERMISSIONS = {
   MANAGE_USERS: "manage_users",
   VIEW_ACTIVITY_LOGS: "view_activity_logs",
   MANAGE_SPECS: "manage_specs",
+  MANAGE_CERTIFICATIONS: "manage_certifications",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -47,6 +50,7 @@ export const ROLE_PERMISSIONS: Record<Permission, RoleOrSuper[]> = {
   [PERMISSIONS.MANAGE_USERS]: [SUPER_ADMIN_ROLE, "admin"],
   [PERMISSIONS.VIEW_ACTIVITY_LOGS]: [SUPER_ADMIN_ROLE, "admin"],
   [PERMISSIONS.MANAGE_SPECS]: [SUPER_ADMIN_ROLE, "admin"],
+  [PERMISSIONS.MANAGE_CERTIFICATIONS]: [SUPER_ADMIN_ROLE, "admin", "sales_manager"],
 };
 
 export function hasPermission(user: { role: string; isSuperAdmin: boolean }, permission: Permission): boolean {
