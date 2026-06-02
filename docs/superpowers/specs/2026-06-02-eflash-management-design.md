@@ -105,17 +105,29 @@
 7. 标签：从标题中提取产品关键词匹配已有标签，无匹配则忽略
 8. 返回结果：`{ created: number, updated: number, failed: number, errors: Array<{row, reason}> }`
 
+### PDF 元数据提取导入
+
+支持从存档文件夹中的 PDF 文件批量导入：
+
+1. 用户选择一个本地目录（通过 zip 打包上传或逐个拖拽 PDF 文件）
+2. 系统按文件名规则解析 eFlash ID：`EF-(Z|N|C|S|P)\d+` 正则匹配
+3. 根据前缀自动填充 type/division/scope（同 Excel 导入规则）
+4. 从 PDF 元数据（metadata）中提取 Title、Author、CreationDate
+5. 用户在预览界面确认/修正解析结果后批量创建记录
+6. PDF 文件自动关联到对应记录作为附件
+
 ### PDF 附件存储
 
 - 存储路径：`uploads/eflash/{eflashId}/{originalFilename}`
-- 通过 Express static middleware 提供下载
+- Express 在 `server/_core/index.ts` 注册 `express.static('uploads/eflash')` 提供下载
 - 上传接口使用 multipart/form-data，限制单文件 50MB
-- 删除记录时同步删除文件
+- 删除记录时通过 `fs.unlinkSync` 同步删除附件文件和目录
 
 ### 权限
 
 - 查看类路由：`protectedProcedure`（所有登录用户）
 - 写入类路由：新增 `EFLASH_MANAGE` 权限，赋予 admin、sales_manager、superAdmin
+- 在 `shared/const.ts` 的 `ROLE_PERMISSIONS` 矩阵中添加 `EFLASH_MANAGE`，映射到 admin、sales_manager、superAdmin 角色
 
 ## 前端
 
