@@ -16,6 +16,7 @@ import { suggestionsRouter } from "./routers/suggestions";
 import { productSpecsRouter } from "./routers/productSpecs";
 import { customersRouter } from "./routers/customers";
 import { certificationsRouter } from "./routers/certifications";
+import { eflashRouter } from "./routers/eflash";
 
 export const appRouter = router({
   system: systemRouter,
@@ -35,6 +36,7 @@ export const appRouter = router({
   productSpecs: productSpecsRouter,
   customers: customersRouter,
   certifications: certificationsRouter,
+  eflash: eflashRouter,
 });
 
 export type AppRouter = typeof appRouter;

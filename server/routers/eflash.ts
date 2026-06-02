@@ -1,0 +1,279 @@
+import { router, protectedProcedure, permissionProcedure } from "../_core/trpc";
+import { z } from "zod";
+import * as db from "../db/eflash";
+import { PERMISSIONS } from "@shared/const";
+import { logActivity } from "./helpers";
+import XLSX from "xlsx";
+import path from "path";
+import fs from "fs/promises";
+import { TRPCError } from "@trpc/server";
+
+const EFLASH_MANAGE = PERMISSIONS.EFLASH_MANAGE;
+
+const uploadDir = path.resolve(process.cwd(), "uploads/eflash");
+
+export const eflashRouter = router({
+  list: protectedProcedure
+    .input(z.object({
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(100).default(20),
+      type: z.enum(["phase_in", "phase_out", "service", "pricing", "program"]).optional(),
+      division: z.enum(["communications", "network", "general"]).optional(),
+      scope: z.enum(["global", "china"]).optional(),
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+      search: z.string().optional(),
+      tagIds: z.array(z.number()).optional(),
+    }))
+    .query(async ({ input }) => {
+      return db.listEFlashRecords(input);
+    }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      const record = await db.getEFlashRecordById(input.id);
+      if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "Record not found" });
+      return record;
+    }),
+
+  listTags: protectedProcedure
+    .input(z.object({
+      category: z.enum(["region", "product"]).optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      return db.listEFlashTags(input?.category);
+    }),
+
+  getStats: protectedProcedure
+    .query(async () => {
+      return db.getEFlashStats();
+    }),
+
+  create: permissionProcedure(EFLASH_MANAGE)
+    .input(z.object({
+      eflashId: z.string().min(1).max(20),
+      type: z.enum(["phase_in", "phase_out", "service", "pricing", "program"]),
+      division: z.enum(["communications", "network", "general"]),
+      scope: z.enum(["global", "china"]),
+      subjectEn: z.string().optional(),
+      subjectCn: z.string().optional(),
+      globalDate: z.string().optional(),
+      chinaDate: z.string().optional(),
+      effectiveDate: z.string().optional(),
+      authorEn: z.string().max(200).optional(),
+      authorCn: z.string().max(200).optional(),
+      comments: z.string().optional(),
+      tagIds: z.array(z.number()).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { tagIds, ...data } = input;
+      const id = await db.createEFlashRecord(
+        {
+          ...data,
+          globalDate: data.globalDate ? new Date(data.globalDate) : null,
+          chinaDate: data.chinaDate ? new Date(data.chinaDate) : null,
+          effectiveDate: data.effectiveDate ? new Date(data.effectiveDate) : null,
+          createdBy: ctx.user.id,
+        },
+        tagIds
+      );
+      await logActivity(ctx, {
+        action: "create_eflash",
+        resourceType: "eflash",
+        resourceId: id,
+      });
+      return { id };
+    }),
+
+  update: permissionProcedure(EFLASH_MANAGE)
+    .input(z.object({
+      id: z.number(),
+      eflashId: z.string().min(1).max(20).optional(),
+      type: z.enum(["phase_in", "phase_out", "service", "pricing", "program"]).optional(),
+      division: z.enum(["communications", "network", "general"]).optional(),
+      scope: z.enum(["global", "china"]).optional(),
+      subjectEn: z.string().optional(),
+      subjectCn: z.string().optional(),
+      globalDate: z.string().optional(),
+      chinaDate: z.string().optional(),
+      effectiveDate: z.string().optional(),
+      authorEn: z.string().max(200).optional(),
+      authorCn: z.string().max(200).optional(),
+      comments: z.string().optional(),
+      tagIds: z.array(z.number()).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, tagIds, ...data } = input;
+      const updateData: Record<string, unknown> = { ...data };
+      if (data.globalDate !== undefined) updateData.globalDate = data.globalDate ? new Date(data.globalDate) : null;
+      if (data.chinaDate !== undefined) updateData.chinaDate = data.chinaDate ? new Date(data.chinaDate) : null;
+      if (data.effectiveDate !== undefined) updateData.effectiveDate = data.effectiveDate ? new Date(data.effectiveDate) : null;
+
+      await db.updateEFlashRecord(id, updateData, tagIds);
+      await logActivity(ctx, {
+        action: "update_eflash",
+        resourceType: "eflash",
+        resourceId: id,
+      });
+      return { id };
+    }),
+
+  delete: permissionProcedure(EFLASH_MANAGE)
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await db.deleteEFlashRecord(input.id);
+      await logActivity(ctx, {
+        action: "delete_eflash",
+        resourceType: "eflash",
+        resourceId: input.id,
+      });
+      return { success: true };
+    }),
+
+  importExcel: permissionProcedure(EFLASH_MANAGE)
+    .input(z.object({
+      fileBase64: z.string().max(50_000_000),
+      sheetNames: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+
+      const defaultSheets = ["China", "NET Global", "COMM Global"];
+      const targetSheets = input.sheetNames?.length ? input.sheetNames : defaultSheets;
+
+      const allRows: Array<{
+        eflashId: string;
+        type: string;
+        division: string;
+        scope: string;
+        subjectEn?: string;
+        subjectCn?: string;
+        globalDate?: Date | null;
+        chinaDate?: Date | null;
+        effectiveDate?: Date | null;
+        authorEn?: string;
+        authorCn?: string;
+        comments?: string;
+      }> = [];
+
+      for (const sheetName of targetSheets) {
+        const ws = workbook.Sheets[sheetName];
+        if (!ws) continue;
+
+        const data = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 });
+        // Skip title row (0) and header row (1)
+        for (let i = 2; i < data.length; i++) {
+          const row = data[i];
+          if (!row || row.length < 2) continue;
+
+          const eflashId = String(row[3] || "").trim();
+          if (!eflashId || !eflashId.startsWith("EF-")) continue;
+
+          const typeStr = String(row[1] || "").trim();
+          const prefix = eflashId.match(/^EF-([A-Z])/)?.[1] || "";
+
+          // Derive division and scope from prefix
+          let division = "general";
+          let scope = "global";
+          if (prefix === "Z") {
+            scope = "china";
+            division = String(row[0] || "").toLowerCase().includes("network") ? "network" : "communications";
+          } else if (prefix === "N") {
+            division = "network";
+            scope = "global";
+          } else if (prefix === "C") {
+            division = "communications";
+            scope = "global";
+          } else if (prefix === "S" || prefix === "P") {
+            division = String(row[0] || "").toLowerCase().includes("network") ? "network" : "general";
+            scope = "global";
+          }
+
+          // Parse dates (Excel serial numbers or strings)
+          const parseDate = (val: unknown): Date | null => {
+            if (val == null || val === "" || val === "－" || val === "-") return null;
+            if (typeof val === "number") {
+              // Excel serial date
+              const date = XLSX.SSF.parse_date_code(val);
+              if (date) return new Date(date.y, date.m - 1, date.d);
+              return null;
+            }
+            const str = String(val).trim().replace(/^\s+/, "");
+            if (/^\d{4}[/-]\d{1,2}[/-]\d{1,2}$/.test(str)) return new Date(str);
+            if (/^\d{2}[/-]\d{1,2}[/-]\d{2,4}$/.test(str)) {
+              const parts = str.split(/[/-]/);
+              const d = parts[0].length === 2 ? `20${parts[0]}-${parts[1]}-${parts[2]}` : str;
+              return new Date(d);
+            }
+            return null;
+          };
+
+          allRows.push({
+            eflashId,
+            type: typeStr,
+            division,
+            scope,
+            subjectEn: String(row[4] || "").trim() || undefined,
+            subjectCn: String(row[5] || "").trim() || undefined,
+            globalDate: parseDate(row[6]),
+            chinaDate: parseDate(row[7]),
+            effectiveDate: parseDate(row[8]),
+            authorEn: String(row[9] || "").trim() || undefined,
+            authorCn: String(row[10] || "").trim() || undefined,
+            comments: String(row[11] || "").trim() || undefined,
+          });
+        }
+      }
+
+      const result = await db.importEFlashFromRows(allRows, ctx.user.id);
+      await logActivity(ctx, {
+        action: "import_eflash",
+        resourceType: "eflash",
+        detail: { created: result.created, updated: result.updated, failed: result.failed },
+      });
+      return result;
+    }),
+
+  uploadAttachment: permissionProcedure(EFLASH_MANAGE)
+    .input(z.object({
+      recordId: z.number(),
+      fileName: z.string().max(500),
+      fileBase64: z.string().max(50_000_000),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Verify record exists
+      const record = await db.getEFlashRecordById(input.recordId);
+      if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "Record not found" });
+
+      const recordDir = path.join(uploadDir, record.eflashId);
+      await fs.mkdir(recordDir, { recursive: true });
+
+      const filePath = path.join(recordDir, input.fileName);
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      await fs.writeFile(filePath, buffer);
+
+      const id = await db.createAttachment({
+        recordId: input.recordId,
+        fileName: input.fileName,
+        filePath,
+        fileSize: buffer.length,
+        uploadedBy: ctx.user.id,
+      });
+
+      return { id };
+    }),
+
+  deleteAttachment: permissionProcedure(EFLASH_MANAGE)
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await db.deleteAttachment(input.id);
+      await logActivity(ctx, {
+        action: "delete_eflash_attachment",
+        resourceType: "eflash_attachment",
+        resourceId: input.id,
+      });
+      return { success: true };
+    }),
+});

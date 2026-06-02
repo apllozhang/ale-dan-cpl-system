@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -44,6 +45,11 @@ async function startServer() {
       createContext,
     })
   );
+  // Serve eFlash uploaded files
+  app.use("/uploads/eflash", (req, res, next) => {
+    const uploadsPath = path.resolve(process.cwd(), "uploads/eflash");
+    express.static(uploadsPath)(req, res, next);
+  });
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
