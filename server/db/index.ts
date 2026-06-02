@@ -30,3 +30,4 @@ export * from "./sharing";
 export * from "./productSpecs";
 export * from "./customers";
 export * from "./certifications";
+export * from "./eflash";
