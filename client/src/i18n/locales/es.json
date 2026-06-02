@@ -10,7 +10,8 @@
     "activity": "Registro de Actividad",
     "customers": "Clientes",
     "techSpecs": "Especificaciones",
-    "certifications": "Certificaciones"
+    "certifications": "Certificaciones",
+    "eflash": "eFlash"
   },
   "dashboard": {
     "welcome": "Bienvenido de nuevo",
@@ -80,7 +81,8 @@
     "confirmDelete": "Confirmar eliminación",
     "irreversible": "Esta acción no se puede deshacer. ¿Está seguro de continuar?",
     "operationFailed": "Operación fallida",
-    "success": "Operación exitosa"
+    "success": "Operación exitosa",
+    "required": "Obligatorio"
   },
   "theme": {
     "light": "Cambiar a modo claro",
@@ -614,7 +616,10 @@
   },
   "certifications": {
     "title": "Certificaciones",
-    "tabs": { "product": "Conformidad de Producto", "enterprise": "Calificación Empresarial" },
+    "tabs": {
+      "product": "Conformidad de Producto",
+      "enterprise": "Calificación Empresarial"
+    },
     "fields": {
       "certNo": "Nº de Certificado",
       "certName": "Nombre del Certificado",
@@ -629,7 +634,10 @@
       "status": "Estado",
       "remark": "Observación",
       "productModels": "Productos",
-      "attachmentUrl": "Adjunto"
+      "attachmentUrl": "Adjunto",
+      "productModelsPlaceholder": "MODELO-A, MODELO-B, MODELO-C",
+      "productCategory": "Categoría de Producto",
+      "productSeries": "Serie de Producto"
     },
     "status": {
       "active": "Vigente",
@@ -660,12 +668,136 @@
       "result": "Resultado de Importación",
       "success": "Importado exitosamente",
       "failed": "Fallido",
-      "items": "elementos"
+      "items": "elementos",
+      "fileTooLarge": "Archivo demasiado grande. Seleccione un archivo menor a 10MB",
+      "readError": "Error al leer el archivo"
     },
     "filters": {
       "allStatus": "Todos los estados",
       "allStandards": "Todos los estándares",
-      "searchPlaceholder": "Buscar nº certificado, nombre, titular..."
+      "searchPlaceholder": "Buscar nº certificado, nombre, titular...",
+      "allCategories": "Todas las Categorías"
+    },
+    "categories": {
+      "switch": "Switches",
+      "wireless_ap": "AP Inalámbrico",
+      "pon": "POL/ONU",
+      "firewall": "Seguridad de Red",
+      "wireless_controller": "Controlador Inalámbrico",
+      "software": "Software",
+      "other": "Otro"
+    },
+    "standards": {
+      "network_access_permit": "Permiso de Acceso a Red",
+      "ccc": "CCC (Obligatorio China)",
+      "cqc": "CQC (Voluntario)",
+      "srrc": "SRRC (Aprobación de Radio)",
+      "isccc": "ISCCC (Seguridad Informática)",
+      "security_cert": "Certificado de Seguridad",
+      "public_security_license": "Licencia de Seguridad Pública",
+      "ipv6_ready": "IPv6 Ready",
+      "software_copyright": "Derechos de Software",
+      "ce_emc": "CE / EMC",
+      "fcc": "FCC",
+      "ul": "UL",
+      "cb": "CB",
+      "tuv": "TUV",
+      "dnv": "DNV (Marítimo)",
+      "rohs_weee": "RoHS / WEEE",
+      "wifi_alliance": "Wi-Fi Alliance",
+      "nom": "NOM (México)",
+      "anatel": "ANATEL (Brasil)",
+      "bsmi": "BSMI (Taiwán)",
+      "other": "Otro"
+    }
+  },
+  "eflash": {
+    "title": "Gestión de eFlash",
+    "description": "Gestión de documentos de notificación de productos",
+    "fields": {
+      "eflashId": "ID de eFlash",
+      "type": "Tipo",
+      "division": "División",
+      "scope": "Alcance",
+      "subjectEn": "Asunto (EN)",
+      "subjectCn": "Asunto (CN)",
+      "globalDate": "Fecha Global",
+      "chinaDate": "Fecha China",
+      "effectiveDate": "Fecha de Vigencia",
+      "authorEn": "Autor (EN)",
+      "authorCn": "Traductor (CN)",
+      "comments": "Comentarios",
+      "tags": "Etiquetas",
+      "attachments": "Adjuntos",
+      "createdAt": "Creado"
+    },
+    "types": {
+      "phase_in": "Phase-in",
+      "phase_out": "Phase-out",
+      "service": "Service",
+      "pricing": "Pricing",
+      "program": "Program"
+    },
+    "divisions": {
+      "communications": "Comunicaciones",
+      "network": "Red",
+      "general": "General"
+    },
+    "scopes": {
+      "global": "Global",
+      "china": "China"
+    },
+    "tagCategories": {
+      "region": "Región",
+      "product": "Producto/Serie"
+    },
+    "filters": {
+      "allTypes": "Todos los tipos",
+      "allDivisions": "Todas las divisiones",
+      "allScopes": "Todos los alcances",
+      "dateRange": "Rango de fecha de vigencia",
+      "searchPlaceholder": "Buscar ID o asunto..."
+    },
+    "actions": {
+      "create": "Nuevo",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "viewDetail": "Ver detalle",
+      "importExcel": "Importar Excel",
+      "uploadPdf": "Subir PDF"
+    },
+    "import": {
+      "title": "Importar datos de eFlash",
+      "dragHint": "Arrastre el archivo Excel aquí o haga clic para seleccionar",
+      "selectSheets": "Seleccionar hojas a importar",
+      "result": "Importación completada: {created} creados, {updated} actualizados, {failed} fallidos",
+      "noFile": "Seleccione un archivo",
+      "fileTooLarge": "El archivo no debe superar los 10MB",
+      "invalidFileType": "Seleccione un archivo Excel (.xlsx o .xls)"
+    },
+    "form": {
+      "createTitle": "Nuevo registro eFlash",
+      "editTitle": "Editar registro eFlash",
+      "saveSuccess": "Guardado exitosamente",
+      "deleteConfirm": "¿Está seguro de eliminar este registro? Los adjuntos asociados también se eliminarán.",
+      "validation": {
+        "eflashIdRequired": "El ID de eFlash es obligatorio",
+        "eflashIdFormat": "Formato: EF-X###, ej. EF-Z001",
+        "typeRequired": "El tipo es obligatorio"
+      }
+    },
+    "detail": {
+      "title": "Detalle de eFlash",
+      "noAttachments": "Sin adjuntos",
+      "download": "Descargar"
+    },
+    "recent": {
+      "title": "eFlash recientes",
+      "viewAll": "Ver todo",
+      "count": "{count} registros en los últimos 30 días"
+    },
+    "table": {
+      "empty": "Sin registros eFlash"
     }
   }
 }

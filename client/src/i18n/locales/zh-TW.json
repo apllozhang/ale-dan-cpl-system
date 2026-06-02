@@ -10,7 +10,8 @@
     "activity": "操作日誌",
     "customers": "客戶管理",
     "techSpecs": "技術參數",
-    "certifications": "證書管理"
+    "certifications": "證書管理",
+    "eflash": "eFlash 管理"
   },
   "dashboard": {
     "welcome": "歡迎回來",
@@ -80,7 +81,8 @@
     "confirmDelete": "確認刪除",
     "irreversible": "此操作無法復原，確定要繼續嗎？",
     "operationFailed": "操作失敗",
-    "success": "操作成功"
+    "success": "操作成功",
+    "required": "必填"
   },
   "theme": {
     "light": "切換亮色模式",
@@ -614,7 +616,10 @@
   },
   "certifications": {
     "title": "證書管理",
-    "tabs": { "product": "產品認證", "enterprise": "企業資質" },
+    "tabs": {
+      "product": "產品認證",
+      "enterprise": "企業資質"
+    },
     "fields": {
       "certNo": "證書編號",
       "certName": "證書名稱",
@@ -629,7 +634,10 @@
       "status": "狀態",
       "remark": "備註",
       "productModels": "關聯產品",
-      "attachmentUrl": "附件"
+      "attachmentUrl": "附件",
+      "productModelsPlaceholder": "MODEL-A, MODEL-B, MODEL-C",
+      "productCategory": "產品類別",
+      "productSeries": "產品系列"
     },
     "status": {
       "active": "有效",
@@ -660,12 +668,136 @@
       "result": "匯入結果",
       "success": "成功匯入",
       "failed": "失敗",
-      "items": "筆"
+      "items": "筆",
+      "fileTooLarge": "檔案過大，請選擇小於 10MB 的檔案",
+      "readError": "檔案讀取失敗"
     },
     "filters": {
       "allStatus": "全部狀態",
       "allStandards": "全部標準",
-      "searchPlaceholder": "搜尋證書編號、名稱、持有人..."
+      "searchPlaceholder": "搜尋證書編號、名稱、持有人...",
+      "allCategories": "全部類別"
+    },
+    "categories": {
+      "switch": "交換機",
+      "wireless_ap": "無線AP",
+      "pon": "POL/ONU",
+      "firewall": "網路安全",
+      "wireless_controller": "無線控制器",
+      "software": "軟體",
+      "other": "其他"
+    },
+    "standards": {
+      "network_access_permit": "進網許可證",
+      "ccc": "CCC (3C認證)",
+      "cqc": "CQC (自願認證)",
+      "srrc": "SRRC (無線電型號核准)",
+      "isccc": "ISCCC (資訊安全認證)",
+      "security_cert": "安全性證書",
+      "public_security_license": "公安部銷售許可證",
+      "ipv6_ready": "泰爾IPv6",
+      "software_copyright": "軟體著作權",
+      "ce_emc": "CE / EMC",
+      "fcc": "FCC",
+      "ul": "UL",
+      "cb": "CB",
+      "tuv": "TUV (萊茵)",
+      "dnv": "DNV (船級社)",
+      "rohs_weee": "RoHS / WEEE",
+      "wifi_alliance": "Wi-Fi Alliance",
+      "nom": "NOM (墨西哥)",
+      "anatel": "ANATEL (巴西)",
+      "bsmi": "BSMI (台灣)",
+      "other": "其他"
+    }
+  },
+  "eflash": {
+    "title": "eFlash 管理",
+    "description": "產品通知文件管理",
+    "fields": {
+      "eflashId": "eFlash 編號",
+      "type": "類型",
+      "division": "產品線",
+      "scope": "範圍",
+      "subjectEn": "英文標題",
+      "subjectCn": "中文標題",
+      "globalDate": "全球發布日期",
+      "chinaDate": "中國發布日期",
+      "effectiveDate": "生效日期",
+      "authorEn": "英文版作者",
+      "authorCn": "中文版譯者/作者",
+      "comments": "備註",
+      "tags": "標籤",
+      "attachments": "附件",
+      "createdAt": "建立時間"
+    },
+    "types": {
+      "phase_in": "Phase-in",
+      "phase_out": "Phase-out",
+      "service": "Service",
+      "pricing": "Pricing",
+      "program": "Program"
+    },
+    "divisions": {
+      "communications": "語音產品",
+      "network": "網路產品",
+      "general": "通用"
+    },
+    "scopes": {
+      "global": "全球",
+      "china": "中國"
+    },
+    "tagCategories": {
+      "region": "地區",
+      "product": "產品/系列"
+    },
+    "filters": {
+      "allTypes": "全部類型",
+      "allDivisions": "全部產品線",
+      "allScopes": "全部範圍",
+      "dateRange": "生效日期範圍",
+      "searchPlaceholder": "搜尋編號或標題..."
+    },
+    "actions": {
+      "create": "新建",
+      "edit": "編輯",
+      "delete": "刪除",
+      "viewDetail": "查看詳情",
+      "importExcel": "匯入 Excel",
+      "uploadPdf": "上傳 PDF"
+    },
+    "import": {
+      "title": "匯入 eFlash 資料",
+      "dragHint": "拖曳 Excel 檔案到此處，或點擊選擇",
+      "selectSheets": "選擇要匯入的 Sheet",
+      "result": "匯入完成：新建 {created} 筆，更新 {updated} 筆，失敗 {failed} 筆",
+      "noFile": "請選擇檔案",
+      "fileTooLarge": "檔案大小不能超過 10MB",
+      "invalidFileType": "請選擇 Excel 檔案（.xlsx 或 .xls）"
+    },
+    "form": {
+      "createTitle": "新建 eFlash 記錄",
+      "editTitle": "編輯 eFlash 記錄",
+      "saveSuccess": "儲存成功",
+      "deleteConfirm": "確定刪除此記錄？關聯的附件也會被刪除。",
+      "validation": {
+        "eflashIdRequired": "請輸入 eFlash 編號",
+        "eflashIdFormat": "編號格式：EF-X###，如 EF-Z001",
+        "typeRequired": "請選擇類型"
+      }
+    },
+    "detail": {
+      "title": "eFlash 詳情",
+      "noAttachments": "暫無附件",
+      "download": "下載"
+    },
+    "recent": {
+      "title": "近期 eFlash",
+      "viewAll": "查看全部",
+      "count": "近 30 天共 {count} 筆"
+    },
+    "table": {
+      "empty": "暫無 eFlash 記錄"
     }
   }
 }

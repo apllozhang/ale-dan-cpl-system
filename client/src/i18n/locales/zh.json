@@ -10,7 +10,8 @@
     "activity": "操作日志",
     "customers": "客户管理",
     "techSpecs": "技术参数",
-    "certifications": "证书管理"
+    "certifications": "证书管理",
+    "eflash": "eFlash 管理"
   },
   "dashboard": {
     "welcome": "欢迎回来",
@@ -81,7 +82,8 @@
     "confirmDelete": "确认删除",
     "irreversible": "此操作不可恢复，确定要继续吗？",
     "operationFailed": "操作失败",
-    "success": "操作成功"
+    "success": "操作成功",
+    "required": "必填"
   },
   "theme": {
     "light": "切换亮色模式",
@@ -615,7 +617,10 @@
   },
   "certifications": {
     "title": "证书管理",
-    "tabs": { "product": "产品认证", "enterprise": "企业资质" },
+    "tabs": {
+      "product": "产品认证",
+      "enterprise": "企业资质"
+    },
     "fields": {
       "certNo": "证书编号",
       "certName": "证书名称",
@@ -630,7 +635,10 @@
       "status": "状态",
       "remark": "备注",
       "productModels": "关联产品",
-      "attachmentUrl": "附件"
+      "attachmentUrl": "附件",
+      "productModelsPlaceholder": "MODEL-A, MODEL-B, MODEL-C",
+      "productCategory": "产品类别",
+      "productSeries": "产品系列"
     },
     "status": {
       "active": "有效",
@@ -661,12 +669,136 @@
       "result": "导入结果",
       "success": "成功导入",
       "failed": "失败",
-      "items": "条"
+      "items": "条",
+      "fileTooLarge": "文件过大，请选择小于 10MB 的文件",
+      "readError": "文件读取失败"
     },
     "filters": {
       "allStatus": "全部状态",
       "allStandards": "全部标准",
-      "searchPlaceholder": "搜索证书编号、名称、持有人..."
+      "searchPlaceholder": "搜索证书编号、名称、持有人...",
+      "allCategories": "全部类别"
+    },
+    "categories": {
+      "switch": "交换机",
+      "wireless_ap": "无线AP",
+      "pon": "POL/ONU",
+      "firewall": "网络安全",
+      "wireless_controller": "无线控制器",
+      "software": "软件",
+      "other": "其他"
+    },
+    "standards": {
+      "network_access_permit": "进网许可证",
+      "ccc": "CCC (3C认证)",
+      "cqc": "CQC (自愿认证)",
+      "srrc": "SRRC (无线电型号核准)",
+      "isccc": "ISCCC (信息安全认证)",
+      "security_cert": "安全性证书",
+      "public_security_license": "公安部销售许可证",
+      "ipv6_ready": "泰尔IPv6",
+      "software_copyright": "软件著作权",
+      "ce_emc": "CE / EMC",
+      "fcc": "FCC",
+      "ul": "UL",
+      "cb": "CB",
+      "tuv": "TUV (莱茵)",
+      "dnv": "DNV (船级社)",
+      "rohs_weee": "RoHS / WEEE",
+      "wifi_alliance": "Wi-Fi Alliance",
+      "nom": "NOM (墨西哥)",
+      "anatel": "ANATEL (巴西)",
+      "bsmi": "BSMI (台湾)",
+      "other": "其他"
+    }
+  },
+  "eflash": {
+    "title": "eFlash 管理",
+    "description": "产品通知文档管理",
+    "fields": {
+      "eflashId": "eFlash 编号",
+      "type": "类型",
+      "division": "产品线",
+      "scope": "范围",
+      "subjectEn": "英文标题",
+      "subjectCn": "中文标题",
+      "globalDate": "全球发布日期",
+      "chinaDate": "中国发布日期",
+      "effectiveDate": "生效日期",
+      "authorEn": "英文版作者",
+      "authorCn": "中文版译者/作者",
+      "comments": "备注",
+      "tags": "标签",
+      "attachments": "附件",
+      "createdAt": "创建时间"
+    },
+    "types": {
+      "phase_in": "Phase-in",
+      "phase_out": "Phase-out",
+      "service": "Service",
+      "pricing": "Pricing",
+      "program": "Program"
+    },
+    "divisions": {
+      "communications": "语音产品",
+      "network": "网络产品",
+      "general": "通用"
+    },
+    "scopes": {
+      "global": "全球",
+      "china": "中国"
+    },
+    "tagCategories": {
+      "region": "地区",
+      "product": "产品/系列"
+    },
+    "filters": {
+      "allTypes": "全部类型",
+      "allDivisions": "全部产品线",
+      "allScopes": "全部范围",
+      "dateRange": "生效日期范围",
+      "searchPlaceholder": "搜索编号或标题..."
+    },
+    "actions": {
+      "create": "新建",
+      "edit": "编辑",
+      "delete": "删除",
+      "viewDetail": "查看详情",
+      "importExcel": "导入 Excel",
+      "uploadPdf": "上传 PDF"
+    },
+    "import": {
+      "title": "导入 eFlash 数据",
+      "dragHint": "拖拽 Excel 文件到此处，或点击选择",
+      "selectSheets": "选择要导入的 Sheet",
+      "result": "导入完成：新建 {created} 条，更新 {updated} 条，失败 {failed} 条",
+      "noFile": "请选择文件",
+      "fileTooLarge": "文件大小不能超过 10MB",
+      "invalidFileType": "请选择 Excel 文件（.xlsx 或 .xls）"
+    },
+    "form": {
+      "createTitle": "新建 eFlash 记录",
+      "editTitle": "编辑 eFlash 记录",
+      "saveSuccess": "保存成功",
+      "deleteConfirm": "确定删除此记录？关联的附件也会被删除。",
+      "validation": {
+        "eflashIdRequired": "请输入 eFlash 编号",
+        "eflashIdFormat": "编号格式：EF-X###，如 EF-Z001",
+        "typeRequired": "请选择类型"
+      }
+    },
+    "detail": {
+      "title": "eFlash 详情",
+      "noAttachments": "暂无附件",
+      "download": "下载"
+    },
+    "recent": {
+      "title": "近期 eFlash",
+      "viewAll": "查看全部",
+      "count": "近 30 天共 {count} 条"
+    },
+    "table": {
+      "empty": "暂无 eFlash 记录"
     }
   }
 }

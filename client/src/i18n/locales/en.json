@@ -10,7 +10,8 @@
     "activity": "Activity Log",
     "customers": "Customers",
     "techSpecs": "Tech Specs",
-    "certifications": "Certifications"
+    "certifications": "Certifications",
+    "eflash": "eFlash"
   },
   "dashboard": {
     "welcome": "Welcome back",
@@ -80,7 +81,8 @@
     "confirmDelete": "Confirm Deletion",
     "irreversible": "This action cannot be undone. Are you sure you want to proceed?",
     "operationFailed": "Operation Failed",
-    "success": "Operation Successful"
+    "success": "Operation Successful",
+    "required": "Required"
   },
   "theme": {
     "light": "Switch to Light Mode",
@@ -614,7 +616,10 @@
   },
   "certifications": {
     "title": "Certifications",
-    "tabs": { "product": "Product Compliance", "enterprise": "Enterprise Qualification" },
+    "tabs": {
+      "product": "Product Compliance",
+      "enterprise": "Enterprise Qualification"
+    },
     "fields": {
       "certNo": "Certificate No.",
       "certName": "Certificate Name",
@@ -629,7 +634,10 @@
       "status": "Status",
       "remark": "Remark",
       "productModels": "Products",
-      "attachmentUrl": "Attachment"
+      "attachmentUrl": "Attachment",
+      "productModelsPlaceholder": "MODEL-A, MODEL-B, MODEL-C",
+      "productCategory": "Product Category",
+      "productSeries": "Product Series"
     },
     "status": {
       "active": "Active",
@@ -660,12 +668,136 @@
       "result": "Import Result",
       "success": "Successfully imported",
       "failed": "Failed",
-      "items": "items"
+      "items": "items",
+      "fileTooLarge": "File too large. Please select a file under 10MB",
+      "readError": "Failed to read file"
     },
     "filters": {
       "allStatus": "All Status",
       "allStandards": "All Standards",
-      "searchPlaceholder": "Search certificate no, name, holder..."
+      "searchPlaceholder": "Search certificate no, name, holder...",
+      "allCategories": "All Categories"
+    },
+    "categories": {
+      "switch": "Switches",
+      "wireless_ap": "Wireless AP",
+      "pon": "POL/ONU",
+      "firewall": "Network Security",
+      "wireless_controller": "Wireless Controller",
+      "software": "Software",
+      "other": "Other"
+    },
+    "standards": {
+      "network_access_permit": "Network Access Permit",
+      "ccc": "CCC (China Compulsory)",
+      "cqc": "CQC (Voluntary)",
+      "srrc": "SRRC (Radio Type Approval)",
+      "isccc": "ISCCC (Info Security)",
+      "security_cert": "Security Certificate",
+      "public_security_license": "Public Security License",
+      "ipv6_ready": "IPv6 Ready",
+      "software_copyright": "Software Copyright",
+      "ce_emc": "CE / EMC",
+      "fcc": "FCC",
+      "ul": "UL",
+      "cb": "CB",
+      "tuv": "TUV",
+      "dnv": "DNV (Marine)",
+      "rohs_weee": "RoHS / WEEE",
+      "wifi_alliance": "Wi-Fi Alliance",
+      "nom": "NOM (Mexico)",
+      "anatel": "ANATEL (Brazil)",
+      "bsmi": "BSMI (Taiwan)",
+      "other": "Other"
+    }
+  },
+  "eflash": {
+    "title": "eFlash Management",
+    "description": "Product notification document management",
+    "fields": {
+      "eflashId": "eFlash ID",
+      "type": "Type",
+      "division": "Division",
+      "scope": "Scope",
+      "subjectEn": "Subject (EN)",
+      "subjectCn": "Subject (CN)",
+      "globalDate": "Global Date",
+      "chinaDate": "China Date",
+      "effectiveDate": "Effective Date",
+      "authorEn": "Author (EN)",
+      "authorCn": "Translator (CN)",
+      "comments": "Comments",
+      "tags": "Tags",
+      "attachments": "Attachments",
+      "createdAt": "Created"
+    },
+    "types": {
+      "phase_in": "Phase-in",
+      "phase_out": "Phase-out",
+      "service": "Service",
+      "pricing": "Pricing",
+      "program": "Program"
+    },
+    "divisions": {
+      "communications": "Communications",
+      "network": "Network",
+      "general": "General"
+    },
+    "scopes": {
+      "global": "Global",
+      "china": "China"
+    },
+    "tagCategories": {
+      "region": "Region",
+      "product": "Product/Series"
+    },
+    "filters": {
+      "allTypes": "All Types",
+      "allDivisions": "All Divisions",
+      "allScopes": "All Scopes",
+      "dateRange": "Effective Date Range",
+      "searchPlaceholder": "Search ID or subject..."
+    },
+    "actions": {
+      "create": "New",
+      "edit": "Edit",
+      "delete": "Delete",
+      "viewDetail": "View Detail",
+      "importExcel": "Import Excel",
+      "uploadPdf": "Upload PDF"
+    },
+    "import": {
+      "title": "Import eFlash Data",
+      "dragHint": "Drag Excel file here, or click to select",
+      "selectSheets": "Select sheets to import",
+      "result": "Import completed: {created} created, {updated} updated, {failed} failed",
+      "noFile": "Please select a file",
+      "fileTooLarge": "File size must not exceed 10MB",
+      "invalidFileType": "Please select an Excel file (.xlsx or .xls)"
+    },
+    "form": {
+      "createTitle": "New eFlash Record",
+      "editTitle": "Edit eFlash Record",
+      "saveSuccess": "Saved successfully",
+      "deleteConfirm": "Are you sure to delete this record? Associated attachments will also be deleted.",
+      "validation": {
+        "eflashIdRequired": "eFlash ID is required",
+        "eflashIdFormat": "Format: EF-X###, e.g. EF-Z001",
+        "typeRequired": "Type is required"
+      }
+    },
+    "detail": {
+      "title": "eFlash Detail",
+      "noAttachments": "No attachments",
+      "download": "Download"
+    },
+    "recent": {
+      "title": "Recent eFlash",
+      "viewAll": "View All",
+      "count": "{count} records in last 30 days"
+    },
+    "table": {
+      "empty": "No eFlash records"
     }
   }
 }

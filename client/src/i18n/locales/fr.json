@@ -10,7 +10,8 @@
     "activity": "Journal d'activité",
     "customers": "Clients",
     "techSpecs": "Spécifications",
-    "certifications": "Certifications"
+    "certifications": "Certifications",
+    "eflash": "eFlash"
   },
   "dashboard": {
     "welcome": "Bienvenue",
@@ -80,7 +81,8 @@
     "confirmDelete": "Confirmer la suppression",
     "irreversible": "Cette action est irréversible. Voulez-vous continuer ?",
     "operationFailed": "Échec de l'opération",
-    "success": "Opération réussie"
+    "success": "Opération réussie",
+    "required": "Obligatoire"
   },
   "theme": {
     "light": "Passer en mode clair",
@@ -614,7 +616,10 @@
   },
   "certifications": {
     "title": "Certifications",
-    "tabs": { "product": "Conformité Produit", "enterprise": "Qualification Entreprise" },
+    "tabs": {
+      "product": "Conformité Produit",
+      "enterprise": "Qualification Entreprise"
+    },
     "fields": {
       "certNo": "Nº de Certificat",
       "certName": "Nom du Certificat",
@@ -629,7 +634,10 @@
       "status": "Statut",
       "remark": "Remarque",
       "productModels": "Produits",
-      "attachmentUrl": "Pièce jointe"
+      "attachmentUrl": "Pièce jointe",
+      "productModelsPlaceholder": "MODELE-A, MODELE-B, MODELE-C",
+      "productCategory": "Catégorie de Produit",
+      "productSeries": "Série de Produit"
     },
     "status": {
       "active": "Valide",
@@ -660,12 +668,136 @@
       "result": "Résultat de l'importation",
       "success": "Importé avec succès",
       "failed": "Échoué",
-      "items": "éléments"
+      "items": "éléments",
+      "fileTooLarge": "Fichier trop volumineux. Veuillez sélectionner un fichier de moins de 10 Mo",
+      "readError": "Échec de la lecture du fichier"
     },
     "filters": {
       "allStatus": "Tous les statuts",
       "allStandards": "Toutes les normes",
-      "searchPlaceholder": "Rechercher nº certificat, nom, titulaire..."
+      "searchPlaceholder": "Rechercher nº certificat, nom, titulaire...",
+      "allCategories": "Toutes les Catégories"
+    },
+    "categories": {
+      "switch": "Commutateurs",
+      "wireless_ap": "AP Sans Fil",
+      "pon": "POL/ONU",
+      "firewall": "Sécurité Réseau",
+      "wireless_controller": "Contrôleur Sans Fil",
+      "software": "Logiciel",
+      "other": "Autre"
+    },
+    "standards": {
+      "network_access_permit": "Permis d'Accès Réseau",
+      "ccc": "CCC (Obligatoire Chine)",
+      "cqc": "CQC (Volontaire)",
+      "srrc": "SRRC (Approbation Radio)",
+      "isccc": "ISCCC (Sécurité Info)",
+      "security_cert": "Certificat de Sécurité",
+      "public_security_license": "Licence de Sécurité Publique",
+      "ipv6_ready": "IPv6 Ready",
+      "software_copyright": "Droit d'Auteur Logiciel",
+      "ce_emc": "CE / EMC",
+      "fcc": "FCC",
+      "ul": "UL",
+      "cb": "CB",
+      "tuv": "TUV",
+      "dnv": "DNV (Maritime)",
+      "rohs_weee": "RoHS / WEEE",
+      "wifi_alliance": "Wi-Fi Alliance",
+      "nom": "NOM (Mexique)",
+      "anatel": "ANATEL (Brésil)",
+      "bsmi": "BSMI (Taïwan)",
+      "other": "Autre"
+    }
+  },
+  "eflash": {
+    "title": "Gestion eFlash",
+    "description": "Gestion des documents de notification produit",
+    "fields": {
+      "eflashId": "ID eFlash",
+      "type": "Type",
+      "division": "Division",
+      "scope": "Périmètre",
+      "subjectEn": "Objet (EN)",
+      "subjectCn": "Objet (CN)",
+      "globalDate": "Date Globale",
+      "chinaDate": "Date Chine",
+      "effectiveDate": "Date d'Effet",
+      "authorEn": "Auteur (EN)",
+      "authorCn": "Traducteur (CN)",
+      "comments": "Commentaires",
+      "tags": "Étiquettes",
+      "attachments": "Pièces jointes",
+      "createdAt": "Créé"
+    },
+    "types": {
+      "phase_in": "Phase-in",
+      "phase_out": "Phase-out",
+      "service": "Service",
+      "pricing": "Pricing",
+      "program": "Program"
+    },
+    "divisions": {
+      "communications": "Communications",
+      "network": "Réseau",
+      "general": "Général"
+    },
+    "scopes": {
+      "global": "Global",
+      "china": "Chine"
+    },
+    "tagCategories": {
+      "region": "Région",
+      "product": "Produit/Série"
+    },
+    "filters": {
+      "allTypes": "Tous les types",
+      "allDivisions": "Toutes les divisions",
+      "allScopes": "Tous les périmètres",
+      "dateRange": "Plage de dates d'effet",
+      "searchPlaceholder": "Rechercher ID ou objet..."
+    },
+    "actions": {
+      "create": "Nouveau",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "viewDetail": "Voir le détail",
+      "importExcel": "Importer Excel",
+      "uploadPdf": "Téléverser PDF"
+    },
+    "import": {
+      "title": "Importer les données eFlash",
+      "dragHint": "Glissez le fichier Excel ici ou cliquez pour sélectionner",
+      "selectSheets": "Sélectionner les feuilles à importer",
+      "result": "Import terminé : {created} créés, {updated} mis à jour, {failed} échoués",
+      "noFile": "Veuillez sélectionner un fichier",
+      "fileTooLarge": "La taille du fichier ne doit pas dépasser 10 Mo",
+      "invalidFileType": "Veuillez sélectionner un fichier Excel (.xlsx ou .xls)"
+    },
+    "form": {
+      "createTitle": "Nouvel enregistrement eFlash",
+      "editTitle": "Modifier l'enregistrement eFlash",
+      "saveSuccess": "Enregistré avec succès",
+      "deleteConfirm": "Voulez-vous vraiment supprimer cet enregistrement ? Les pièces jointes associées seront également supprimées.",
+      "validation": {
+        "eflashIdRequired": "L'ID eFlash est obligatoire",
+        "eflashIdFormat": "Format : EF-X###, ex. EF-Z001",
+        "typeRequired": "Le type est obligatoire"
+      }
+    },
+    "detail": {
+      "title": "Détail eFlash",
+      "noAttachments": "Aucune pièce jointe",
+      "download": "Télécharger"
+    },
+    "recent": {
+      "title": "eFlash récents",
+      "viewAll": "Voir tout",
+      "count": "{count} enregistrements ces 30 derniers jours"
+    },
+    "table": {
+      "empty": "Aucun enregistrement eFlash"
     }
   }
 }

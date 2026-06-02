@@ -10,7 +10,8 @@
     "activity": "操作ログ",
     "customers": "顧客管理",
     "techSpecs": "技術仕様",
-    "certifications": "認証管理"
+    "certifications": "認証管理",
+    "eflash": "eFlash管理"
   },
   "dashboard": {
     "welcome": "おかえりなさい",
@@ -80,7 +81,8 @@
     "confirmDelete": "削除の確認",
     "irreversible": "この操作は元に戻せません。続行しますか？",
     "operationFailed": "操作に失敗しました",
-    "success": "操作が成功しました"
+    "success": "操作が成功しました",
+    "required": "必須"
   },
   "theme": {
     "light": "ライトモードに切替",
@@ -614,7 +616,10 @@
   },
   "certifications": {
     "title": "認証管理",
-    "tabs": { "product": "製品認証", "enterprise": "企業資格" },
+    "tabs": {
+      "product": "製品認証",
+      "enterprise": "企業資格"
+    },
     "fields": {
       "certNo": "証明書番号",
       "certName": "証明書名",
@@ -629,7 +634,10 @@
       "status": "ステータス",
       "remark": "備考",
       "productModels": "関連製品",
-      "attachmentUrl": "添付ファイル"
+      "attachmentUrl": "添付ファイル",
+      "productModelsPlaceholder": "MODEL-A, MODEL-B, MODEL-C",
+      "productCategory": "製品カテゴリ",
+      "productSeries": "製品シリーズ"
     },
     "status": {
       "active": "有効",
@@ -660,12 +668,136 @@
       "result": "インポート結果",
       "success": "インポート成功",
       "failed": "失敗",
-      "items": "件"
+      "items": "件",
+      "fileTooLarge": "ファイルが大きすぎます。10MB以下のファイルを選択してください",
+      "readError": "ファイルの読み込みに失敗しました"
     },
     "filters": {
       "allStatus": "すべてのステータス",
       "allStandards": "すべての規格",
-      "searchPlaceholder": "証明書番号、名前、保有者を検索..."
+      "searchPlaceholder": "証明書番号、名前、保有者を検索...",
+      "allCategories": "全カテゴリ"
+    },
+    "categories": {
+      "switch": "スイッチ",
+      "wireless_ap": "ワイヤレスAP",
+      "pon": "POL/ONU",
+      "firewall": "ネットワークセキュリティ",
+      "wireless_controller": "ワイヤレスコントローラ",
+      "software": "ソフトウェア",
+      "other": "その他"
+    },
+    "standards": {
+      "network_access_permit": "入網許可証",
+      "ccc": "CCC (3C認証)",
+      "cqc": "CQC (任意認証)",
+      "srrc": "SRRC (無線電型式承認)",
+      "isccc": "ISCCC (情報セキュリティ)",
+      "security_cert": "セキュリティ証明書",
+      "public_security_license": "公安部販売許可証",
+      "ipv6_ready": "泰爾IPv6",
+      "software_copyright": "ソフトウェア著作権",
+      "ce_emc": "CE / EMC",
+      "fcc": "FCC",
+      "ul": "UL",
+      "cb": "CB",
+      "tuv": "TUV",
+      "dnv": "DNV",
+      "rohs_weee": "RoHS / WEEE",
+      "wifi_alliance": "Wi-Fi Alliance",
+      "nom": "NOM (メキシコ)",
+      "anatel": "ANATEL (ブラジル)",
+      "bsmi": "BSMI (台湾)",
+      "other": "その他"
+    }
+  },
+  "eflash": {
+    "title": "eFlash管理",
+    "description": "製品通知ドキュメント管理",
+    "fields": {
+      "eflashId": "eFlash ID",
+      "type": "タイプ",
+      "division": "事業部門",
+      "scope": "スコープ",
+      "subjectEn": "件名（英語）",
+      "subjectCn": "件名（中国語）",
+      "globalDate": "グローバル公開日",
+      "chinaDate": "中国公開日",
+      "effectiveDate": "発効日",
+      "authorEn": "作成者（英語）",
+      "authorCn": "翻訳者（中国語）",
+      "comments": "コメント",
+      "tags": "タグ",
+      "attachments": "添付ファイル",
+      "createdAt": "作成日時"
+    },
+    "types": {
+      "phase_in": "Phase-in",
+      "phase_out": "Phase-out",
+      "service": "Service",
+      "pricing": "Pricing",
+      "program": "Program"
+    },
+    "divisions": {
+      "communications": "コミュニケーション",
+      "network": "ネットワーク",
+      "general": "共通"
+    },
+    "scopes": {
+      "global": "グローバル",
+      "china": "中国"
+    },
+    "tagCategories": {
+      "region": "地域",
+      "product": "製品/シリーズ"
+    },
+    "filters": {
+      "allTypes": "すべてのタイプ",
+      "allDivisions": "すべての事業部門",
+      "allScopes": "すべてのスコープ",
+      "dateRange": "発効日の範囲",
+      "searchPlaceholder": "IDまたは件名を検索..."
+    },
+    "actions": {
+      "create": "新規作成",
+      "edit": "編集",
+      "delete": "削除",
+      "viewDetail": "詳細を見る",
+      "importExcel": "Excelインポート",
+      "uploadPdf": "PDFアップロード"
+    },
+    "import": {
+      "title": "eFlashデータのインポート",
+      "dragHint": "Excelファイルをここにドラッグ、またはクリックして選択",
+      "selectSheets": "インポートするシートを選択",
+      "result": "インポート完了：新規 {created} 件、更新 {updated} 件、失敗 {failed} 件",
+      "noFile": "ファイルを選択してください",
+      "fileTooLarge": "ファイルサイズは10MB以下にしてください",
+      "invalidFileType": "Excelファイル（.xlsxまたは.xls）を選択してください"
+    },
+    "form": {
+      "createTitle": "新規eFlashレコード",
+      "editTitle": "eFlashレコード編集",
+      "saveSuccess": "保存しました",
+      "deleteConfirm": "このレコードを削除しますか？関連する添付ファイルも削除されます。",
+      "validation": {
+        "eflashIdRequired": "eFlash IDは必須です",
+        "eflashIdFormat": "形式：EF-X###（例：EF-Z001）",
+        "typeRequired": "タイプは必須です"
+      }
+    },
+    "detail": {
+      "title": "eFlash詳細",
+      "noAttachments": "添付ファイルなし",
+      "download": "ダウンロード"
+    },
+    "recent": {
+      "title": "最近のeFlash",
+      "viewAll": "すべて表示",
+      "count": "過去30日間で {count} 件"
+    },
+    "table": {
+      "empty": "eFlashレコードがありません"
     }
   }
 }
