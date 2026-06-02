@@ -17,6 +17,7 @@ import ActivityLog from "./pages/ActivityLog";
 import BusinessAnalysis from "./pages/BusinessAnalysis";
 import Customers from "./pages/Customers";
 import ProductSpecsPage, { SpecSetDetail } from "@/pages/ProductSpecsPage";
+import CertificationsPage from "@/pages/CertificationsPage";
 
 function DashboardRoutes() {
   return (
@@ -24,6 +25,7 @@ function DashboardRoutes() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/data" component={ProductDataPage} />
+        <Route path="/certifications" component={CertificationsPage} />
         <Route path="/summary" component={Summary} />
         <Route path="/import" component={Import} />
         <Route path="/quotations" component={QuotationList} />

@@ -48,12 +48,13 @@ import {
   Minimize2,
   Smartphone,
   Monitor,
-
+  Info,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import { AboutDialog } from "./AboutDialog";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
@@ -67,6 +68,7 @@ const menuItems = [
   { icon: FileText, labelKey: "menu.summary", path: "/summary" },
   { icon: HardDriveUpload, labelKey: "menu.import", path: "/import", permission: PERMISSIONS.IMPORT_DATA },
   { icon: Database, labelKey: "menu.products", path: "/data" },
+  { icon: Shield, labelKey: "menu.certifications", path: "/certifications", permission: PERMISSIONS.VIEW_PRODUCTS },
   { icon: Activity, labelKey: "menu.activity", path: "/activity", permission: PERMISSIONS.VIEW_ACTIVITY_LOGS },
   { icon: Users, labelKey: "menu.users", path: "/users", permission: PERMISSIONS.MANAGE_USERS },
 ];
@@ -155,6 +157,7 @@ function DashboardLayoutContent({
   const [isResizing, setIsResizing] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [isMobilePreview, setIsMobilePreview] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find((item) => item.path === location);
@@ -289,6 +292,15 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3">
+            <div className="flex items-center gap-1 mb-1.5">
+              <button
+                onClick={() => setAboutOpen(true)}
+                className="flex items-center gap-3 rounded-lg px-2 py-1.5 w-full hover:bg-accent/50 transition-colors group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring text-muted-foreground hover:text-foreground"
+              >
+                <Info className="h-4 w-4 shrink-0" />
+                <span className="text-xs group-data-[collapsible=icon]:hidden">{t('about.title')}</span>
+              </button>
+            </div>
             <div className="flex items-center gap-1">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -334,6 +346,9 @@ function DashboardLayoutContent({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* About Dialog */}
+          <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
         </Sidebar>
         <div
           className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
