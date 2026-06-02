@@ -9,7 +9,8 @@
     "users": "User Management",
     "activity": "Activity Log",
     "customers": "Customers",
-    "techSpecs": "Tech Specs"
+    "techSpecs": "Tech Specs",
+    "certifications": "Certifications"
   },
   "dashboard": {
     "welcome": "Welcome back",
@@ -604,5 +605,67 @@
     "title": "Change Log",
     "tabPrice": "Price Change Log",
     "tabSpec": "Spec Change Log"
+  },
+  "about": {
+    "title": "About",
+    "version": "Version",
+    "copyright": "© 2024-2026 DAN CPL. All rights reserved.",
+    "description": "ALE DAN CPL Quotation Management System"
+  },
+  "certifications": {
+    "title": "Certifications",
+    "tabs": { "product": "Product Compliance", "enterprise": "Enterprise Qualification" },
+    "fields": {
+      "certNo": "Certificate No.",
+      "certName": "Certificate Name",
+      "standardType": "Standard Type",
+      "issuer": "Issuer",
+      "holder": "Holder",
+      "factoryNo": "Factory No.",
+      "testReportNo": "Test Report No.",
+      "certScope": "Scope",
+      "issueDate": "Issue Date",
+      "expiryDate": "Expiry Date",
+      "status": "Status",
+      "remark": "Remark",
+      "productModels": "Products",
+      "attachmentUrl": "Attachment"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "revoked": "Revoked",
+      "pending": "Pending"
+    },
+    "actions": {
+      "import": "Import",
+      "export": "Export",
+      "add": "Add Certificate",
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View",
+      "confirmDelete": "Are you sure you want to delete this certificate?"
+    },
+    "expiring": {
+      "title": "Expiring Certificates",
+      "days": "days",
+      "count": "certificates expiring soon",
+      "noExpiring": "No expiring certificates",
+      "viewAll": "View All"
+    },
+    "import": {
+      "title": "Import Certificates",
+      "uploadExcel": "Upload Excel File",
+      "selectType": "Select Certificate Type",
+      "result": "Import Result",
+      "success": "Successfully imported",
+      "failed": "Failed",
+      "items": "items"
+    },
+    "filters": {
+      "allStatus": "All Status",
+      "allStandards": "All Standards",
+      "searchPlaceholder": "Search certificate no, name, holder..."
+    }
   }
 }

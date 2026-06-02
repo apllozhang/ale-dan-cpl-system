@@ -9,7 +9,8 @@
     "users": "Usuarios",
     "activity": "Registro de Actividad",
     "customers": "Clientes",
-    "techSpecs": "Especificaciones"
+    "techSpecs": "Especificaciones",
+    "certifications": "Certificaciones"
   },
   "dashboard": {
     "welcome": "Bienvenido de nuevo",
@@ -604,5 +605,67 @@
     "backToList": "Volver a la Lista",
     "dropzone": "Arrastre archivo Excel/CSV aquí o haga clic para seleccionar",
     "changeFile": "Cambiar archivo"
+  },
+  "about": {
+    "title": "Acerca de",
+    "version": "Versión",
+    "copyright": "© 2024-2026 DAN CPL. Todos los derechos reservados.",
+    "description": "ALE DAN CPL Sistema de Gestión de Cotizaciones"
+  },
+  "certifications": {
+    "title": "Certificaciones",
+    "tabs": { "product": "Conformidad de Producto", "enterprise": "Calificación Empresarial" },
+    "fields": {
+      "certNo": "Nº de Certificado",
+      "certName": "Nombre del Certificado",
+      "standardType": "Tipo de Estándar",
+      "issuer": "Emisor",
+      "holder": "Titular",
+      "factoryNo": "Nº de Fábrica",
+      "testReportNo": "Nº de Informe de Prueba",
+      "certScope": "Alcance",
+      "issueDate": "Fecha de Emisión",
+      "expiryDate": "Fecha de Vencimiento",
+      "status": "Estado",
+      "remark": "Observación",
+      "productModels": "Productos",
+      "attachmentUrl": "Adjunto"
+    },
+    "status": {
+      "active": "Vigente",
+      "expired": "Vencido",
+      "revoked": "Revocado",
+      "pending": "Pendiente"
+    },
+    "actions": {
+      "import": "Importar",
+      "export": "Exportar",
+      "add": "Agregar Certificado",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "view": "Ver",
+      "confirmDelete": "¿Está seguro de eliminar este certificado?"
+    },
+    "expiring": {
+      "title": "Certificados por Vencer",
+      "days": "días",
+      "count": "certificados vencen pronto",
+      "noExpiring": "No hay certificados por vencer",
+      "viewAll": "Ver todo"
+    },
+    "import": {
+      "title": "Importar Certificados",
+      "uploadExcel": "Subir Archivo Excel",
+      "selectType": "Seleccionar Tipo de Certificado",
+      "result": "Resultado de Importación",
+      "success": "Importado exitosamente",
+      "failed": "Fallido",
+      "items": "elementos"
+    },
+    "filters": {
+      "allStatus": "Todos los estados",
+      "allStandards": "Todos los estándares",
+      "searchPlaceholder": "Buscar nº certificado, nombre, titular..."
+    }
   }
 }

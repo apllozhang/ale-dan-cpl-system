@@ -9,7 +9,8 @@
     "users": "Utilisateurs",
     "activity": "Journal d'activité",
     "customers": "Clients",
-    "techSpecs": "Spécifications"
+    "techSpecs": "Spécifications",
+    "certifications": "Certifications"
   },
   "dashboard": {
     "welcome": "Bienvenue",
@@ -604,5 +605,67 @@
     "backToList": "Retour à la Liste",
     "dropzone": "Glissez un fichier Excel/CSV ici ou cliquez pour sélectionner",
     "changeFile": "Changer le fichier"
+  },
+  "about": {
+    "title": "À propos",
+    "version": "Version",
+    "copyright": "© 2024-2026 DAN CPL. Tous droits réservés.",
+    "description": "ALE DAN CPL Système de Gestion des Devis"
+  },
+  "certifications": {
+    "title": "Certifications",
+    "tabs": { "product": "Conformité Produit", "enterprise": "Qualification Entreprise" },
+    "fields": {
+      "certNo": "Nº de Certificat",
+      "certName": "Nom du Certificat",
+      "standardType": "Type de Norme",
+      "issuer": "Émetteur",
+      "holder": "Titulaire",
+      "factoryNo": "Nº d'Usine",
+      "testReportNo": "Nº de Rapport d'Essai",
+      "certScope": "Périmètre",
+      "issueDate": "Date d'Émission",
+      "expiryDate": "Date d'Expiration",
+      "status": "Statut",
+      "remark": "Remarque",
+      "productModels": "Produits",
+      "attachmentUrl": "Pièce jointe"
+    },
+    "status": {
+      "active": "Valide",
+      "expired": "Expiré",
+      "revoked": "Révoqué",
+      "pending": "En attente"
+    },
+    "actions": {
+      "import": "Importer",
+      "export": "Exporter",
+      "add": "Ajouter un Certificat",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "view": "Voir",
+      "confirmDelete": "Voulez-vous vraiment supprimer ce certificat ?"
+    },
+    "expiring": {
+      "title": "Certificats Expirant Bientôt",
+      "days": "jours",
+      "count": "certificats expirent bientôt",
+      "noExpiring": "Aucun certificat expirant bientôt",
+      "viewAll": "Voir tout"
+    },
+    "import": {
+      "title": "Importer des Certificats",
+      "uploadExcel": "Télécharger un fichier Excel",
+      "selectType": "Sélectionner le type de certificat",
+      "result": "Résultat de l'importation",
+      "success": "Importé avec succès",
+      "failed": "Échoué",
+      "items": "éléments"
+    },
+    "filters": {
+      "allStatus": "Tous les statuts",
+      "allStandards": "Toutes les normes",
+      "searchPlaceholder": "Rechercher nº certificat, nom, titulaire..."
+    }
   }
 }

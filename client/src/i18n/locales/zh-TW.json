@@ -9,7 +9,8 @@
     "users": "使用者管理",
     "activity": "操作日誌",
     "customers": "客戶管理",
-    "techSpecs": "技術參數"
+    "techSpecs": "技術參數",
+    "certifications": "證書管理"
   },
   "dashboard": {
     "welcome": "歡迎回來",
@@ -604,5 +605,67 @@
     "title": "變更記錄",
     "tabPrice": "價格變更記錄",
     "tabSpec": "參數變更記錄"
+  },
+  "about": {
+    "title": "關於",
+    "version": "版本",
+    "copyright": "© 2024-2026 DAN CPL. All rights reserved.",
+    "description": "ALE DAN CPL 報價管理系統"
+  },
+  "certifications": {
+    "title": "證書管理",
+    "tabs": { "product": "產品認證", "enterprise": "企業資質" },
+    "fields": {
+      "certNo": "證書編號",
+      "certName": "證書名稱",
+      "standardType": "認證標準",
+      "issuer": "認證機構",
+      "holder": "持有人",
+      "factoryNo": "工廠編號",
+      "testReportNo": "檢測報告編號",
+      "certScope": "認證範圍",
+      "issueDate": "發證日期",
+      "expiryDate": "到期日期",
+      "status": "狀態",
+      "remark": "備註",
+      "productModels": "關聯產品",
+      "attachmentUrl": "附件"
+    },
+    "status": {
+      "active": "有效",
+      "expired": "已過期",
+      "revoked": "已撤銷",
+      "pending": "待生效"
+    },
+    "actions": {
+      "import": "匯入",
+      "export": "匯出",
+      "add": "新增證書",
+      "edit": "編輯",
+      "delete": "刪除",
+      "view": "查看",
+      "confirmDelete": "確定要刪除此證書嗎？"
+    },
+    "expiring": {
+      "title": "證書到期預警",
+      "days": "天內到期",
+      "count": "張證書即將到期",
+      "noExpiring": "暫無即將到期的證書",
+      "viewAll": "查看全部"
+    },
+    "import": {
+      "title": "匯入證書",
+      "uploadExcel": "上傳 Excel 檔案",
+      "selectType": "選擇證書類型",
+      "result": "匯入結果",
+      "success": "成功匯入",
+      "failed": "失敗",
+      "items": "筆"
+    },
+    "filters": {
+      "allStatus": "全部狀態",
+      "allStandards": "全部標準",
+      "searchPlaceholder": "搜尋證書編號、名稱、持有人..."
+    }
   }
 }

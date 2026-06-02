@@ -9,7 +9,8 @@
     "users": "用户管理",
     "activity": "操作日志",
     "customers": "客户管理",
-    "techSpecs": "技术参数"
+    "techSpecs": "技术参数",
+    "certifications": "证书管理"
   },
   "dashboard": {
     "welcome": "欢迎回来",
@@ -605,5 +606,67 @@
     "title": "变更记录",
     "tabPrice": "价格变更记录",
     "tabSpec": "参数变更记录"
+  },
+  "about": {
+    "title": "关于",
+    "version": "版本",
+    "copyright": "© 2024-2026 DAN CPL. All rights reserved.",
+    "description": "ALE DAN CPL 报价管理系统"
+  },
+  "certifications": {
+    "title": "证书管理",
+    "tabs": { "product": "产品认证", "enterprise": "企业资质" },
+    "fields": {
+      "certNo": "证书编号",
+      "certName": "证书名称",
+      "standardType": "认证标准",
+      "issuer": "认证机构",
+      "holder": "持有人",
+      "factoryNo": "工厂编号",
+      "testReportNo": "检测报告编号",
+      "certScope": "认证范围",
+      "issueDate": "发证日期",
+      "expiryDate": "到期日期",
+      "status": "状态",
+      "remark": "备注",
+      "productModels": "关联产品",
+      "attachmentUrl": "附件"
+    },
+    "status": {
+      "active": "有效",
+      "expired": "已过期",
+      "revoked": "已撤销",
+      "pending": "待生效"
+    },
+    "actions": {
+      "import": "导入",
+      "export": "导出",
+      "add": "新增证书",
+      "edit": "编辑",
+      "delete": "删除",
+      "view": "查看",
+      "confirmDelete": "确定要删除此证书吗？"
+    },
+    "expiring": {
+      "title": "证书到期预警",
+      "days": "天内到期",
+      "count": "张证书即将到期",
+      "noExpiring": "暂无即将到期的证书",
+      "viewAll": "查看全部"
+    },
+    "import": {
+      "title": "导入证书",
+      "uploadExcel": "上传 Excel 文件",
+      "selectType": "选择证书类型",
+      "result": "导入结果",
+      "success": "成功导入",
+      "failed": "失败",
+      "items": "条"
+    },
+    "filters": {
+      "allStatus": "全部状态",
+      "allStandards": "全部标准",
+      "searchPlaceholder": "搜索证书编号、名称、持有人..."
+    }
   }
 }

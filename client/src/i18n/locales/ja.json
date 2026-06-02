@@ -9,7 +9,8 @@
     "users": "ユーザー管理",
     "activity": "操作ログ",
     "customers": "顧客管理",
-    "techSpecs": "技術仕様"
+    "techSpecs": "技術仕様",
+    "certifications": "認証管理"
   },
   "dashboard": {
     "welcome": "おかえりなさい",
@@ -604,5 +605,67 @@
     "backToList": "リストに戻る",
     "dropzone": "Excel/CSV ファイルをここにドラッグ、またはクリックして選択",
     "changeFile": "ファイルを変更"
+  },
+  "about": {
+    "title": "バージョン情報",
+    "version": "バージョン",
+    "copyright": "© 2024-2026 DAN CPL. All rights reserved.",
+    "description": "ALE DAN CPL 見積もり管理システム"
+  },
+  "certifications": {
+    "title": "認証管理",
+    "tabs": { "product": "製品認証", "enterprise": "企業資格" },
+    "fields": {
+      "certNo": "証明書番号",
+      "certName": "証明書名",
+      "standardType": "規格タイプ",
+      "issuer": "発行機関",
+      "holder": "保有者",
+      "factoryNo": "工場番号",
+      "testReportNo": "試験報告書番号",
+      "certScope": "認証範囲",
+      "issueDate": "発行日",
+      "expiryDate": "有効期限",
+      "status": "ステータス",
+      "remark": "備考",
+      "productModels": "関連製品",
+      "attachmentUrl": "添付ファイル"
+    },
+    "status": {
+      "active": "有効",
+      "expired": "期限切れ",
+      "revoked": "取消済み",
+      "pending": "保留中"
+    },
+    "actions": {
+      "import": "インポート",
+      "export": "エクスポート",
+      "add": "証明書を追加",
+      "edit": "編集",
+      "delete": "削除",
+      "view": "表示",
+      "confirmDelete": "この証明書を削除してもよろしいですか？"
+    },
+    "expiring": {
+      "title": "期限切れ間近の証明書",
+      "days": "日以内に期限切れ",
+      "count": "件の証明書が期限切れ間近です",
+      "noExpiring": "期限切れ間近の証明書はありません",
+      "viewAll": "すべて表示"
+    },
+    "import": {
+      "title": "証明書のインポート",
+      "uploadExcel": "Excelファイルをアップロード",
+      "selectType": "証明書タイプを選択",
+      "result": "インポート結果",
+      "success": "インポート成功",
+      "failed": "失敗",
+      "items": "件"
+    },
+    "filters": {
+      "allStatus": "すべてのステータス",
+      "allStandards": "すべての規格",
+      "searchPlaceholder": "証明書番号、名前、保有者を検索..."
+    }
   }
 }
