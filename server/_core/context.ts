@@ -3,6 +3,7 @@ import type { User } from "../../drizzle/schema";
 import { COOKIE_NAME } from "@shared/const";
 import { parse as parseCookieHeader } from "cookie";
 import { jwtVerify } from "jose";
+import crypto from "crypto";
 import { ENV } from "./env";
 import * as db from "../db";
 
@@ -10,6 +11,7 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  requestId: string;
 };
 
 function getSessionSecret() {
@@ -49,5 +51,6 @@ export async function createContext(
     req: opts.req,
     res: opts.res,
     user,
+    requestId: crypto.randomUUID(),
   };
 }
