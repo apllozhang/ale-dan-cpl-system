@@ -129,7 +129,7 @@ describe("importLogs.switchActive", () => {
 
     vi.mocked(db.getImportLogById).mockResolvedValue(null);
 
-    await expect(caller.importLogs.switchActive({ id: 999 })).rejects.toThrow("导入记录不存在");
+    await expect(caller.importLogs.switchActive({ id: 999 })).rejects.toThrow("Resource not found");
     expect(db.deactivateAllImports).not.toHaveBeenCalled();
     expect(db.activateImport).not.toHaveBeenCalled();
   });
@@ -179,7 +179,7 @@ describe("importLogs.deleteLog", () => {
 
     vi.mocked(db.getImportLogById).mockResolvedValue(null);
 
-    await expect(caller.importLogs.deleteLog({ id: 999 })).rejects.toThrow("导入记录不存在");
+    await expect(caller.importLogs.deleteLog({ id: 999 })).rejects.toThrow("Resource not found");
     expect(db.deleteImportLog).not.toHaveBeenCalled();
   });
 
