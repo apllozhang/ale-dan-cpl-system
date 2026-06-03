@@ -294,15 +294,6 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3">
-            <div className="flex items-center gap-1 mb-1.5">
-              <button
-                onClick={() => setAboutOpen(true)}
-                className="flex items-center gap-3 rounded-lg px-2 py-1.5 w-full hover:bg-accent/50 transition-colors group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring text-muted-foreground hover:text-foreground"
-              >
-                <Info className="h-4 w-4 shrink-0" />
-                <span className="text-xs group-data-[collapsible=icon]:hidden">{t('about.title')}</span>
-              </button>
-            </div>
             <div className="flex items-center gap-1">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -457,6 +448,15 @@ function DashboardLayoutContent({
                 <Maximize2 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
             ))}
+
+            {/* About */}
+            <button
+              onClick={() => setAboutOpen(true)}
+              className="group h-9 w-9 flex items-center justify-center rounded-md border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-colors"
+              title={t('about.title')}
+            >
+              <Info className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </button>
           </div>
         </div>
         <MobilePreviewProvider value={isMobilePreview}>

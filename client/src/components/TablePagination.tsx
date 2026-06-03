@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TablePaginationProps {
   page: number;
@@ -35,19 +36,16 @@ export default function TablePagination({
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span>{t('data.perPage')}:</span>
-          {pageSizeOptions.map(size => (
-            <button
-              key={size}
-              onClick={() => onPageSizeChange(size)}
-              className={`px-2 py-0.5 text-xs rounded border transition-colors ${
-                pageSize === size
-                  ? "border-primary text-primary bg-primary/10 font-medium"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-primary/30"
-              }`}
-            >
-              {size}
-            </button>
-          ))}
+          <Select value={String(pageSize)} onValueChange={(v: string) => onPageSizeChange(Number(v))}>
+            <SelectTrigger className="h-7 w-16 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map(size => (
+                <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <span className="ml-2">
           {t("data.range", {

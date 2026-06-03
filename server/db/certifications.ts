@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, lte } from "drizzle-orm";
+import { eq, and, sql, desc, lte, gte } from "drizzle-orm";
 import {
   certifications, productCertifications,
   type InsertCertification,
@@ -9,6 +9,8 @@ export async function listCertifications(params: {
   certType?: string;
   status?: string;
   standardType?: string;
+  productCategory?: string;
+  productSeries?: string;
   keyword?: string;
   page?: number;
   pageSize?: number;
@@ -23,10 +25,12 @@ export async function listCertifications(params: {
   if (params.certType) conditions.push(eq(certifications.certType, params.certType));
   if (params.status) conditions.push(eq(certifications.status, params.status));
   if (params.standardType) conditions.push(eq(certifications.standardType, params.standardType));
+  if (params.productCategory) conditions.push(eq(certifications.productCategory, params.productCategory));
+  if (params.productSeries) conditions.push(eq(certifications.productSeries, params.productSeries));
   if (params.keyword) {
     const kw = `%${params.keyword}%`;
     conditions.push(
-      sql`(${certifications.certNo} LIKE ${kw} OR ${certifications.certName} LIKE ${kw} OR ${certifications.holder} LIKE ${kw})`
+      sql`(${certifications.certNo} LIKE ${kw} OR ${certifications.certName} LIKE ${kw} OR ${certifications.holder} LIKE ${kw} OR ${certifications.productSeries} LIKE ${kw})`
     );
   }
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -71,15 +75,17 @@ export async function getCertificationsByProduct(productModel: string) {
 export async function getExpiringCertifications(days: number) {
   const db = await getDb();
   if (!db) return [];
-  const futureDate = new Date();
+  const today = new Date();
+  const todayStr = today.toISOString().split("T")[0];
+  const futureDate = new Date(today);
   futureDate.setDate(futureDate.getDate() + days);
   const futureStr = futureDate.toISOString().split("T")[0];
 
   const rows = await db.select().from(certifications)
     .where(
       and(
+        gte(certifications.expiryDate, todayStr),
         lte(certifications.expiryDate, futureStr),
-        sql`${certifications.expiryDate} IS NOT NULL`,
         sql`${certifications.status} != 'revoked'`
       )
     )
@@ -92,7 +98,7 @@ export async function createCertification(data: InsertCertification, productMode
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(certifications).values(data);
-  const insertId = (result as any)[0]?.insertId ?? (result as any).insertId;
+  const insertId = Number(result[0].insertId);
 
   if (productModels && productModels.length > 0) {
     const BATCH = 200;

@@ -1,10 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { hasPermission, PERMISSIONS } from "@shared/const";
+import { hasPermission, PERMISSIONS, CERT_PRODUCT_CATEGORIES, CERT_STANDARD_TYPES } from "@shared/const";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -14,14 +15,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus, Upload, Download, Search, ShieldCheck, Award,
+  Plus, Upload, Download, Search, ShieldCheck, Award, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { CertificationTable } from "@/components/certifications/CertificationTable";
 import { CertificationFormDialog } from "@/components/certifications/CertificationFormDialog";
 import { CertificationImportDialog } from "@/components/certifications/CertificationImportDialog";
-
-const STANDARD_TYPES = ["CCC", "CE", "FCC", "UL", "RoHS", "REACH", "WEEE"];
 
 export default function CertificationsPage() {
   const { t } = useTranslation();
@@ -29,8 +28,9 @@ export default function CertificationsPage() {
 
   // Tab & filters
   const [certType, setCertType] = useState<"product" | "enterprise">("product");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [standardFilter, setStandardFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [standardFilter, setStandardFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [page, setPage] = useState(1);
@@ -39,6 +39,7 @@ export default function CertificationsPage() {
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
@@ -46,14 +47,26 @@ export default function CertificationsPage() {
   const utils = trpc.useUtils();
 
   // Debounce search
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleKeywordChange = useCallback((value: string) => {
     setKeyword(value);
-    const timer = setTimeout(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
       setDebouncedKeyword(value);
       setPage(1);
     }, 300);
-    return () => clearTimeout(timer);
   }, []);
+
+  // Query for total count badge
+  const { data: countData } = trpc.certifications.list.useQuery({
+    certType,
+    status: statusFilter === "all" ? undefined : statusFilter,
+    standardType: standardFilter === "all" ? undefined : standardFilter,
+    productCategory: categoryFilter === "all" ? undefined : categoryFilter,
+    keyword: debouncedKeyword || undefined,
+    page: 1,
+    pageSize: 1,
+  });
 
   // Delete mutation
   const deleteMut = trpc.certifications.delete.useMutation({
@@ -72,8 +85,9 @@ export default function CertificationsPage() {
     try {
       const base64 = await utils.certifications.export.fetch({
         certType,
-        status: statusFilter || undefined,
-        standardType: standardFilter || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        standardType: standardFilter === "all" ? undefined : standardFilter,
+        productCategory: categoryFilter === "all" ? undefined : categoryFilter,
         keyword: debouncedKeyword || undefined,
       });
       const byteChars = atob(base64);
@@ -104,32 +118,38 @@ export default function CertificationsPage() {
   const handleTabChange = (value: string) => {
     setCertType(value as "product" | "enterprise");
     setPage(1);
-    setStandardFilter("");
+    setStandardFilter("all");
+    setCategoryFilter("all");
   };
 
   const handleCreate = () => {
     setEditId(null);
+    setViewOnly(false);
     setFormOpen(true);
   };
 
   const handleEdit = (id: number) => {
     setEditId(id);
+    setViewOnly(false);
     setFormOpen(true);
   };
 
   const handleView = (id: number) => {
     setEditId(id);
+    setViewOnly(true);
     setFormOpen(true);
   };
 
   const handleFormClose = () => {
     setFormOpen(false);
     setEditId(null);
+    setViewOnly(false);
   };
 
   const handleFormSave = () => {
     setFormOpen(false);
     setEditId(null);
+    setViewOnly(false);
     utils.certifications.list.invalidate();
   };
 
@@ -137,11 +157,16 @@ export default function CertificationsPage() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5" />
+        <div className="flex items-center gap-3">
+          <ShieldCheck className="w-5 h-5 text-primary" />
+          <h1 className="text-lg font-semibold text-foreground">
             {t("certifications.title")}
           </h1>
+          {countData && countData.total > 0 && (
+            <Badge variant="secondary" className="font-normal text-xs">
+              {countData.total}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {canManage && (
@@ -187,6 +212,14 @@ export default function CertificationsPage() {
             onChange={e => handleKeywordChange(e.target.value)}
             className="pl-9 h-9 text-sm w-56 bg-background"
           />
+          {keyword && (
+            <button
+              onClick={() => { setKeyword(""); setDebouncedKeyword(""); setPage(1); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="h-9 w-36">
@@ -201,15 +234,30 @@ export default function CertificationsPage() {
           </SelectContent>
         </Select>
         {certType === "product" && (
-          <Select value={standardFilter} onValueChange={(v) => { setStandardFilter(v); setPage(1); }}>
-            <SelectTrigger className="h-9 w-36">
-              <SelectValue placeholder={t("certifications.filters.allStandards")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("certifications.filters.allStandards")}</SelectItem>
-              {STANDARD_TYPES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <>
+            <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1); }}>
+              <SelectTrigger className="h-9 w-36">
+                <SelectValue placeholder={t("certifications.filters.allCategories")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("certifications.filters.allCategories")}</SelectItem>
+                {CERT_PRODUCT_CATEGORIES.map(c => (
+                  <SelectItem key={c} value={c}>{t(`certifications.categories.${c}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={standardFilter} onValueChange={(v) => { setStandardFilter(v); setPage(1); }}>
+              <SelectTrigger className="h-9 w-40">
+                <SelectValue placeholder={t("certifications.filters.allStandards")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("certifications.filters.allStandards")}</SelectItem>
+                {CERT_STANDARD_TYPES.map(s => (
+                  <SelectItem key={s} value={s}>{t(`certifications.standards.${s}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
         )}
       </div>
 
@@ -218,6 +266,7 @@ export default function CertificationsPage() {
         certType={certType}
         status={statusFilter === "all" ? undefined : statusFilter}
         standardType={standardFilter === "all" ? undefined : standardFilter}
+        productCategory={categoryFilter === "all" ? undefined : categoryFilter}
         keyword={debouncedKeyword}
         page={page}
         pageSize={pageSize}
@@ -229,24 +278,21 @@ export default function CertificationsPage() {
       />
 
       {/* Form Dialog */}
-      {formOpen && (
-        <CertificationFormDialog
-          open={formOpen}
-          onClose={handleFormClose}
-          onSave={handleFormSave}
-          certType={certType}
-          editId={editId}
-        />
-      )}
+      <CertificationFormDialog
+        open={formOpen}
+        onClose={handleFormClose}
+        onSave={handleFormSave}
+        certType={certType}
+        editId={editId}
+        readOnly={viewOnly}
+      />
 
       {/* Import Dialog */}
-      {importOpen && (
-        <CertificationImportDialog
-          open={importOpen}
-          onClose={() => setImportOpen(false)}
-          onImported={() => utils.certifications.list.invalidate()}
-        />
-      )}
+      <CertificationImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => utils.certifications.list.invalidate()}
+      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteId !== null} onOpenChange={(v) => !v && setDeleteId(null)}>
@@ -261,9 +307,10 @@ export default function CertificationsPage() {
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteId && deleteMut.mutate({ id: deleteId })}
+              disabled={deleteMut.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {t("common.delete")}
+              {deleteMut.isPending ? t("common.loading") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

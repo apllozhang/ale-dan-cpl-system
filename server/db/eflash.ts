@@ -244,8 +244,9 @@ export async function getEFlashStats() {
 
 const TYPE_MAP: Record<string, "phase_in" | "phase_out" | "service" | "pricing" | "program"> = {
   "phase-in": "phase_in",
-  "phase_out": "phase_out",
+  "phase_in": "phase_in",
   "phase-out": "phase_out",
+  "phase_out": "phase_out",
   "service": "service",
   "pricing": "pricing",
   "program": "program",

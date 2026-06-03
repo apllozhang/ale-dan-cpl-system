@@ -1,0 +1,1 @@
+ALTER TABLE `product_certifications` ADD CONSTRAINT `product_certifications_certificationId_certifications_id_fk` FOREIGN KEY (`certificationId`) REFERENCES `certifications`(`id`) ON DELETE cascade ON UPDATE no action;

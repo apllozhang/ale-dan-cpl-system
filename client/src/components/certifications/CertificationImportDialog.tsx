@@ -12,6 +12,8 @@ import {
 import { Upload, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -36,10 +38,17 @@ export function CertificationImportDialog({ open, onClose, onImported }: Props) 
   const handleImport = () => {
     const file = fileRef.current?.files?.[0];
     if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(t("certifications.import.fileTooLarge"));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(",")[1];
       importMut.mutate({ fileBase64: base64, certType });
+    };
+    reader.onerror = () => {
+      toast.error(t("certifications.import.readError"));
     };
     reader.readAsDataURL(file);
   };
@@ -57,9 +66,9 @@ export function CertificationImportDialog({ open, onClose, onImported }: Props) 
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div>
-            <Label>{t("certifications.import.selectType")}</Label>
+            <Label htmlFor="importCertType">{t("certifications.import.selectType")}</Label>
             <Select value={certType} onValueChange={(v: "product" | "enterprise") => setCertType(v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="importCertType"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="product">{t("certifications.tabs.product")}</SelectItem>
                 <SelectItem value="enterprise">{t("certifications.tabs.enterprise")}</SelectItem>
@@ -67,8 +76,8 @@ export function CertificationImportDialog({ open, onClose, onImported }: Props) 
             </Select>
           </div>
           <div>
-            <Label>{t("certifications.import.uploadExcel")}</Label>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="mt-1 block w-full text-sm" />
+            <Label htmlFor="importFile">{t("certifications.import.uploadExcel")}</Label>
+            <input ref={fileRef} id="importFile" type="file" accept=".xlsx,.xls" className="mt-1 block w-full text-sm" />
           </div>
           {result && (
             <div className="rounded-md bg-muted p-3 text-sm space-y-1">

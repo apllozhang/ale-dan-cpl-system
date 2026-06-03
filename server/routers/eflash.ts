@@ -140,9 +140,6 @@ export const eflashRouter = router({
       const buffer = Buffer.from(input.fileBase64, "base64");
       const workbook = XLSX.read(buffer, { type: "buffer" });
 
-      const defaultSheets = ["China", "NET Global", "COMM Global"];
-      const targetSheets = input.sheetNames?.length ? input.sheetNames : defaultSheets;
-
       const allRows: Array<{
         eflashId: string;
         type: string;
@@ -158,72 +155,111 @@ export const eflashRouter = router({
         comments?: string;
       }> = [];
 
+      // Parse dates (Excel serial numbers or strings)
+      const parseDate = (val: unknown): Date | null => {
+        if (val == null || val === "" || val === "－" || val === "-") return null;
+        if (typeof val === "number") {
+          const date = XLSX.SSF.parse_date_code(val);
+          if (date) return new Date(date.y, date.m - 1, date.d);
+          return null;
+        }
+        const str = String(val).trim().replace(/^\s+/, "");
+        if (/^\d{4}[/-]\d{1,2}[/-]\d{1,2}$/.test(str)) return new Date(str);
+        if (/^\d{2}[/-]\d{1,2}[/-]\d{2,4}$/.test(str)) {
+          const parts = str.split(/[/-]/);
+          const d = parts[0].length === 2 ? `20${parts[0]}-${parts[1]}-${parts[2]}` : str;
+          return new Date(d);
+        }
+        return null;
+      };
+
+      // Detect format: if sheet "eFlash Records" exists, use header-based mapping
+      const hasMergedSheet = !!workbook.Sheets["eFlash Records"];
+      const targetSheets = hasMergedSheet
+        ? ["eFlash Records"]
+        : (input.sheetNames?.length ? input.sheetNames : ["China", "NET Global", "COMM Global"]);
+
       for (const sheetName of targetSheets) {
         const ws = workbook.Sheets[sheetName];
         if (!ws) continue;
 
-        const data = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 });
-        // Skip title row (0) and header row (1)
-        for (let i = 2; i < data.length; i++) {
-          const row = data[i];
-          if (!row || row.length < 2) continue;
+        if (hasMergedSheet) {
+          // Merged format: header-based column mapping
+          const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws);
+          for (const row of rows) {
+            const eflashId = (row["eFlash ID"] || "").trim().replace(/\s+/g, "");
+            if (!eflashId || !eflashId.startsWith("EF-")) continue;
 
-          const eflashId = String(row[3] || "").trim();
-          if (!eflashId || !eflashId.startsWith("EF-")) continue;
+            const typeRaw = (row.Type || "").trim();
+            const divRaw = (row.Division || "").trim();
+            const scopeRaw = (row.Scope || "").trim();
 
-          const typeStr = String(row[1] || "").trim();
-          const prefix = eflashId.match(/^EF-([A-Z])/)?.[1] || "";
+            const TYPE_MAP: Record<string, string> = {
+              "phase-in": "phase_in", "phase_in": "phase_in",
+              "phase-out": "phase_out", "phase_out": "phase_out",
+              "service": "service", "pricing": "pricing", "program": "program",
+            };
+            const type = TYPE_MAP[typeRaw.toLowerCase()] || "service";
 
-          // Derive division and scope from prefix
-          let division = "general";
-          let scope = "global";
-          if (prefix === "Z") {
-            scope = "china";
-            division = String(row[0] || "").toLowerCase().includes("network") ? "network" : "communications";
-          } else if (prefix === "N") {
-            division = "network";
-            scope = "global";
-          } else if (prefix === "C") {
-            division = "communications";
-            scope = "global";
-          } else if (prefix === "S" || prefix === "P") {
-            division = String(row[0] || "").toLowerCase().includes("network") ? "network" : "general";
-            scope = "global";
+            allRows.push({
+              eflashId,
+              type,
+              division: divRaw.toLowerCase() || "general",
+              scope: scopeRaw.toLowerCase() || "global",
+              subjectEn: (row["Subject (EN)"] || "").trim() || undefined,
+              subjectCn: (row["Subject (CN)"] || "").trim() || undefined,
+              globalDate: parseDate(row["Global Date"]),
+              chinaDate: parseDate(row["China Date"]),
+              effectiveDate: parseDate(row["Effective Date"]),
+              authorEn: (row["Author (EN)"] || "").trim() || undefined,
+              authorCn: (row["Author (CN)"] || "").trim() || undefined,
+              comments: (row.Comments || "").trim() || undefined,
+            });
           }
+        } else {
+          // Original tracking sheet format: fixed column positions
+          const data = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 });
+          for (let i = 2; i < data.length; i++) {
+            const row = data[i];
+            if (!row || row.length < 2) continue;
 
-          // Parse dates (Excel serial numbers or strings)
-          const parseDate = (val: unknown): Date | null => {
-            if (val == null || val === "" || val === "－" || val === "-") return null;
-            if (typeof val === "number") {
-              // Excel serial date
-              const date = XLSX.SSF.parse_date_code(val);
-              if (date) return new Date(date.y, date.m - 1, date.d);
-              return null;
-            }
-            const str = String(val).trim().replace(/^\s+/, "");
-            if (/^\d{4}[/-]\d{1,2}[/-]\d{1,2}$/.test(str)) return new Date(str);
-            if (/^\d{2}[/-]\d{1,2}[/-]\d{2,4}$/.test(str)) {
-              const parts = str.split(/[/-]/);
-              const d = parts[0].length === 2 ? `20${parts[0]}-${parts[1]}-${parts[2]}` : str;
-              return new Date(d);
-            }
-            return null;
-          };
+            const eflashId = String(row[3] || "").trim();
+            if (!eflashId || !eflashId.startsWith("EF-")) continue;
 
-          allRows.push({
-            eflashId,
-            type: typeStr,
-            division,
-            scope,
-            subjectEn: String(row[4] || "").trim() || undefined,
-            subjectCn: String(row[5] || "").trim() || undefined,
-            globalDate: parseDate(row[6]),
-            chinaDate: parseDate(row[7]),
-            effectiveDate: parseDate(row[8]),
-            authorEn: String(row[9] || "").trim() || undefined,
-            authorCn: String(row[10] || "").trim() || undefined,
-            comments: String(row[11] || "").trim() || undefined,
-          });
+            const typeStr = String(row[1] || "").trim();
+            const prefix = eflashId.match(/^EF-([A-Z])/)?.[1] || "";
+
+            let division = "general";
+            let scope = "global";
+            if (prefix === "Z") {
+              scope = "china";
+              division = String(row[0] || "").toLowerCase().includes("network") ? "network" : "communications";
+            } else if (prefix === "N") {
+              division = "network";
+              scope = "global";
+            } else if (prefix === "C") {
+              division = "communications";
+              scope = "global";
+            } else if (prefix === "S" || prefix === "P") {
+              division = String(row[0] || "").toLowerCase().includes("network") ? "network" : "general";
+              scope = "global";
+            }
+
+            allRows.push({
+              eflashId,
+              type: typeStr,
+              division,
+              scope,
+              subjectEn: String(row[4] || "").trim() || undefined,
+              subjectCn: String(row[5] || "").trim() || undefined,
+              globalDate: parseDate(row[6]),
+              chinaDate: parseDate(row[7]),
+              effectiveDate: parseDate(row[8]),
+              authorEn: String(row[9] || "").trim() || undefined,
+              authorCn: String(row[10] || "").trim() || undefined,
+              comments: String(row[11] || "").trim() || undefined,
+            });
+          }
         }
       }
 
