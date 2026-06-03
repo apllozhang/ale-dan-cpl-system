@@ -24,6 +24,7 @@ export function CertificationImportDialog({ open, onClose, onImported }: Props) 
   const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [certType, setCertType] = useState<"product" | "enterprise">("product");
+  const [duplicateStrategy, setDuplicateStrategy] = useState<"skip" | "overwrite">("skip");
   const [result, setResult] = useState<{ imported: number; errors: string[] } | null>(null);
 
   const importMut = trpc.certifications.import.useMutation({
@@ -45,7 +46,7 @@ export function CertificationImportDialog({ open, onClose, onImported }: Props) 
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(",")[1];
-      importMut.mutate({ fileBase64: base64, certType });
+      importMut.mutate({ fileBase64: base64, certType, duplicateStrategy });
     };
     reader.onerror = () => {
       toast.error(t("certifications.import.readError"));
@@ -72,6 +73,16 @@ export function CertificationImportDialog({ open, onClose, onImported }: Props) 
               <SelectContent>
                 <SelectItem value="product">{t("certifications.tabs.product")}</SelectItem>
                 <SelectItem value="enterprise">{t("certifications.tabs.enterprise")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="importDupStrategy">{t("certifications.import.duplicateStrategy")}</Label>
+            <Select value={duplicateStrategy} onValueChange={(v: "skip" | "overwrite") => setDuplicateStrategy(v)}>
+              <SelectTrigger id="importDupStrategy" className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="skip">{t("certifications.import.skipDuplicate")}</SelectItem>
+                <SelectItem value="overwrite">{t("certifications.import.overwriteDuplicate")}</SelectItem>
               </SelectContent>
             </Select>
           </div>

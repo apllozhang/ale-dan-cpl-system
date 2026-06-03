@@ -664,6 +664,9 @@
     "import": {
       "title": "Import Certificates",
       "uploadExcel": "Upload Excel File",
+      "duplicateStrategy": "Duplicate Handling",
+      "skipDuplicate": "Skip duplicates",
+      "overwriteDuplicate": "Overwrite existing",
       "selectType": "Select Certificate Type",
       "result": "Import Result",
       "success": "Successfully imported",

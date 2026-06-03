@@ -186,6 +186,7 @@ export const certificationsRouter = router({
     .input(z.object({
       fileBase64: z.string().max(50_000_000),
       certType: z.enum(["product", "enterprise"]),
+      duplicateStrategy: z.enum(["skip", "overwrite"]).default("skip"),
     }))
     .mutation(async ({ input, ctx }) => {
       let buffer: Buffer;
@@ -212,9 +213,6 @@ export const certificationsRouter = router({
         const row = rows[i];
         const certNo = String(row["证书编号"] ?? "").trim();
         if (!certNo) { errors.push(`第 ${i + 2} 行: 缺少证书编号`); continue; }
-
-        const existing = await db.getCertificationByCertNo(certNo);
-        if (existing) { errors.push(`第 ${i + 2} 行: 证书编号 ${certNo} 已存在`); continue; }
 
         const certName = truncate(String(row["证书名称"] ?? "").trim(), FIELD_LENGTHS.certName);
         const issuer = truncate(String(row["认证机构"] ?? "").trim(), FIELD_LENGTHS.issuer);
@@ -247,7 +245,7 @@ export const certificationsRouter = router({
           certScope: String(row["认证范围"] ?? row["适用范围"] ?? "").trim() || null,
           issueDate,
           expiryDate,
-          status: "active",
+          status: "active" as const,
           remark: String(row["备注"] ?? "").trim() || null,
           createdBy: ctx.user.id,
         };
@@ -259,6 +257,17 @@ export const certificationsRouter = router({
 
         if (input.certType === "product" && (!productModels || productModels.length === 0)) {
           errors.push(`第 ${i + 2} 行: 产品认证缺少关联产品型号`);
+          continue;
+        }
+
+        const existing = await db.getCertificationByCertNo(certNo);
+        if (existing) {
+          if (input.duplicateStrategy === "overwrite") {
+            await db.updateCertification(existing.id, certData, productModels);
+            imported.push(certNo);
+            continue;
+          }
+          errors.push(`第 ${i + 2} 行: 证书编号 ${certNo} 已存在`);
           continue;
         }
 

@@ -664,6 +664,9 @@
     "import": {
       "title": "Importer des Certificats",
       "uploadExcel": "Télécharger un fichier Excel",
+      "duplicateStrategy": "Gestion des doublons",
+      "skipDuplicate": "Ignorer les doublons",
+      "overwriteDuplicate": "Écraser les existants",
       "selectType": "Sélectionner le type de certificat",
       "result": "Résultat de l'importation",
       "success": "Importé avec succès",

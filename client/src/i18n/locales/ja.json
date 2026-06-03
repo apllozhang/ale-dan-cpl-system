@@ -664,6 +664,9 @@
     "import": {
       "title": "証明書のインポート",
       "uploadExcel": "Excelファイルをアップロード",
+      "duplicateStrategy": "重複データの処理",
+      "skipDuplicate": "重複をスキップ",
+      "overwriteDuplicate": "既存データを上書き",
       "selectType": "証明書タイプを選択",
       "result": "インポート結果",
       "success": "インポート成功",

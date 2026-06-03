@@ -665,6 +665,9 @@
     "import": {
       "title": "导入证书",
       "uploadExcel": "上传 Excel 文件",
+      "duplicateStrategy": "重复数据处理",
+      "skipDuplicate": "跳过重复记录",
+      "overwriteDuplicate": "覆盖更新重复记录",
       "selectType": "选择证书类型",
       "result": "导入结果",
       "success": "成功导入",

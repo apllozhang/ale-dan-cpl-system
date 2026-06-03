@@ -664,6 +664,9 @@
     "import": {
       "title": "匯入證書",
       "uploadExcel": "上傳 Excel 檔案",
+      "duplicateStrategy": "重複資料處理",
+      "skipDuplicate": "跳過重複記錄",
+      "overwriteDuplicate": "覆蓋更新重複記錄",
       "selectType": "選擇證書類型",
       "result": "匯入結果",
       "success": "成功匯入",
