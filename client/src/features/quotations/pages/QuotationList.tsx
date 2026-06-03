@@ -21,7 +21,7 @@ import {
   Trash2, ChevronDown,
 } from "lucide-react";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
-import QuotationCompare from "@/components/QuotationCompare";
+import QuotationCompare from "@/features/quotations/components/QuotationCompare";
 import { useTranslation } from "react-i18next";
 import { useStaggerIn } from "@/hooks/useStaggerIn";
 import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";

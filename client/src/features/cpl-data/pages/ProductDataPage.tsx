@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Database, ClipboardList } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ProductDataContent } from "@/components/product/ProductDataContent";
-import { SpecDataTab } from "@/components/product/SpecDataTab";
+import { ProductDataContent } from "@/features/cpl-data/components/ProductDataContent";
+import { SpecDataTab } from "@/features/cpl-data/components/SpecDataTab";
 
 export default function ProductDataPage() {
   const { t } = useTranslation();

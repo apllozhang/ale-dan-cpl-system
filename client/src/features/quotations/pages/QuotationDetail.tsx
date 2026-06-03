@@ -21,8 +21,8 @@ import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
 import gsap from "gsap";
 import { exportQuotationToExcel } from "@/lib/quotationExport";
-import ProductSelectorDialog from "@/components/ProductSelectorDialog";
-import SpecMatchPreview from "@/components/SpecMatchPreview";
+import ProductSelectorDialog from "@/features/quotations/components/ProductSelectorDialog";
+import SpecMatchPreview from "@/features/product-specs/components/SpecMatchPreview";
 import { useTranslation } from "react-i18next";
 
 type ItemRow = {

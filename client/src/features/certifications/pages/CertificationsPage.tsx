@@ -18,9 +18,9 @@ import {
   Plus, Upload, Download, Search, ShieldCheck, Award, X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { CertificationTable } from "@/components/certifications/CertificationTable";
-import { CertificationFormDialog } from "@/components/certifications/CertificationFormDialog";
-import { CertificationImportDialog } from "@/components/certifications/CertificationImportDialog";
+import { CertificationTable } from "@/features/certifications/components/CertificationTable";
+import { CertificationFormDialog } from "@/features/certifications/components/CertificationFormDialog";
+import { CertificationImportDialog } from "@/features/certifications/components/CertificationImportDialog";
 
 export default function CertificationsPage() {
   const { t } = useTranslation();

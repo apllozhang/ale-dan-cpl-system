@@ -4,8 +4,8 @@ import { HardDriveUpload, Shield, Database, ClipboardList } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { useTranslation } from "react-i18next";
-import { ProductDataImport } from "@/components/import/ProductDataImport";
-import { SpecDataImport } from "@/components/import/SpecDataImport";
+import { ProductDataImport } from "@/features/cpl-data/components/ProductDataImport";
+import { SpecDataImport } from "@/features/cpl-data/components/SpecDataImport";
 
 type TabKey = "product" | "spec";
 

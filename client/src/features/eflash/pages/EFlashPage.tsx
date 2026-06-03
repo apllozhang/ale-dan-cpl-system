@@ -10,10 +10,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Plus, Upload, Search, Zap, X } from "lucide-react";
-import { EFlashTable } from "@/components/eflash/EFlashTable";
-import { EFlashDetailSheet } from "@/components/eflash/EFlashDetailSheet";
-import { EFlashFormDialog } from "@/components/eflash/EFlashFormDialog";
-import { EFlashImportDialog } from "@/components/eflash/EFlashImportDialog";
+import { EFlashTable } from "@/features/eflash/components/EFlashTable";
+import { EFlashDetailSheet } from "@/features/eflash/components/EFlashDetailSheet";
+import { EFlashFormDialog } from "@/features/eflash/components/EFlashFormDialog";
+import { EFlashImportDialog } from "@/features/eflash/components/EFlashImportDialog";
 import TablePagination from "@/components/TablePagination";
 
 const TYPE_OPTIONS = ["phase_in", "phase_out", "service", "pricing", "program"] as const;

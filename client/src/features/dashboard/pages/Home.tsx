@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
 import gsap from "gsap";
-import { ExpiringCertsCard } from "@/components/certifications/ExpiringCertsCard";
-import { RecentEFlashCard } from "@/components/eflash/RecentEFlashCard";
+import { ExpiringCertsCard } from "@/features/certifications/components/ExpiringCertsCard";
+import { RecentEFlashCard } from "@/features/eflash/components/RecentEFlashCard";
 
 interface RecentQuotation {
   id: number;
