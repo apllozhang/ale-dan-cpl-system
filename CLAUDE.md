@@ -118,6 +118,21 @@ Quotation versioning is automatic on every save (`updateQuotation` in `server/db
 - Excel import base64 capped at 50MB
 - Super admin passwords are immutable via API
 
+## Skill Routing Rules
+
+三工具串行协作，禁止重叠调用：
+
+| 阶段 | 工具 | 职责 | 何时触发 |
+|------|------|------|----------|
+| **决策** | gstack | 判断"做什么"——用 `/browse`、`/qa`、`/investigate`、`/health` 等收集证据，输出明确结论 | 任何任务的第一步 |
+| **提案** | OpenSpec (`/opsx:propose`) | 把决策写成结构化 change proposal——`/opsx:explore` 探索 → `/opsx:propose` 提案 → `/opsx:apply` 执行 | 决策完成后、动手写码之前 |
+| **执行** | Superpowers | 按 spec 写码——`/brainstorming` → `/writing-plans` → `/test-driven-development` → `/verification-before-completion` | spec 批准后 |
+
+**禁止规则：**
+- 不要同时调用重叠的 brainstorm / planning 命令（如 gstack 的 `/autoplan` 和 superpowers 的 `/brainstorming`）。
+- 每个阶段只激活一个工具集，完成后再进入下一阶段。
+- 简单 bugfix / 单行改动可跳过 OpenSpec，直接走 Superpowers 的 `/systematic-debugging`。
+
 ## gstack
 
 gstack plugin installed at `~/.claude/skills/gstack`. Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /design-shotgun, /design-html, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /open-gstack-browser, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /pair-agent, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade, /learn.
