@@ -99,7 +99,7 @@ export default function Customers() {
                   </td>
                 </tr>
               ) : (
-                sortedItems.map((customer: any, idx: number) => (
+                sortedItems.map((customer: { customerName: string; industries: string; quotationCount: number; totalRevenue: number; completedRevenue: number; lastQuotationAt: Date }, idx: number) => (
                   <CustomerRow
                     key={customer.customerName}
                     customer={customer}
@@ -135,7 +135,7 @@ export default function Customers() {
 function CustomerRow({
   customer, rank, expanded, onToggle, onViewQuotation, columns, renderCell,
 }: {
-  customer: any;
+  customer: { customerName: string; industries: string; quotationCount: number; totalRevenue: number; completedRevenue: number; lastQuotationAt: Date };
   rank: number;
   expanded: boolean;
   onToggle: () => void;
@@ -195,7 +195,7 @@ function CustomerRow({
               <p className="text-xs text-muted-foreground">暂无关联报价单</p>
             ) : (
               <div className="space-y-1">
-                {quotations.map((q: any) => (
+                {quotations.map((q: { id: number; quotationNo: string; projectName: string | null; status: string; totalAmount: string | null; customerName: string; customerContact: string | null; customerPhone: string | null; customerEmail: string | null; industry: string | null }) => (
                   <button
                     key={q.id}
                     onClick={() => onViewQuotation(q.id)}

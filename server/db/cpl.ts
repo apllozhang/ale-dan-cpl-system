@@ -130,7 +130,6 @@ export async function getCplProducts(params: {
         like(cplProducts.salesCategory, searchTerm),
         like(cplProducts.serviceCategory, searchTerm),
         like(cplProducts.productStatus, searchTerm),
-        like(cplProducts.listPrice, searchTerm),
         like(cplProducts.priceNote, searchTerm),
         like(cplProducts.isNew, searchTerm),
         like(cplProducts.remark, searchTerm),

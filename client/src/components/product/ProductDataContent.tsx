@@ -49,6 +49,29 @@ import {
 } from "@/lib/productCategories";
 import { exportToExcel } from "@/lib/exportUtils";
 
+interface CplProductRow {
+  id: number;
+  sheetName: string;
+  productGroup: string | null;
+  taxCategory: string | null;
+  productModel: string | null;
+  productDesc: string | null;
+  salesCategory: string | null;
+  serviceCategory: string | null;
+  productStatus: string | null;
+  listPrice: string | null;
+  priceNote: string | null;
+  isNew: string | null;
+  remark: string | null;
+}
+
+interface QuotationListItem {
+  id: number;
+  quotationNo: string;
+  customerName: string;
+  projectName: string | null;
+}
+
 const COLUMNS = [
   { key: "productGroup", label: "产品组件", labelKey: "data.colProductGroup", defaultWidth: 140 },
   { key: "taxCategory", label: "税务小类", labelKey: "data.colTaxCategory", defaultWidth: 110 },
@@ -101,7 +124,7 @@ export function ProductDataContent() {
     new Set(["wired-network"])
   );
   const [selectedSheet, setSelectedSheet] = useState<string>("");
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -452,9 +475,9 @@ export function ProductDataContent() {
         priceMin: priceMin ? parseFloat(priceMin) : undefined,
         priceMax: priceMax ? parseFloat(priceMax) : undefined,
       });
-      const exportData = (allData?.items || []).map((product: any) => {
-        const row: Record<string, any> = {};
-        visibleColumnsList.forEach(col => { row[col.key] = (product as any)[col.key] || ""; });
+      const exportData = (allData?.items || []).map((product: CplProductRow) => {
+        const row: Record<string, string> = {};
+        visibleColumnsList.forEach(col => { row[col.key] = String(product[col.key as keyof CplProductRow] ?? ""); });
         return row;
       });
       const fileName = `${t('data.exportFilename')}_${new Date().toISOString().split("T")[0]}.xlsx`;
@@ -474,7 +497,7 @@ export function ProductDataContent() {
     );
   };
 
-  const getCellValue = (product: any, key: ColumnKey) => {
+  const getCellValue = (product: CplProductRow, key: ColumnKey) => {
     const value = product[key];
     if (key === "listPrice" && value) {
       const numValue = typeof value === "string" ? parseFloat(value) : value;
@@ -812,7 +835,7 @@ export function ProductDataContent() {
                 <DropdownMenuContent align="end" className="w-72 max-h-60 overflow-auto">
                   <div className="px-2 py-1.5 text-sm font-medium">{t('data.selectQuotation')}</div>
                   <DropdownMenuSeparator />
-                  {(existingQuotationsQuery.data?.items || []).map((q: any) => (
+                  {(existingQuotationsQuery.data?.items || []).map((q: QuotationListItem) => (
                     <DropdownMenuItem
                       key={q.id}
                       onClick={() => {
@@ -821,7 +844,7 @@ export function ProductDataContent() {
                       }}
                     >
                       <div className="flex flex-col">
-                        <span className="text-xs font-medium">{q.quotationNumber || q.quotationNo} - {q.customerName}</span>
+                        <span className="text-xs font-medium">{q.quotationNo} - {q.customerName}</span>
                         <span className="text-xs text-muted-foreground">{q.projectName}</span>
                       </div>
                     </DropdownMenuItem>
@@ -845,17 +868,17 @@ export function ProductDataContent() {
                 size="sm"
                 variant="default"
                    onClick={() => {
-                  const selectedProducts = products.filter((p: any) => selectedRows.has(String(p.id)));
+                  const selectedProducts = products.filter((p: CplProductRow) => selectedRows.has(String(p.id)));
                   if (selectedProducts.length === 0) {
                     alert(t('data.pleaseSelectProducts'));
                     return;
                   }
 
                   const visibleCols = COLUMNS.filter(col => visibleColumns.has(col.key));
-                  const exportData = selectedProducts.map((product: any) => {
-                    const row: Record<string, any> = {};
+                  const exportData = selectedProducts.map((product: CplProductRow) => {
+                    const row: Record<string, string> = {};
                     visibleCols.forEach(col => {
-                      row[col.key] = (product as any)[col.key] || '';
+                      row[col.key] = String(product[col.key as keyof CplProductRow] ?? '');
                     });
                     return row;
                   });
@@ -971,7 +994,7 @@ export function ProductDataContent() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  products.map((product: any) => (
+                  products.map((product: CplProductRow) => (
                     <TableRow
                       key={product.id}
                       onClick={() => setSelectedRowId(selectedRowId === product.id ? null : product.id)}
@@ -1002,12 +1025,12 @@ export function ProductDataContent() {
                       }}
                     >
                       <div className="break-words whitespace-normal">
-                        {col.key === "isNew" && getCellValue(product as any, col.key) ? (
+                        {col.key === "isNew" && getCellValue(product, col.key) ? (
                               <Badge variant="default" className="text-[10px] h-5 px-1.5 bg-success-soft text-success border-success-border">
-                                {getCellValue(product as any, col.key)}
+                                {getCellValue(product, col.key)}
                               </Badge>
                             ) : (
-                              getCellValue(product as any, col.key)
+                              getCellValue(product, col.key)
                             )}
                           </div>
                         </TableCell>

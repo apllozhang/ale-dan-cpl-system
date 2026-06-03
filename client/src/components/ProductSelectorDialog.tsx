@@ -69,7 +69,7 @@ import {
   type CategoryNavItem,
 } from "@/lib/productCategories";
 
-const CATEGORY_ICONS: Record<string, any> = {
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "wired-network": Network,
   "wireless-network": Wifi,
   "nms-system": Monitor,
@@ -80,10 +80,17 @@ const CATEGORY_ICONS: Record<string, any> = {
   "accessories": Package,
 };
 
+interface ProductItem {
+  id: number;
+  productModel: string | null;
+  productDesc: string | null;
+  listPrice: string | null;
+}
+
 interface ProductSelectorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddProducts: (products: Array<{ product: any; quantity: number }>) => void;
+  onAddProducts: (products: Array<{ product: ProductItem; quantity: number }>) => void;
   discountRate: number;
   existingProductIds: Set<number>;
 }
@@ -95,7 +102,7 @@ export default function ProductSelectorDialog({
   const [activeNav, setActiveNav] = useState<CategoryNavItem | null>(null);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedMap, setSelectedMap] = useState<Map<number, { product: any; quantity: number }>>(new Map());
+  const [selectedMap, setSelectedMap] = useState<Map<number, { product: ProductItem; quantity: number }>>(new Map());
   const [wiredExpanded, setWiredExpanded] = useState(true);
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const [selectedSheetTab, setSelectedSheetTab] = useState<string | null>(null);
@@ -203,7 +210,7 @@ export default function ProductSelectorDialog({
     setSearchTimer(timer);
   }, [searchTimer]);
 
-  const toggleProduct = useCallback((product: any) => {
+  const toggleProduct = useCallback((product: ProductItem) => {
     setSelectedMap(prev => {
       const next = new Map(prev);
       if (next.has(product.id)) {
@@ -242,7 +249,7 @@ export default function ProductSelectorDialog({
   }, [filteredProducts]);
 
   const handleAddProducts = () => {
-    const products: Array<{ product: any; quantity: number }> = [];
+    const products: Array<{ product: ProductItem; quantity: number }> = [];
     selectedMap.forEach(({ product, quantity }) => {
       if (!existingProductIds.has(product.id)) {
         products.push({ product, quantity });
@@ -482,7 +489,7 @@ export default function ProductSelectorDialog({
                       </td>
                     </tr>
                   ) : (
-                    pagedProducts.map((p: any) => {
+                    pagedProducts.map((p: ProductItem) => {
                       const isSelected = selectedMap.has(p.id);
                       const isExisting = existingProductIds.has(p.id);
                       return (

@@ -277,46 +277,81 @@ export async function importEFlashFromRows(
   let failed = 0;
   const errors: Array<{ row: number; reason: string }> = [];
 
+  // Phase 1: Validate all rows
+  type ValidatedRow = {
+    row: typeof rows[number];
+    index: number;
+    normalizedType: string;
+  };
+  const validRows: ValidatedRow[] = [];
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    try {
-      const normalizedType = TYPE_MAP[row.type?.toLowerCase().trim()];
-      if (!normalizedType) {
-        errors.push({ row: i + 3, reason: `Unknown type: ${row.type}` });
-        failed++;
-        continue;
-      }
-
-      const existing = await getEFlashRecordByEFlashId(row.eflashId.trim());
-      const data = {
-        eflashId: row.eflashId.trim(),
-        type: normalizedType,
-        division: row.division as "communications" | "network" | "general",
-        scope: row.scope as "global" | "china",
-        subjectEn: row.subjectEn || null,
-        subjectCn: row.subjectCn || null,
-        globalDate: row.globalDate || null,
-        chinaDate: row.chinaDate || null,
-        effectiveDate: row.effectiveDate || null,
-        authorEn: row.authorEn || null,
-        authorCn: row.authorCn || null,
-        comments: row.comments || null,
-        createdBy,
-      };
-
-      if (existing) {
-        await db.update(eflashRecords)
-          .set({ ...data, updatedAt: new Date() })
-          .where(eq(eflashRecords.id, existing.id));
-        updated++;
-      } else {
-        await db.insert(eflashRecords).values(data);
-        created++;
-      }
-    } catch (err) {
-      errors.push({ row: i + 3, reason: String(err) });
+    const normalizedType = TYPE_MAP[row.type?.toLowerCase().trim()];
+    if (!normalizedType) {
+      errors.push({ row: i + 3, reason: `Unknown type: ${row.type}` });
       failed++;
+      continue;
     }
+    validRows.push({ row, index: i, normalizedType });
+  }
+
+  if (validRows.length === 0) return { created, updated, failed, errors };
+
+  // Phase 2: Batch prefetch existing records
+  const eflashIds = validRows.map(vr => vr.row.eflashId.trim());
+  const existingRecords = await db
+    .select({ id: eflashRecords.id, eflashId: eflashRecords.eflashId })
+    .from(eflashRecords)
+    .where(inArray(eflashRecords.eflashId, eflashIds));
+  const existingMap = new Map(existingRecords.map(r => [r.eflashId, r.id]));
+
+  // Phase 3: Partition into inserts and updates
+  const toInsert: Array<typeof eflashRecords.$inferInsert> = [];
+  const toUpdate: Array<{ id: number; data: typeof eflashRecords.$inferInsert }> = [];
+
+  for (const vr of validRows) {
+    const data = {
+      eflashId: vr.row.eflashId.trim(),
+      type: vr.normalizedType as "phase_in" | "phase_out" | "service" | "pricing" | "program",
+      division: vr.row.division as "communications" | "network" | "general",
+      scope: vr.row.scope as "global" | "china",
+      subjectEn: vr.row.subjectEn || null,
+      subjectCn: vr.row.subjectCn || null,
+      globalDate: vr.row.globalDate || null,
+      chinaDate: vr.row.chinaDate || null,
+      effectiveDate: vr.row.effectiveDate || null,
+      authorEn: vr.row.authorEn || null,
+      authorCn: vr.row.authorCn || null,
+      comments: vr.row.comments || null,
+      createdBy,
+    };
+    const existingId = existingMap.get(vr.row.eflashId.trim());
+    if (existingId) {
+      toUpdate.push({ id: existingId, data: { ...data, updatedAt: new Date() } });
+    } else {
+      toInsert.push(data);
+    }
+  }
+
+  // Phase 4: Transactional write
+  try {
+    await db.transaction(async (tx) => {
+      if (toInsert.length > 0) {
+        await tx.insert(eflashRecords).values(toInsert);
+        created = toInsert.length;
+      }
+      for (const { id, data } of toUpdate) {
+        await tx.update(eflashRecords).set(data).where(eq(eflashRecords.id, id));
+      }
+      updated = toUpdate.length;
+    });
+  } catch (err) {
+    // Transaction failed — count all valid rows as failed
+    failed = validRows.length;
+    created = 0;
+    updated = 0;
+    errors.push({ row: 0, reason: `Transaction failed: ${String(err)}` });
   }
 
   return { created, updated, failed, errors };

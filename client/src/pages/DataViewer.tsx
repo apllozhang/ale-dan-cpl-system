@@ -72,7 +72,7 @@ import {
   type CategoryNavItem,
 } from "@/lib/productCategories";
 
-const CATEGORY_ICONS: Record<string, any> = {
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "wired-network": Network,
   wireless: Wifi,
   nms: Server,
@@ -228,7 +228,7 @@ export default function DataViewer() {
       setSelectedRows(new Set());
       setSelectAll(false);
     } else {
-      const allIds = new Set(products.map((p: any) => p.id.toString()));
+      const allIds = new Set(products.map((p: { id: number | string }) => p.id.toString()));
       setSelectedRows(allIds);
       setSelectAll(true);
     }
@@ -340,8 +340,8 @@ export default function DataViewer() {
     );
   };
 
-  const getCellValue = (product: any, key: ColumnKey) => {
-    return product[key] || "";
+  const getCellValue = (product: Record<string, unknown>, key: ColumnKey): string => {
+    return String(product[key] || "");
   };
 
   const isNavActive = (nav: CategoryNavItem) => {
@@ -552,9 +552,9 @@ export default function DataViewer() {
 
                   const visibleCols = COLUMNS.filter(col => visibleColumns.has(col.key));
                   const exportData = selectedProducts.map(product => {
-                    const row: Record<string, any> = {};
+                    const row: Record<string, string> = {};
                     visibleCols.forEach(col => {
-                      row[col.key] = (product as any)[col.key] || '';
+                      row[col.key] = String((product as Record<string, unknown>)[col.key] || '');
                     });
                     return row;
                   });
@@ -657,10 +657,10 @@ export default function DataViewer() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  products.map((product: any) => (
+                  products.map((product: Record<string, unknown> & { id: string | number }) => (
                     <TableRow
                       key={product.id}
-                      onClick={() => setSelectedRowId(selectedRowId === product.id ? null : product.id)}
+                      onClick={() => setSelectedRowId(selectedRowId === product.id ? null : String(product.id))}
                       className={`group cursor-pointer border-b border-border/50 last:border-b-0 transition-colors ${
                         selectedRowId === product.id
                           ? 'bg-primary/15 hover:bg-primary/20'

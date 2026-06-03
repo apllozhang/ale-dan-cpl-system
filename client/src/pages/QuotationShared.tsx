@@ -36,12 +36,12 @@ export default function QuotationShared() {
     );
   }
 
-  const items = (quotation.items || []).map((item: any) => ({
+  const items = (quotation.items || []).map((item) => ({
     ...item,
     subtotal: Number(item.subtotal) || 0,
     listPrice: item.listPrice || "",
   }));
-  const totalAmount = items.reduce((sum: number, item: any) => sum + item.subtotal, 0);
+  const totalAmount = items.reduce((sum: number, item: { subtotal: number }) => sum + item.subtotal, 0);
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -91,7 +91,7 @@ export default function QuotationShared() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item: any, idx: number) => (
+              {items.map((item, idx: number) => (
                 <tr key={idx} className="border-b border-border/50">
                   <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
                   <td className="px-3 py-2 font-medium">{item.productModel}</td>

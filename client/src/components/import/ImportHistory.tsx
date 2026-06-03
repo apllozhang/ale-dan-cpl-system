@@ -37,7 +37,7 @@ export function ImportHistory() {
   const logsQuery = trpc.importLogs.list.useQuery({ search: search || undefined, page, pageSize });
   const deleteMutation = trpc.importLogs.deleteLog.useMutation({
     onSuccess: () => { logsQuery.refetch(); },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
   const switchMutation = trpc.importLogs.switchActive.useMutation({
     onSuccess: () => {
@@ -49,7 +49,7 @@ export function ImportHistory() {
       toast.success(t('import.switchSuccess', { defaultValue: '已切换到该导入数据' }));
       setSwitchOpen(null);
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err) => toast.error(err.message),
   });
   const clearMut = trpc.importLogs.clear.useMutation();
   const utils = trpc.useUtils();
@@ -105,12 +105,12 @@ export function ImportHistory() {
               <tr><td colSpan={5} className="h-24 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : sortedLogs.length === 0 ? (
               <tr><td colSpan={5} className="h-24 text-center text-muted-foreground text-sm">{t('import.noHistory')}</td></tr>
-            ) : sortedLogs.map((l: any) => (
+            ) : sortedLogs.map((l) => (
               <tr key={l.id} className={`hover:bg-accent/30 border-b border-border/40 ${l.isActive ? "bg-primary/5" : ""}`}>
                 {renderCell(columns[0], false, <span className="text-muted-foreground">{new Date(l.createdAt).toLocaleDateString()}<br/>{new Date(l.createdAt).toLocaleTimeString()}</span>)}
                 {renderCell(columns[1], false, <span className="font-medium">{l.fileName}</span>)}
                 {renderCell(columns[2], false,
-                  l.sheetNames?.length > 0 ? (
+                  l.sheetNames && l.sheetNames.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {l.sheetNames.map((name: string) => (
                         <Badge key={name} variant="outline" className="text-xs font-normal">{name}</Badge>

@@ -44,7 +44,7 @@ function formatPrice(value: string | number | null | undefined): string {
   return `¥${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function parseNum(val: any): number {
+function parseNum(val: unknown): number {
   if (val == null) return 0;
   const n = typeof val === "string" ? parseFloat(val) : Number(val);
   return isNaN(n) ? 0 : n;
@@ -75,10 +75,10 @@ export default function QuotationCompare({ quotationIds, onClose }: QuotationCom
 
     // Normalize items for each quotation
     const normalizedItems: FlatItem[][] = quotations.map(q =>
-      (q?.items || []).map((item: any) => ({
-        productModel: item.productModel || "",
-        productDesc: item.productDesc || "",
-        listPrice: item.listPrice || "",
+      (q?.items || []).map((item: Record<string, unknown>) => ({
+        productModel: String(item.productModel || ""),
+        productDesc: String(item.productDesc || ""),
+        listPrice: String(item.listPrice || ""),
         quantity: Number(item.quantity) || 1,
         discountRate: parseNum(item.discountRate),
         subtotal: parseNum(item.subtotal),

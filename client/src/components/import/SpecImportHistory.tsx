@@ -47,7 +47,7 @@ export function SpecImportHistory() {
   const setsQuery = trpc.productSpecs.listSets.useQuery({ page: 1, pageSize: 100 });
   const deleteMutation = trpc.productSpecs.deleteSet.useMutation({
     onSuccess: () => { setsQuery.refetch(); },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const allSets = setsQuery.data?.items ?? [];

@@ -22,10 +22,10 @@ const COLOR_TITLE = "1B0033";
 const COLOR_TOTAL_BG = "E8E0F0";
 
 interface CellStyle {
-  font?: any;
-  fill?: any;
-  alignment?: any;
-  border?: any;
+  font?: Partial<ExcelJS.Font>;
+  fill?: ExcelJS.Fill;
+  alignment?: Partial<ExcelJS.Alignment>;
+  border?: Partial<ExcelJS.Borders>;
   numFmt?: string;
 }
 
@@ -41,7 +41,26 @@ function applyStyle(cell: ExcelJS.Cell, s: CellStyle) {
   if (s.numFmt) cell.numFmt = s.numFmt;
 }
 
-export async function exportQuotationToExcel(quotation: any, items: any[]) {
+interface QuotationExportData {
+  quotationNo?: string | null;
+  customerName?: string | null;
+  projectName?: string | null;
+  customerPhone?: string | null;
+  createdAt?: string | Date | null;
+  validUntil?: string | Date | null;
+  notes?: string | null;
+  discountRate?: number | string | null;
+}
+
+interface QuotationItem {
+  productModel?: string;
+  productDesc?: string;
+  listPrice: string;
+  discountRate: number | string;
+  quantity?: number;
+}
+
+export async function exportQuotationToExcel(quotation: QuotationExportData, items: QuotationItem[]) {
   const wb = new ExcelJS.Workbook();
   wb.creator = "ALE DAN CPL System";
   wb.created = new Date();
@@ -282,7 +301,7 @@ export async function exportQuotationToExcel(quotation: any, items: any[]) {
   }
 
   // Border for total row
-  const totalBorder: any = {
+  const totalBorder: Partial<ExcelJS.Borders> = {
     top: makeBorder("medium", COLOR_HEADER_BG),
     bottom: makeBorder("medium", COLOR_HEADER_BG),
     left: makeBorder("thin", COLOR_BORDER),
@@ -352,7 +371,7 @@ export async function exportQuotationToExcel(quotation: any, items: any[]) {
     if (logoResp.ok) {
       const logoBuffer = await logoResp.arrayBuffer();
       const logoId = wb.addImage({
-        buffer: new Uint8Array(logoBuffer) as any,
+        buffer: new Uint8Array(logoBuffer) as unknown as Parameters<typeof wb.addImage>[0]["buffer"],
         extension: "png",
       });
       ws.addImage(logoId, {

@@ -51,7 +51,7 @@ export function SpecDataTab() {
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState<string | undefined>(undefined);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [allEntries, setAllEntries] = useState<any[]>([]);
+  const [allEntries, setAllEntries] = useState<Array<{ id: number; productModel: string; productDesc: string | null; specs: Record<string, string> }>>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -98,7 +98,7 @@ export function SpecDataTab() {
     const counts: Record<string, number> = {};
     for (const cat of SPEC_CATEGORIES) {
       counts[cat.id] = (categorySetIds[cat.id] || []).reduce((sum, setId) => {
-        const set = sets.find((s: any) => s.id === setId);
+        const set = sets.find((s: { id: number; modelCount: number }) => s.id === setId);
         return sum + (set?.modelCount || 0);
       }, 0);
     }
@@ -122,7 +122,7 @@ export function SpecDataTab() {
       matchingSetIds.map(id => utils.productSpecs.getSetById.fetch({ id }))
     ).then(results => {
       if (!cancelled) {
-        setAllEntries(results.flatMap((r: any) => r?.entries ?? []));
+        setAllEntries(results.flatMap((r: { entries?: Array<{ id: number; productModel: string; productDesc: string | null; specs: Record<string, string> }> } | null) => r?.entries ?? []));
         setEntriesLoading(false);
       }
     }).catch(() => { if (!cancelled) setEntriesLoading(false); });
@@ -136,7 +136,7 @@ export function SpecDataTab() {
       utils.productSpecs.getSetById.invalidate();
       setRefreshKey(k => k + 1);
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   // Column resize handlers
@@ -180,16 +180,16 @@ export function SpecDataTab() {
 
   // Filter → Sort → Paginate
   const filteredEntries = useMemo(() => {
-    let entries = allEntries.filter((e: any) =>
+    let entries = allEntries.filter((e: { productModel: string }) =>
       !debouncedSearch || e.productModel.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
     if (sortBy === "productModel") {
-      entries.sort((a: any, b: any) => {
+      entries.sort((a: { productModel: string }, b: { productModel: string }) => {
         const cmp = a.productModel.localeCompare(b.productModel);
         return sortOrder === "asc" ? cmp : -cmp;
       });
     } else if (sortBy === "briefSpecs") {
-      entries.sort((a: any, b: any) => {
+      entries.sort((a: { productDesc: string | null }, b: { productDesc: string | null }) => {
         const sa = a.productDesc || '';
         const sb = b.productDesc || '';
         return sortOrder === "asc" ? sa.localeCompare(sb) : sb.localeCompare(sa);
@@ -214,8 +214,8 @@ export function SpecDataTab() {
 
   const handleSave = () => {
     for (const [id, specs] of Object.entries(editedEntries)) {
-      const entry = allEntries.find((e: any) => e.id === Number(id));
-      updateMutation.mutate({ id: Number(id), specs, productDesc: entry?.productDesc });
+      const entry = allEntries.find((e: { id: number }) => e.id === Number(id));
+      updateMutation.mutate({ id: Number(id), specs, productDesc: entry?.productDesc ?? undefined });
     }
   };
 
@@ -223,13 +223,13 @@ export function SpecDataTab() {
 
   const updateSpec = (entryId: number, key: string, value: string) => {
     setEditedEntries(prev => {
-      const entry = allEntries.find((e: any) => e.id === entryId);
+      const entry = allEntries.find((e: { id: number }) => e.id === entryId);
       const base = prev[entryId] || { ...(entry?.specs || {}) };
       return { ...prev, [entryId]: { ...base, [key]: value } };
     });
   };
 
-  const getSpecs = (entry: any): Record<string, string> => {
+  const getSpecs = (entry: { id: number; specs: Record<string, string> }): Record<string, string> => {
     return editedEntries[entry.id] || entry.specs || {};
   };
 
@@ -371,7 +371,7 @@ export function SpecDataTab() {
                       </td>
                     </tr>
                   ) : (
-                    paginatedEntries.map((entry: any, idx: number) => {
+                    paginatedEntries.map((entry: { id: number; productModel: string; productDesc: string | null; specs: Record<string, string> }, idx: number) => {
                       const specs = getSpecs(entry);
                       const briefText = entry.productDesc
                         || Object.entries(specs).map(([k, v]) => `${k}: ${v}`).join("  |  ");
@@ -391,7 +391,7 @@ export function SpecDataTab() {
                                 <textarea
                                   value={entry.productDesc || ''}
                                   onChange={e => {
-                                    const entryToUpdate = allEntries.find((en: any) => en.id === entry.id);
+                                    const entryToUpdate = allEntries.find((en: { id: number }) => en.id === entry.id);
                                     if (entryToUpdate) entryToUpdate.productDesc = e.target.value;
                                   }}
                                   className="w-full min-h-[60px] text-xs border rounded bg-background p-2 focus:outline-none focus:ring-1 focus:ring-primary resize-y"

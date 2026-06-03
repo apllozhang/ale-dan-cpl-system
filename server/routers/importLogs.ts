@@ -1,5 +1,6 @@
 import { router, publicProcedure, superAdminProcedure } from "../_core/trpc";
 import { z } from "zod";
+import type { ImportLog } from "../../drizzle/schema";
 import * as db from "../db";
 
 function csvEscape(val: string | null | undefined): string {
@@ -28,7 +29,7 @@ export const importLogsRouter = router({
     .mutation(async ({ input }) => {
       const log = await db.getImportLogById(input.id);
       if (!log) throw new Error("导入记录不存在");
-      if ((log as any).isActive) throw new Error("当前正在使用的导入不能删除，请先切换到其他导入");
+      if ((log as ImportLog).isActive) throw new Error("当前正在使用的导入不能删除，请先切换到其他导入");
       await db.deleteImportLog(input.id);
       return { success: true };
     }),
@@ -51,8 +52,8 @@ export const importLogsRouter = router({
     const { items } = await db.getImportLogs({ page: 1, pageSize: 10000 });
     // Format as CSV
     const header = "ID,文件名,用户,组织,用户组,模式,Sheet数,产品数,时间";
-    const rows = items.map((l: any) =>
-      `${l.id},${csvEscape(l.fileName)},${csvEscape(l.username)},${csvEscape(l.orgName)},${csvEscape(l.groupName)},${csvEscape(l.mode === 'overwrite' ? '完全覆盖' : '合并')},${l.sheetsCount},${l.productsCount},${csvEscape(new Date(l.createdAt).toLocaleString('zh-CN'))}`
+    const rows = items.map((l: ImportLog) =>
+      `${l.id},${csvEscape(l.fileName)},${csvEscape(l.username)},${csvEscape(l.orgName ?? '')},${csvEscape(l.groupName ?? '')},${csvEscape(l.mode === 'overwrite' ? '完全覆盖' : '合并')},${l.sheetsCount},${l.productsCount},${csvEscape(new Date(l.createdAt).toLocaleString('zh-CN'))}`
     );
     return header + "\n" + rows.join("\n");
   }),

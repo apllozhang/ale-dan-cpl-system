@@ -20,7 +20,7 @@ export function SpecDataImport() {
   const [isDragging, setIsDragging] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [preview, setPreview] = useState<any[]>([]);
+  const [preview, setPreview] = useState<Record<string, string>[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [importResult, setImportResult] = useState<{ modelCount: number; sets?: { name: string; modelCount: number }[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,7 +33,7 @@ export function SpecDataImport() {
       reset();
       utils.productSpecs.listSets.invalidate();
     },
-    onError: (err: any) => toast.error(err.message || t('techSpecs.importFailed')),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : t('techSpecs.importFailed')),
   });
 
   // Check existing sets
@@ -79,7 +79,7 @@ export function SpecDataImport() {
       // Preview from first valid sheet
       const firstValid = info.find(s => s.hasModelCol);
       if (firstValid) {
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[firstValid.name], { defval: "" });
+        const rows = XLSX.utils.sheet_to_json<Record<string, string>>(wb.Sheets[firstValid.name], { defval: "" });
         setPreview(rows.slice(0, 5));
       } else {
         setPreview([]);
@@ -228,7 +228,7 @@ export function SpecDataImport() {
                   </thead>
                   <tbody>
                     {preview.map((row, i) => (
-                      <tr key={i}>{Object.values(row).slice(0, 6).map((v: any, j) => <td key={j} className="px-2 py-1">{String(v)}</td>)}</tr>
+                      <tr key={i}>{Object.values(row).slice(0, 6).map((v, j) => <td key={j} className="px-2 py-1">{String(v)}</td>)}</tr>
                     ))}
                   </tbody>
                 </table>
@@ -262,7 +262,7 @@ export function SpecDataImport() {
                     {t('import.duplicateSpecWarning', { count: duplicates.length, fileName: file?.name ?? "" })}
                   </p>
                   <div className="bg-muted/50 rounded p-2 text-xs space-y-1 max-h-32 overflow-y-auto">
-                    {duplicates.map((d: any) => (
+                    {duplicates.map((d) => (
                       <div key={d.id} className="flex gap-2 items-center">
                         <span className="text-muted-foreground">{new Date(d.createdAt).toLocaleDateString()}</span>
                         <span className="font-medium">{d.name}</span>

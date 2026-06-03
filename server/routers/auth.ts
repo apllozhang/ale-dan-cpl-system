@@ -39,7 +39,7 @@ export const authRouter = router({
   }),
   logout: publicProcedure.mutation(async ({ ctx }) => {
     if (ctx.user) {
-      await logActivity(ctx, { action: "logout", resourceType: "auth" });
+      await logActivity({ user: ctx.user, req: ctx.req }, { action: "logout", resourceType: "auth" });
     }
     const cookieOptions = getSessionCookieOptions(ctx.req);
     ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

@@ -143,7 +143,7 @@ function OrgManagement() {
   const sortedOrgs = sortData(orgs);
 
   const openCreate = () => { setEditingId(null); setName(""); setDialogOpen(true); };
-  const openEdit = (o: any) => { setEditingId(o.id); setName(o.name); setDialogOpen(true); };
+  const openEdit = (o: typeof sortedOrgs[number]) => { setEditingId(o.id); setName(o.name); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!name.trim()) { toast.error(t('user.validationOrgName')); return; }
@@ -157,7 +157,7 @@ function OrgManagement() {
       }
       setDialogOpen(false);
       orgsQuery.refetch();
-    } catch (err: any) { toast.error(err.message || t('common.operationFailed')); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t('common.operationFailed')); }
   };
 
   const handleDelete = async () => {
@@ -167,7 +167,7 @@ function OrgManagement() {
       toast.success(t('user.orgDeleted'));
       setDeleteId(null);
       orgsQuery.refetch();
-    } catch (err: any) { toast.error(err.message || t('user.deleteFailed')); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t('user.deleteFailed')); }
   };
 
   return (
@@ -189,7 +189,7 @@ function OrgManagement() {
                 <tr><td colSpan={4} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></td></tr>
               ) : sortedOrgs.length === 0 ? (
                 <tr><td colSpan={4} className="h-32 text-center text-muted-foreground text-sm">{t('user.noOrgs')}</td></tr>
-              ) : sortedOrgs.map((o: any) => (
+              ) : sortedOrgs.map((o) => (
                 <tr key={o.id} className="hover:bg-accent/30 border-b border-border/30">
                   {renderCell(orgColumns[0], false, <span className="text-sm">{o.id}</span>)}
                   {renderCell(orgColumns[1], false, <span className="text-sm font-medium">{o.name}</span>)}
@@ -261,12 +261,12 @@ function GroupManagement() {
 
   const { renderHeader, renderCell, sortData } = useTableFeatures(groupColumns);
 
-  const getOrgName = (id: number) => orgs.find((o: any) => o.id === id)?.name || "-";
+  const getOrgName = (id: number) => orgs.find((o) => o.id === id)?.name || "-";
 
   const sortedGroups = sortData(groups);
 
   const openCreate = () => { setEditingId(null); setName(""); setOrgId(orgs[0]?.id || 0); setDialogOpen(true); };
-  const openEdit = (g: any) => { setEditingId(g.id); setName(g.name); setOrgId(g.organizationId); setDialogOpen(true); };
+  const openEdit = (g: typeof sortedGroups[number]) => { setEditingId(g.id); setName(g.name); setOrgId(g.organizationId); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!name.trim()) { toast.error(t('user.validationGroupName')); return; }
@@ -281,7 +281,7 @@ function GroupManagement() {
       }
       setDialogOpen(false);
       groupsQuery.refetch();
-    } catch (err: any) { toast.error(err.message || t('common.operationFailed')); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t('common.operationFailed')); }
   };
 
   const handleDelete = async () => {
@@ -291,7 +291,7 @@ function GroupManagement() {
       toast.success(t('user.groupDeleted'));
       setDeleteId(null);
       groupsQuery.refetch();
-    } catch (err: any) { toast.error(err.message || t('user.deleteFailed')); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t('user.deleteFailed')); }
   };
 
   return (
@@ -313,7 +313,7 @@ function GroupManagement() {
                 <tr><td colSpan={5} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></td></tr>
               ) : sortedGroups.length === 0 ? (
                 <tr><td colSpan={5} className="h-32 text-center text-muted-foreground text-sm">{t('user.noGroups')}</td></tr>
-              ) : sortedGroups.map((g: any) => (
+              ) : sortedGroups.map((g) => (
                 <tr key={g.id} className="hover:bg-accent/30 border-b border-border/30">
                   {renderCell(groupColumns[0], false, <span className="text-sm">{g.id}</span>)}
                   {renderCell(groupColumns[1], false, <span className="text-sm font-medium">{g.name}</span>)}
@@ -340,7 +340,7 @@ function GroupManagement() {
             <div className="space-y-2"><Label>{t('user.groupOrg')} *</Label>
               <Select value={String(orgId)} onValueChange={v => setOrgId(Number(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{orgs.map((o: any) => <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{orgs.map((o) => <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
@@ -403,8 +403,8 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
   const { renderHeader, renderCell, sortData } = useTableFeatures(userColumns);
 
-  const getOrgName = (id: number | null | undefined) => { if (!id) return "-"; return orgs.find((o: any) => o.id === id)?.name || "-"; };
-  const getGroupName = (id: number | null | undefined) => { if (!id) return "-"; return groups.find((g: any) => g.id === id)?.name || "-"; };
+  const getOrgName = (id: number | null | undefined) => { if (!id) return "-"; return orgs.find((o) => o.id === id)?.name || "-"; };
+  const getGroupName = (id: number | null | undefined) => { if (!id) return "-"; return groups.find((g) => g.id === id)?.name || "-"; };
 
   const sortedUsers = sortData(users);
   const totalPages = Math.ceil(sortedUsers.length / pageSize);
@@ -424,7 +424,7 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     setDialogOpen(true);
   };
 
-  const openEdit = (u: any) => {
+  const openEdit = (u: typeof pagedUsers[number]) => {
     setEditingId(u.id);
     setForm({
       username: u.username || "",
@@ -448,23 +448,34 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     if (!editingId && !form.password2) { toast.error(t('user.validationPasswordConfirm')); return; }
     try {
       if (editingId) {
-        const { password2, ...raw }: any = { id: editingId, ...form };
-        if (!raw.password) delete raw.password;
-        // Convert empty strings to undefined for optional fields
-        if (!raw.name) raw.name = undefined;
-        if (!raw.email) raw.email = undefined;
-        await updateMutation.mutateAsync(raw);
+        await updateMutation.mutateAsync({
+          id: editingId,
+          username: form.username,
+          name: form.name || undefined,
+          email: form.email || undefined,
+          role: form.role as "user" | "admin" | "sales_manager" | "sales_rep" | "viewer",
+          isSuperAdmin: form.isSuperAdmin,
+          organizationId: form.organizationId,
+          groupId: form.groupId,
+          ...(form.password ? { password: form.password } : {}),
+        });
         toast.success(t('user.userUpdated'));
       } else {
-        const { password2, ...data }: any = form;
-        if (!data.name) data.name = undefined;
-        if (!data.email) data.email = undefined;
-        await createMutation.mutateAsync(data);
+        await createMutation.mutateAsync({
+          username: form.username,
+          password: form.password,
+          name: form.name || undefined,
+          email: form.email || undefined,
+          role: form.role as "user" | "admin" | "sales_manager" | "sales_rep" | "viewer",
+          isSuperAdmin: form.isSuperAdmin,
+          organizationId: form.organizationId,
+          groupId: form.groupId,
+        });
         toast.success(t('user.userCreated'));
       }
       setDialogOpen(false);
       usersQuery.refetch();
-    } catch (err: any) { toast.error(err.message || t('common.operationFailed')); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t('common.operationFailed')); }
   };
 
   const handleDelete = async () => {
@@ -474,7 +485,7 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       toast.success(t('user.userDeleted'));
       setDeleteId(null);
       usersQuery.refetch();
-    } catch (err: any) { toast.error(err.message || t('user.deleteFailed')); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t('user.deleteFailed')); }
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -498,7 +509,7 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                 <tr><td colSpan={colCount} className="h-32 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></td></tr>
               ) : pagedUsers.length === 0 ? (
                 <tr><td colSpan={colCount} className="h-32 text-center text-muted-foreground text-sm">{t('user.noUsers')}</td></tr>
-              ) : pagedUsers.map((u: any) => {
+              ) : pagedUsers.map((u) => {
                 let cellIdx = 0;
                 return (
                   <tr key={u.id} className="hover:bg-accent/30 border-b border-border/30">
@@ -559,7 +570,7 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                     <SelectTrigger><SelectValue placeholder={t('user.selectOrg')} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">{t('common.no')}</SelectItem>
-                      {orgs.map((o: any) => <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>)}
+                      {orgs.map((o) => <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -568,7 +579,7 @@ function UserManagementTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                     <SelectTrigger><SelectValue placeholder={t('user.selectGroup')} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">{t('common.no')}</SelectItem>
-                      {groups.map((g: any) => <SelectItem key={g.id} value={String(g.id)}>{g.name} ({getOrgName(g.organizationId)})</SelectItem>)}
+                      {groups.map((g) => <SelectItem key={g.id} value={String(g.id)}>{g.name} ({getOrgName(g.organizationId)})</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>

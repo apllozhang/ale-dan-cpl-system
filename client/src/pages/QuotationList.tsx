@@ -28,6 +28,18 @@ import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";
 
 import { useMobilePreview } from "@/contexts/MobilePreviewContext";
 
+interface QuotationRow {
+  id: number;
+  quotationNo: string;
+  customerName: string;
+  projectName: string | null;
+  status: string;
+  totalAmount: string | null;
+  creatorName: string | null;
+  creatorUsername: string | null;
+  createdAt: string | null | Date;
+}
+
 function generatePageNumbers(current: number, total: number): (number | "...")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages: (number | "...")[] = [];
@@ -200,14 +212,14 @@ export default function QuotationList() {
               <th className="px-3 py-2 text-xs font-semibold w-10 border-r border-border/50">
                 <input
                   type="checkbox"
-                  checked={items.length > 0 && items.every((q: any) => selectedIds.has(q.id))}
+                  checked={items.length > 0 && items.every((q: QuotationRow) => selectedIds.has(q.id))}
                   onChange={() => {
                     setSelectedIds(prev => {
                       const next = new Set(prev);
-                      if (items.every((q: any) => next.has(q.id))) {
-                        items.forEach((q: any) => next.delete(q.id));
+                      if (items.every((q: QuotationRow) => next.has(q.id))) {
+                        items.forEach((q: QuotationRow) => next.delete(q.id));
                       } else {
-                        items.forEach((q: any) => next.add(q.id));
+                        items.forEach((q: QuotationRow) => next.add(q.id));
                       }
                       return next;
                     });
@@ -239,7 +251,7 @@ export default function QuotationList() {
                 </td>
               </tr>
             ) : (
-              items.map((q: any) => {
+              items.map((q: QuotationRow) => {
                 const cellData: Record<string, React.ReactNode> = {
                   quotationNo: <span className="text-sm font-medium text-primary break-words whitespace-normal">{q.quotationNo}</span>,
                   customerName: <span className="text-sm break-words whitespace-normal">{q.customerName}</span>,

@@ -64,7 +64,7 @@ export function SpecSetList({ search, page, onSearchChange, searchValue }: {
 
   const deleteMutation = trpc.productSpecs.deleteSet.useMutation({
     onSuccess: () => { toast.success(t('common.saved')); setsQuery.refetch(); },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const sets = setsQuery.data?.items ?? [];
@@ -102,7 +102,7 @@ export function SpecSetList({ search, page, onSearchChange, searchValue }: {
         <EmptyState icon={ClipboardList} title={t('techSpecs.noSets')} description={t('techSpecs.noSetsDesc')} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sets.map((set: any) => (
+          {sets.map((set: { id: number; name: string; description: string | null; modelCount: number; fileName: string | null; createdAt: Date }) => (
             <Card key={set.id} className="hover:shadow-md transition-all cursor-pointer group" onClick={() => setLocation(`/data/specs/${set.id}`)}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
@@ -160,22 +160,22 @@ export function SpecSetDetail({ setId, onBack }: { setId: number; onBack: () => 
   const { t } = useTranslation();
   const isMobilePreview = useMobilePreview();
   const [search, setSearch] = useState("");
-  const [editEntry, setEditEntry] = useState<any>(null);
+  const [editEntry, setEditEntry] = useState<{ id: number; productModel: string; productDesc: string | null; specs: Record<string, string> } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const setQuery = trpc.productSpecs.getSetById.useQuery({ id: setId });
   const deleteEntryMutation = trpc.productSpecs.deleteEntry.useMutation({
     onSuccess: () => { setQuery.refetch(); },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const set = setQuery.data;
-  const entries = (setQuery.data?.entries ?? []).filter((e: any) =>
+  const entries = (setQuery.data?.entries ?? []).filter((e: { productModel: string }) =>
     !search || e.productModel.toLowerCase().includes(search.toLowerCase())
   );
 
   // Collect all unique spec keys for dynamic columns
-  const specKeys = entries.reduce((keys: string[], e: any) => {
+  const specKeys = entries.reduce((keys: string[], e: { specs: Record<string, string> }) => {
     for (const k of Object.keys(e.specs || {})) {
       if (!keys.includes(k)) keys.push(k);
     }
@@ -240,7 +240,7 @@ export function SpecSetDetail({ setId, onBack }: { setId: number; onBack: () => 
             <tbody>
               {entries.length === 0 ? (
                 <tr><td colSpan={4 + specKeys.length} className="h-32 text-center text-muted-foreground text-sm">{t('techSpecs.noSpecData')}</td></tr>
-              ) : entries.map((entry: any, idx: number) => (
+              ) : entries.map((entry: { id: number; productModel: string; productDesc: string | null; specs: Record<string, string> }, idx: number) => (
                 <tr key={entry.id} className="border-b border-border/50 hover:bg-accent/20">
                   <td className="px-4 py-2 text-xs text-muted-foreground">{idx + 1}</td>
                   <td className="px-4 py-2 text-sm font-medium text-foreground">{entry.productModel}</td>
@@ -283,7 +283,7 @@ export function SpecSetDetail({ setId, onBack }: { setId: number; onBack: () => 
 
 // ==================== Edit Entry Dialog ====================
 
-function EditEntryDialog({ entry, set, onClose }: { entry: any; set: any; onClose: () => void }) {
+function EditEntryDialog({ entry, set, onClose }: { entry: { id: number; productModel: string; productDesc: string | null; specs: Record<string, string> }; set: { name: string; modelCount: number; fileName?: string }; onClose: () => void }) {
   const { t } = useTranslation();
   const [specs, setSpecs] = useState<Record<string, string>>(entry.specs || {});
   const [productDesc, setProductDesc] = useState(entry.productDesc || "");
@@ -291,7 +291,7 @@ function EditEntryDialog({ entry, set, onClose }: { entry: any; set: any; onClos
 
   const updateMutation = trpc.productSpecs.updateEntry.useMutation({
     onSuccess: () => { toast.success(t('common.saved')); onClose(); },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const handleSave = () => {
@@ -364,7 +364,7 @@ function AddEntryDialog({ setId, onClose }: { setId: number; onClose: () => void
 
   const addMutation = trpc.productSpecs.addEntry.useMutation({
     onSuccess: () => { toast.success(t('common.saved')); onClose(); },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const handleSave = () => {

@@ -35,7 +35,7 @@ type ItemRow = {
   subtotal: number;
 };
 
-const STATUS_ICONS: Record<string, any> = {
+const STATUS_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   submitted: Send,
   approved: CheckCircle,
   sent: Mail,
@@ -96,7 +96,7 @@ function QuotationItemsTable({
   onRemove,
 }: {
   items: ItemRow[];
-  onUpdate: (index: number, field: keyof ItemRow, value: any) => void;
+  onUpdate: (index: number, field: keyof ItemRow, value: string | number) => void;
   onRemove: (index: number) => void;
 }) {
   const { t } = useTranslation();
@@ -226,7 +226,7 @@ export default function QuotationDetail() {
 
   // Quick search state
   const [quickSearch, setQuickSearch] = useState("");
-  const [quickResults, setQuickResults] = useState<any[]>([]);
+  const [quickResults, setQuickResults] = useState<Array<{ id: number; productModel: string | null; productDesc: string | null; listPrice: string | null; [key: string]: unknown }>>([]);
   const quickSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quickSearchRef = useRef<HTMLDivElement>(null);
 
@@ -248,8 +248,8 @@ export default function QuotationDetail() {
       setDiscountRate(Number(q.discountRate) || 0);
       setNotes(q.notes || "");
       setValidUntil(q.validUntil ? new Date(q.validUntil).toISOString().slice(0, 10) : "");
-      setItems((q.items || []).map((item: any) => ({
-        productId: item.productId,
+      setItems((q.items || []).map((item: { productId: number | null; productModel: string; productDesc: string | null; listPrice: string | null; quantity: number; unitPrice: string | null; discountRate: string | null; subtotal: string | null; createdAt: Date; updatedAt: Date }) => ({
+        productId: item.productId ?? undefined,
         productModel: item.productModel || "",
         productDesc: item.productDesc || "",
         listPrice: item.listPrice || "",
@@ -285,7 +285,7 @@ export default function QuotationDetail() {
     }
   }, [preselectedProductsQuery.data, isAddMode, discountRate]);
 
-  const updateItem = (index: number, field: keyof ItemRow, value: any) => {
+  const updateItem = (index: number, field: keyof ItemRow, value: string | number) => {
     setItems(prev => prev.map((item, i) => {
       if (i !== index) return item;
       const updated = { ...item, [field]: value };
@@ -327,7 +327,7 @@ export default function QuotationDetail() {
     setQuickSearch(text);
   }, []);
 
-  const quickAdd = (product: any) => {
+  const quickAdd = (product: { id: number; productModel: string | null; productDesc: string | null; listPrice: string | null }) => {
     if (existingProductIds.has(product.id)) {
       toast.info(`${product.productModel} 已在报价单中`);
       setQuickSearch("");
@@ -365,7 +365,7 @@ export default function QuotationDetail() {
     return ids;
   }, [items]);
 
-  const handleAddProducts = (products: Array<{ product: any; quantity: number }>) => {
+  const handleAddProducts = (products: Array<{ product: { id: number; productModel: string | null; productDesc: string | null; listPrice: string | null }; quantity: number }>) => {
     const newItems: ItemRow[] = products.map(({ product, quantity }) => ({
       productId: product.id,
       productModel: product.productModel || "",
@@ -449,7 +449,7 @@ export default function QuotationDetail() {
 
     try {
       if (isNew) {
-        const result = await createMutation.mutateAsync(payload) as any;
+        const result = await createMutation.mutateAsync(payload) as unknown as { id?: number };
         toast.success(t('quotation.createSuccess'));
         if (result?.id) {
           setLocation(`/quotations/${result.id}`);
@@ -459,19 +459,19 @@ export default function QuotationDetail() {
         toast.success(t('quotation.updateSuccess'));
         quotationQuery.refetch();
       }
-    } catch (err: any) {
-      toast.error(err.message || t('quotation.saveFailed'));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : t('quotation.saveFailed'));
     }
   };
 
   const handleStatusChange = async (newStatus: string) => {
     if (!quotationId) return;
     try {
-      await statusMutation.mutateAsync({ id: quotationId, status: newStatus as any });
+      await statusMutation.mutateAsync({ id: quotationId, status: newStatus as "draft" | "submitted" | "approved" | "sent" | "completed" | "cancelled" });
       toast.success(t('quotation.statusUpdated', { status: QUOTATION_STATUS_LABELS[newStatus] }));
       quotationQuery.refetch();
-    } catch (err: any) {
-      toast.error(err.message || t('quotation.statusUpdateFailed'));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : t('quotation.statusUpdateFailed'));
     }
   };
 
@@ -487,8 +487,8 @@ export default function QuotationDetail() {
       const url = `${window.location.origin}/share/${result.shareToken}`;
       await navigator.clipboard.writeText(url);
       toast.success(t('quotation.shareCopied'));
-    } catch (err: any) {
-      toast.error(err.message || t('quotation.shareFailed'));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : t('quotation.shareFailed'));
     }
   };
 
@@ -503,8 +503,8 @@ export default function QuotationDetail() {
         notes,
       });
       toast.success(t('quotation.templateSaved'));
-    } catch (err: any) {
-      toast.error(err.message || t('quotation.templateSaveFailed'));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : t('quotation.templateSaveFailed'));
     }
   };
 
@@ -658,7 +658,7 @@ export default function QuotationDetail() {
               </div>
               {quickResults.length > 0 && (
                 <div className="absolute z-50 top-10 left-0 right-0 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
-                  {quickResults.map((product: any) => (
+                  {quickResults.map((product: { id: number; productModel: string | null; productDesc: string | null; listPrice: string | null }) => (
                     <button
                       key={product.id}
                       onClick={() => quickAdd(product)}
@@ -773,9 +773,20 @@ export default function QuotationDetail() {
 }
 
 // ==================== Version Timeline Component ====================
-function VersionTimeline({ versions, quotationId }: { versions: any[]; quotationId: number }) {
+function VersionTimeline({ versions, quotationId }: { versions: Array<{ id: number; version: number; createdAt: string | Date; itemCount: number; totalAmount?: string | number | null; changeSummary?: string | null }>; quotationId: number }) {
   const { t } = useTranslation();
-  const [diffData, setDiffData] = useState<any>(null);
+  const [diffData, setDiffData] = useState<{
+    fromVersion: number;
+    toVersion: number;
+    fromTotal: string | number;
+    toTotal: string | number;
+    items: Array<{
+      productModel: string;
+      change: "added" | "removed" | "modified" | "unchanged";
+      before: { quantity?: number; subtotal?: string | number; discountRate?: string } | null;
+      after: { quantity?: number; subtotal?: string | number; discountRate?: string } | null;
+    }>;
+  } | null>(null);
   const [comparing, setComparing] = useState(false);
   const [selectedFrom, setSelectedFrom] = useState<number | null>(null);
   const [selectedTo, setSelectedTo] = useState<number | null>(null);
@@ -817,7 +828,7 @@ function VersionTimeline({ versions, quotationId }: { versions: any[]; quotation
       {expanded && (
         <CardContent className="pt-0">
           <div className="relative ml-4 pl-6 border-l-2 border-muted">
-            {displayed.map((v: any, i: number) => (
+            {displayed.map((v: { id: number; version: number; createdAt: string | Date; itemCount: number; totalAmount?: string | number | null; changeSummary?: string | null }, i: number) => (
               <div key={v.id} className="relative pb-4 last:pb-0">
                 <div className={`absolute -left-[29px] top-1 w-3 h-3 rounded-full border-2 ${i === 0 ? "bg-primary border-primary" : "bg-background border-muted-foreground/40"}`} />
                 <div className="flex items-start justify-between gap-3">
@@ -883,7 +894,7 @@ function VersionTimeline({ versions, quotationId }: { versions: any[]; quotation
                     </tr>
                   </thead>
                   <tbody>
-                    {diffData.items.map((item: any, i: number) => {
+                    {diffData.items.map((item: { productModel: string; change: "added" | "removed" | "modified" | "unchanged"; before: { quantity?: number; subtotal?: string | number; discountRate?: string } | null; after: { quantity?: number; subtotal?: string | number; discountRate?: string } | null }, i: number) => {
                       const cs: Record<string, string> = {
                         added: "bg-success-soft text-success",
                         removed: "bg-destructive/10 text-destructive",

@@ -166,7 +166,7 @@ export default function BusinessAnalysis() {
   const countAvg = useCountUp(summary.avgAmount, 1000, 0, "¥");
   const countRate = useCountUp(summary.conversionRate * 100, 800, 1, "", "%");
 
-  const industryData = useMemo(() => byIndustry.map((d: any, i: number) => ({
+  const industryData = useMemo(() => byIndustry.map((d: { industry: string; count: number | string; totalAmount: number | string }, i: number) => ({
     name: (d.industry || t("analytics.unspecified")).slice(0, 10),
     count: Number(d.count),
     amount: Number(d.totalAmount),
@@ -177,13 +177,13 @@ export default function BusinessAnalysis() {
     const order = ["draft", "submitted", "approved", "sent", "completed", "cancelled"];
     return order
       .map(s => {
-        const found = byStatus.find((d: any) => d.status === s);
+        const found = byStatus.find((d: { status: string }) => d.status === s);
         return found ? { name: QUOTATION_STATUS_LABELS[s] || s, count: Number(found.count), color: STATUS_COLORS[s] } : null;
       })
       .filter(Boolean) as { name: string; count: number; color: string }[];
   }, [byStatus]);
 
-  const statusData = useMemo(() => byStatus.map((d: any) => ({
+  const statusData = useMemo(() => byStatus.map((d: { status: string; count: number | string; totalAmount: number | string }) => ({
     name: QUOTATION_STATUS_LABELS[d.status] || d.status,
     count: Number(d.count),
     amount: Number(d.totalAmount),
@@ -193,7 +193,7 @@ export default function BusinessAnalysis() {
   const timeData = useMemo(() => {
     if (byTime.length === 0) return [];
     const months: Record<string, { month: string; count: number; amount: number }> = {};
-    byTime.forEach((d: any) => {
+    byTime.forEach((d: { month: string; count: number | string; totalAmount: number | string }) => {
       months[d.month] = { month: d.month, count: Number(d.count), amount: Number(d.totalAmount) };
     });
     const result = [];
@@ -209,7 +209,7 @@ export default function BusinessAnalysis() {
     return result;
   }, [byTime]);
 
-  const salesRepData = useMemo(() => bySalesRep.map((d: any) => ({
+  const salesRepData = useMemo(() => bySalesRep.map((d: { repName: string; count: number | string; totalAmount: number | string; completedCount: number | string; submittedCount: number | string }) => ({
     name: (d.repName || "Unknown").slice(0, 8),
     count: Number(d.count),
     amount: Number(d.totalAmount),
@@ -351,13 +351,13 @@ export default function BusinessAnalysis() {
             <CardContent>
               <ChartContainer config={barConfig} className="h-[320px] w-full">
                 <BarChart data={industryData} layout="vertical" margin={{ left: 10, right: 20 }}
-                  onClick={(e: any) => { if (e?.activePayload?.[0]?.payload?.name) setIndustryFilter(e.activePayload[0].payload.name); }}>
+                  onClick={(e: { activePayload?: Array<{ payload: { name: string } }> }) => { if (e?.activePayload?.[0]?.payload?.name) setIndustryFilter(e.activePayload[0].payload.name); }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border) / 0.5)" />
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="count" radius={[0, 6, 6, 0]} className="cursor-pointer">
-                    {industryData.map((entry: any, i: number) => (
+                    {industryData.map((entry: { fill: string }, i: number) => (
                       <Cell key={i} fill={entry.fill} className="cursor-pointer" />
                     ))}
                   </Bar>
@@ -378,7 +378,7 @@ export default function BusinessAnalysis() {
                     <Pie data={statusData} dataKey="count" nameKey="name" cx="50%" cy="50%"
                       innerRadius={30} outerRadius={55} paddingAngle={2}
                       animationBegin={0} animationDuration={800}
-                      onClick={(_data: any, index: number) => {
+                      onClick={(_data: Record<string, unknown>, index: number) => {
                         const statusEntry = statusData[index];
                         if (statusEntry) {
                           const statusKey = byStatus[index]?.status;
@@ -386,7 +386,7 @@ export default function BusinessAnalysis() {
                         }
                       }}
                       className="cursor-pointer">
-                      {statusData.map((d: any, i: number) => <Cell key={i} fill={d.fill} className="cursor-pointer" />)}
+                      {statusData.map((d: { fill: string }, i: number) => <Cell key={i} fill={d.fill} className="cursor-pointer" />)}
                     </Pie>
                     <ChartTooltip content={<ChartTooltipContent />} />
                   </PieChart>
@@ -450,17 +450,17 @@ export default function BusinessAnalysis() {
                   <tbody>
                     {customerTable.sortData(
                       byCustomer
-                        .filter((c: any) => !industryFilter || c.industry?.includes(industryFilter))
+                        .filter((c: { industry?: string }) => !industryFilter || c.industry?.includes(industryFilter))
                         .slice(0, 10)
-                        .map((c: any) => ({
+                        .map((c: { customerName: string; industry?: string; count: number | string; totalAmount: number | string }) => ({
                           ...c,
                           customerName: c.customerName,
                           count: Number(c.count),
                           totalAmount: Number(c.totalAmount),
                         }))
-                    ).map((c: any, i: number) => {
-                      const filtered = byCustomer.filter((c: any) => !industryFilter || c.industry?.includes(industryFilter));
-                      const total = filtered.reduce((s: number, x: any) => s + Number(x.totalAmount), 0) || 1;
+                    ).map((c: { customerName: string; count: number | string; totalAmount: number | string }, i: number) => {
+                      const filtered = byCustomer.filter((cx: { industry?: string }) => !industryFilter || cx.industry?.includes(industryFilter));
+                      const total = filtered.reduce((s: number, x: { totalAmount: number | string }) => s + Number(x.totalAmount), 0) || 1;
                       const pct = (Number(c.totalAmount) / total * 100).toFixed(1);
                       return (
                         <tr key={i} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
@@ -540,12 +540,12 @@ export default function BusinessAnalysis() {
                   </tr>
                 </thead>
                 <tbody>
-                  {productTable.sortData(topProducts.map((p: any) => ({
+                  {productTable.sortData(topProducts.map((p: { productModel: string; productDesc?: string; quotationCount: number | string; totalQuantity: number | string; totalRevenue: number | string; [key: string]: unknown }) => ({
                     ...p,
                     quotationCount: Number(p.quotationCount),
                     totalQuantity: Number(p.totalQuantity),
                     totalRevenue: Number(p.totalRevenue),
-                  }))).map((p: any, i: number) => (
+                  }))).map((p: { productModel: string; productDesc?: string; quotationCount: number; totalQuantity: number; totalRevenue: number }, i: number) => (
                     <tr key={i} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
                       {productTable.renderCell(productColumns[0], false,
                         i < 3 ? (

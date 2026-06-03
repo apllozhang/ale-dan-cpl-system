@@ -40,7 +40,7 @@ export const activityLogsRouter = router({
     .query(async ({ input }) => {
       const { items } = await db.getActivityLogs({ ...input, page: 1, pageSize: 10000 });
       const header = "ID,时间,用户,操作,资源类型,资源ID,详情,IP";
-      const rows = items.map((l: any) =>
+      const rows = items.map((l: { id: number; createdAt: Date | string; username: string | null; action: string; resourceType: string | null; resourceId: number | null; detail: string | null; ipAddress: string | null }) =>
         `${l.id},${csvEscape(new Date(l.createdAt).toLocaleString("zh-CN"))},${csvEscape(l.username)},${csvEscape(l.action)},${csvEscape(l.resourceType)},${l.resourceId || ''},${csvEscape((l.detail || "").slice(0, 200))},${csvEscape(l.ipAddress)}`
       );
       return header + "\n" + rows.join("\n");

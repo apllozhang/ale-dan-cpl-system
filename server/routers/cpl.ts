@@ -1,6 +1,7 @@
 import { router, publicProcedure, superAdminProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import type { Organization, UserGroup, InsertCplProduct, InsertCplSheet } from "../../drizzle/schema";
 import * as db from "../db";
 import * as XLSX from "xlsx";
 import { logActivity } from "./helpers";
@@ -46,18 +47,18 @@ const COLUMN_MAP: Record<string, string> = {
 function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheetsToSkip = ["Summary", "LBS场景化报价模型"];
-  const products: any[] = [];
+  const products: InsertCplProduct[] = [];
   const sheetMeta: { sheetName: string; displayOrder: number; productCount: number }[] = [];
 
   // Parse Summary sheet
   let summaryContent = "";
   if (workbook.SheetNames.includes("Summary")) {
     const ws = workbook.Sheets["Summary"];
-    const data = XLSX.utils.sheet_to_json<any>(ws, { header: 1 });
+    const data: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
     const lines: string[] = [];
     for (const row of data) {
       if (Array.isArray(row)) {
-        const text = row.filter((c: any) => c !== null && c !== undefined && c !== "").join(" ").trim();
+        const text = row.filter((c) => c !== null && c !== undefined && c !== "").join(" ").trim();
         if (text) lines.push(text);
       }
     }
@@ -71,7 +72,7 @@ function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]) {
     if (selectedSheets && !selectedSheets.includes(sheetName)) continue;
     const trimmedName = sheetName.trim();
     const ws = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<any>(ws, { defval: "" });
+    const rows: Record<string, string | number | boolean | null | undefined>[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
     let count = 0;
     for (const row of rows) {
@@ -98,7 +99,7 @@ function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]) {
         priceNote: mapped.priceNote || "",
         isNew: mapped.isNew || "",
         remark: mapped.remark || "",
-      });
+      } as InsertCplProduct);
       count++;
     }
 
@@ -201,16 +202,16 @@ export const cplRouter = router({
         let orgName = "";
         let groupName = "";
         if (ctx.user!.organizationId) {
-          const orgs = await db.getAllOrganizations();
-          orgName = orgs.find((o: any) => o.id === ctx.user!.organizationId)?.name || "";
+          const orgs: Organization[] = await db.getAllOrganizations();
+          orgName = orgs.find((o) => o.id === ctx.user!.organizationId)?.name || "";
         }
         if (ctx.user!.groupId) {
-          const groups = await db.getAllUserGroups();
-          groupName = groups.find((g: any) => g.id === ctx.user!.groupId)?.name || "";
+          const groups: UserGroup[] = await db.getAllUserGroups();
+          groupName = groups.find((g) => g.id === ctx.user!.groupId)?.name || "";
         }
 
-        const cleanedSheets = sheetMeta.map((s: any) => {
-          const { id, ...rest } = s;
+        const cleanedSheets: Omit<InsertCplSheet, "id">[] = sheetMeta.map((s) => {
+          const { id, ...rest } = s as InsertCplSheet & { id?: number };
           return rest;
         });
         await db.importCplOverwrite({
@@ -219,11 +220,11 @@ export const cplRouter = router({
           username: ctx.user!.username || "unknown",
           orgName: orgName || null,
           groupName: groupName || null,
-          sheetNames: sheetMeta.map((s: any) => s.sheetName),
+          sheetNames: sheetMeta.map((s) => s.sheetName),
           sheetsCount: sheetMeta.length,
           productsCount: products.length,
-          products: products as any,
-          sheets: cleanedSheets as any,
+          products: products as InsertCplProduct[],
+          sheets: cleanedSheets as Omit<InsertCplSheet, "id">[],
           summary: summaryContent ? { content: summaryContent, version: input.fileName } : undefined,
         });
 

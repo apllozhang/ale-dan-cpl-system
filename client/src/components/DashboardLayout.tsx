@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useTheme } from "@/contexts/ThemeContext";
-import { hasPermission, PERMISSIONS } from "@shared/const";
+import { hasPermission, PERMISSIONS, type Permission } from "@shared/const";
 import {
   LayoutDashboard,
   LogOut,
@@ -164,8 +164,8 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find((item) => item.path === location);
   const activeLabel = activeMenuItem ? t(activeMenuItem.labelKey) : "";
-  const visibleMenuItems = menuItems.filter((item: any) => {
-    if (item.permission && !hasPermission(user!, item.permission)) return false;
+  const visibleMenuItems = menuItems.filter((item: { icon: React.ComponentType<{ className?: string }>; labelKey: string; path: string; permission?: string }) => {
+    if (item.permission && !hasPermission(user!, item.permission as Permission)) return false;
     return true;
   });
   const isMobile = useIsMobile();

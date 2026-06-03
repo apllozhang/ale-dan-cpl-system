@@ -60,9 +60,9 @@ export const usersRouter = router({
       const { id, password, username, ...rest } = input;
       // Only super admins can modify isSuperAdmin
       if (rest.isSuperAdmin !== undefined && !ctx.user.isSuperAdmin) {
-        delete (rest as any).isSuperAdmin;
+        delete (rest as Record<string, unknown>).isSuperAdmin;
       }
-      const updateData: any = { ...rest };
+      const updateData: Record<string, unknown> = { ...rest };
       if (password) {
         const target = await db.getUserById(id);
         if (target?.isSuperAdmin) {

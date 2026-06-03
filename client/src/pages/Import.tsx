@@ -1,6 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useState } from "react";
 import { HardDriveUpload, Shield, Database, ClipboardList } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 import { useTranslation } from "react-i18next";
 import { ProductDataImport } from "@/components/import/ProductDataImport";
 import { SpecDataImport } from "@/components/import/SpecDataImport";
@@ -22,7 +24,7 @@ export default function Import() {
     );
   }
 
-  const tabs: { key: TabKey; icon: any; labelKey: string }[] = [
+  const tabs: { key: TabKey; icon: LucideIcon; labelKey: string }[] = [
     { key: "product", icon: Database, labelKey: "import.tabProduct" },
     { key: "spec", icon: ClipboardList, labelKey: "import.tabSpec" },
   ];

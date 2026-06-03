@@ -26,7 +26,7 @@ declare global {
     createWritable(): Promise<FileSystemWritableFileStream>;
   }
   interface FileSystemWritableFileStream extends WritableStream {
-    write(data: any): Promise<void>;
+    write(data: Uint8Array | Blob | ArrayBuffer | DataView): Promise<void>;
     close(): Promise<void>;
   }
 }
@@ -38,7 +38,7 @@ import { useTranslation } from "react-i18next";
 import { useStaggerIn } from "@/hooks/useStaggerIn";
 import { useMobilePreview } from "@/contexts/MobilePreviewContext";
 
-function formatDetail(action: string, detail: string | null, t: (key: string, options?: Record<string, any>) => string): string {
+function formatDetail(action: string, detail: string | null, t: (key: string, options?: Record<string, unknown>) => string): string {
   if (!detail) return "-";
   try {
     const d = JSON.parse(detail);
@@ -201,7 +201,7 @@ export default function ActivityLog() {
 
   const clearMutation = trpc.activityLogs.clear.useMutation({
     onSuccess: () => { toast.success(t('activity.logsCleared')); refetch(); },
-    onError: (err: any) => toast.error(err.message || t('activity.clearFailed')),
+    onError: (err: { message?: string }) => toast.error(err.message || t('activity.clearFailed')),
   });
 
   const handleExport = async () => {
@@ -219,8 +219,8 @@ export default function ActivityLog() {
       const { saveStringWithPicker } = await import("@/lib/saveFile");
       await saveStringWithPicker(csvContent, suggestedName, "text/csv;charset=utf-8");
       toast.success(t('activity.exportSuccess'));
-    } catch (err: any) {
-      if (err?.name === "AbortError") return;
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
       toast.error(t('activity.exportFailed'));
     }
   };
@@ -366,7 +366,7 @@ export default function ActivityLog() {
                 <tr><td colSpan={5}>
                   <EmptyState icon={Activity} title={t('activity.noLogs')} />
                 </td></tr>
-              ) : sortData(data.items).map((log: any) => (
+              ) : sortData(data.items).map((log: { id: number; createdAt: Date; username: string | null; action: string; resourceType: string | null; detail: string | null }) => (
                 <tr key={log.id} className="stagger-child border-b border-border/50 hover:bg-accent/30">
                   {renderCell(tableColumns[0], false, <span className="text-xs text-muted-foreground">{new Date(log.createdAt).toLocaleString("zh-CN")}</span>)}
                   {renderCell(tableColumns[1], false, <span className="text-xs font-medium">{log.username || "-"}</span>)}
@@ -376,8 +376,8 @@ export default function ActivityLog() {
                     </Badge>
                   )}
                   {renderCell(tableColumns[3], false,
-                    <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${RESOURCE_COLORS[log.resourceType] || "bg-muted text-muted-foreground"}`}>
-                      {RESOURCE_LABELS[log.resourceType] || log.resourceType || "-"}
+                    <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${RESOURCE_COLORS[log.resourceType ?? ""] || "bg-muted text-muted-foreground"}`}>
+                      {RESOURCE_LABELS[log.resourceType ?? ""] || log.resourceType || "-"}
                     </Badge>
                   )}
                   {renderCell(tableColumns[4], true, <span className="text-xs text-muted-foreground">{formatDetail(log.action, log.detail, t)}</span>)}

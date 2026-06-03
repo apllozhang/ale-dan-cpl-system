@@ -1,14 +1,40 @@
 import { router, protectedProcedure } from "../_core/trpc";
 import { z } from "zod";
+import type { QuotationVersion } from "../../drizzle/schema";
 import * as db from "../db";
+
+interface SnapshotData {
+  changeSummary?: string | null;
+  diff?: Record<string, unknown> | null;
+  totalAmount?: string | null;
+  items?: SnapshotItem[];
+}
+
+interface SnapshotItem {
+  productModel: string;
+  productDesc?: string;
+  quantity?: number;
+  listPrice?: string;
+  discountRate?: string;
+  subtotal?: string;
+  [key: string]: unknown;
+}
+
+interface DiffResult {
+  productModel: string;
+  productDesc?: string;
+  change: "added" | "removed" | "modified" | "unchanged";
+  before: { quantity?: number; listPrice?: string; discountRate?: string; subtotal?: string } | null;
+  after: { quantity?: number; listPrice?: string; discountRate?: string; subtotal?: string } | null;
+}
 
 export const versionsRouter = router({
   list: protectedProcedure
     .input(z.object({ quotationId: z.number() }))
     .query(async ({ input }) => {
-      const versions = await db.getQuotationVersions(input.quotationId);
-      return versions.map((v: any) => {
-        let parsed = null;
+      const versions: QuotationVersion[] = await db.getQuotationVersions(input.quotationId);
+      return versions.map((v) => {
+        let parsed: SnapshotData | null = null;
         try { parsed = JSON.parse(v.snapshot); } catch {}
         return {
           id: v.id,
@@ -29,24 +55,24 @@ export const versionsRouter = router({
       toVersion: z.number(),
     }))
     .query(async ({ input }) => {
-      const versions = await db.getQuotationVersions(input.quotationId);
-      const fromV = versions.find((v: any) => v.version === input.fromVersion);
-      const toV = versions.find((v: any) => v.version === input.toVersion);
+      const versions: QuotationVersion[] = await db.getQuotationVersions(input.quotationId);
+      const fromV = versions.find((v) => v.version === input.fromVersion);
+      const toV = versions.find((v) => v.version === input.toVersion);
       if (!fromV || !toV) return null;
 
-      let fromData: any = null, toData: any = null;
+      let fromData: SnapshotData | null = null, toData: SnapshotData | null = null;
       try { fromData = JSON.parse(fromV.snapshot); } catch {}
       try { toData = JSON.parse(toV.snapshot); } catch {}
       if (!fromData || !toData) return null;
 
-      const fromItems = new Map<string, any>((fromData.items || []).map((it: any) => [it.productModel, it]));
-      const toItems = new Map<string, any>((toData.items || []).map((it: any) => [it.productModel, it]));
+      const fromItems = new Map<string, SnapshotItem>((fromData.items || []).map((it) => [it.productModel, it]));
+      const toItems = new Map<string, SnapshotItem>((toData.items || []).map((it) => [it.productModel, it]));
       const allModels = Array.from(new Set<string>([...Array.from(fromItems.keys()), ...Array.from(toItems.keys())]));
 
-      const result: any[] = [];
+      const result: DiffResult[] = [];
       for (const model of allModels) {
-        const fi: any = fromItems.get(model);
-        const ti: any = toItems.get(model);
+        const fi: SnapshotItem | undefined = fromItems.get(model);
+        const ti: SnapshotItem | undefined = toItems.get(model);
         let change: "added" | "removed" | "modified" | "unchanged" = "unchanged";
         if (!fi) change = "added";
         else if (!ti) change = "removed";

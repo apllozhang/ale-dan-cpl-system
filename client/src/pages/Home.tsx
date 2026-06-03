@@ -10,6 +10,18 @@ import gsap from "gsap";
 import { ExpiringCertsCard } from "@/components/certifications/ExpiringCertsCard";
 import { RecentEFlashCard } from "@/components/eflash/RecentEFlashCard";
 
+interface RecentQuotation {
+  id: number;
+  quotationNo: string;
+  customerName: string;
+  customerContact: string | null;
+  projectName: string | null;
+  status: string;
+  totalAmount: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const DATE_PRESETS = [
   { key: "thisMonth", label: "本月" },
   { key: "thisQuarter", label: "本季度" },
@@ -52,7 +64,7 @@ function useStaggerIn<T extends HTMLElement>(ready: boolean) {
 }
 
 function StatCard({ icon: Icon, label, value, color, loading }: {
-  icon: any; label: string; value: string; color: string; loading?: boolean;
+  icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: string; loading?: boolean;
 }) {
   return (
     <div className="group relative overflow-hidden bg-card border rounded-xl p-5 hover:shadow-md transition-all stagger-child flex items-center gap-4">
@@ -128,7 +140,7 @@ export default function Home() {
     endDate: endDate || undefined,
   });
 
-  const sheets: any[] = sheetsQuery.data ?? [];
+  const sheets: { sheetName: string; productCount: number }[] = sheetsQuery.data ?? [];
   const summary = summaryQuery.data;
   const totalProducts = sheets.reduce((sum, s) => sum + s.productCount, 0);
   const stats = dashboardQuery.data?.stats;
@@ -144,9 +156,9 @@ export default function Home() {
   const [sortKey, setSortKey] = useState<string>("updatedAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const sortedRecent = useMemo(() => {
-    const arr = [...recent];
-    const key = sortKey as keyof (typeof arr)[0];
-    arr.sort((a: any, b: any) => {
+    const arr = [...recent] as RecentQuotation[];
+    const key = sortKey as keyof RecentQuotation;
+    arr.sort((a, b) => {
       const va = a[key] ?? "";
       const vb = b[key] ?? "";
       let cmp = 0;
@@ -175,7 +187,7 @@ export default function Home() {
   }, []);
 
   // Status counts for merged card
-  const statusCounts = (stats as any)?.statusCounts ?? {};
+  const statusCounts = stats?.statusCounts as Record<string, number> ?? {};
 
   return (
     <div className="space-y-6" ref={containerRef}>
@@ -315,7 +327,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedRecent.map((q: any, idx: number) => (
+                  {sortedRecent.map((q: RecentQuotation, idx: number) => (
                     <tr
                       key={q.id}
                       onClick={() => setLocation(`/quotations/${q.id}`)}
@@ -326,8 +338,8 @@ export default function Home() {
                       <td className="px-4 py-2.5 text-sm text-muted-foreground truncate">{q.projectName || "—"}</td>
                       <td className="px-4 py-2.5 text-sm text-muted-foreground truncate">{q.customerContact || "—"}</td>
                       <td className="px-4 py-2.5">
-                        <Badge variant="outline" className={`text-xs ${QUOTATION_STATUS_COLORS[q.status] || ""}`}>
-                          {QUOTATION_STATUS_LABELS[q.status] || q.status}
+                        <Badge variant="outline" className={`text-xs ${QUOTATION_STATUS_COLORS[q.status as keyof typeof QUOTATION_STATUS_COLORS] || ""}`}>
+                          {QUOTATION_STATUS_LABELS[q.status as keyof typeof QUOTATION_STATUS_LABELS] || q.status}
                         </Badge>
                       </td>
                       <td className="px-4 py-2.5 text-sm font-medium tabular-nums text-foreground text-right">¥{Number(q.totalAmount || 0).toLocaleString()}</td>

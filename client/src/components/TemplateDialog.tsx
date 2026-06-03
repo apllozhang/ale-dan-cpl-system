@@ -12,11 +12,25 @@ import { useState, useEffect, useCallback } from "react";
 import { Loader2, FileText, Save, Trash2, Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
 
+interface TemplateItem {
+  id: number;
+  name: string;
+  description: string | null;
+  createdBy: number;
+  isPublic: boolean;
+  discountRate: string | null;
+  notes: string | null;
+  validDays: number | null;
+  items: string;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+}
+
 interface TemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onLoadTemplate: (template: any) => void;
-  currentItems: any[];
+  onLoadTemplate: (template: TemplateItem & { items: unknown }) => void;
+  currentItems: Record<string, unknown>[];
   discountRate: number;
   notes: string;
 }
@@ -87,7 +101,7 @@ export default function TemplateDialog({
     });
   }, [templateName, templateDescription, isPublic, currentItems, discountRate, notes, createMutation]);
 
-  const handleLoad = useCallback((template: any) => {
+  const handleLoad = useCallback((template: TemplateItem) => {
     try {
       const items = typeof template.items === "string"
         ? JSON.parse(template.items)
@@ -159,7 +173,7 @@ export default function TemplateDialog({
                   <p className="text-xs mt-1">保存当前报价单为模板，方便以后复用</p>
                 </div>
               ) : (
-                templates.map((template: any) => {
+                templates.map((template: TemplateItem) => {
                   let itemCount = 0;
                   try {
                     const items = typeof template.items === "string"

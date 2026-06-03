@@ -282,7 +282,7 @@ export function ProductDataImport() {
                     {t('import.duplicateWarning', { count: duplicates.length, fileName: file?.name ?? "" })}
                   </p>
                   <div className="bg-muted/50 rounded p-2 text-xs space-y-1 max-h-32 overflow-y-auto">
-                    {duplicates.map((d: any) => (
+                    {duplicates.map((d) => (
                       <div key={d.id} className="flex gap-2 items-center">
                         <span className="text-muted-foreground">{new Date(d.createdAt).toLocaleDateString()}</span>
                         <span>{d.sheetsCount} {t('import.sheetNames', { defaultValue: '表格' })}</span>

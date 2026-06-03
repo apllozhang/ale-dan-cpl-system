@@ -73,7 +73,7 @@ export default function CategoryStats() {
 
   const sheetData = useMemo(() => {
     if (!stats?.bySheet) return [];
-    return stats.bySheet.slice(0, 15).map((s: any) => ({
+    return stats.bySheet.slice(0, 15).map((s: { sheetName: string; count: number }) => ({
       name: s.sheetName.length > 20 ? s.sheetName.slice(0, 18) + "..." : s.sheetName,
       fullName: s.sheetName,
       count: Number(s.count),
@@ -82,7 +82,7 @@ export default function CategoryStats() {
 
   const statusData = useMemo(() => {
     if (!stats?.byStatus) return [];
-    return stats.byStatus.map((s: any) => ({
+    return stats.byStatus.map((s: { status: string | null; count: number }) => ({
       name: s.status || t('stats.unknown'),
       count: Number(s.count),
     }));
@@ -90,7 +90,7 @@ export default function CategoryStats() {
 
   const salesCatData = useMemo(() => {
     if (!stats?.bySalesCategory) return [];
-    return stats.bySalesCategory.map((s: any) => ({
+    return stats.bySalesCategory.map((s: { category: string | null; count: number }) => ({
       name: s.category || t('stats.unknown'),
       count: Number(s.count),
     }));
@@ -203,9 +203,9 @@ export default function CategoryStats() {
                       {name} {(percent * 100).toFixed(0)}%
                     </text>
                   )}
-                  labelLine={(props: any) => {
+                  labelLine={(props: { points: Array<{ x: number; y: number }>; index: number }) => {
                     const { points, index } = props;
-                    return <polyline points={points.map((p: any) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={1.5} />;
+                    return <polyline points={points.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={1.5} />;
                   }}
                 >
                   {statusData.map((_, i) => (
@@ -254,12 +254,12 @@ export default function CategoryStats() {
                 </tr>
               </thead>
               <tbody>
-                {sortData((stats?.bySheet ?? []).map((s: any) => ({
+                {sortData((stats?.bySheet ?? []).map((s: { sheetName: string; count: number }) => ({
                   ...s,
                   sheetName: s.sheetName,
                   count: Number(s.count),
                   proportion: ((Number(s.count) / (stats?.total || 1)) * 100).toFixed(1),
-                }))).map((s: any, i: number) => (
+                }))).map((s: { sheetName: string; count: number; proportion: string }, i: number) => (
                   <tr key={i} className="border-b border-border/50 hover:bg-accent/20">
                     {renderCell(tableColumns[0], false, <span className="text-sm">{s.sheetName}</span>)}
                     {renderCell(tableColumns[1], false,

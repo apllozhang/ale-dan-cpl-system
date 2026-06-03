@@ -1,6 +1,11 @@
 import * as db from "../db";
 
-export function logActivity(ctx: any, params: {
+interface AuthedContext {
+  user: NonNullable<import("../_core/context").TrpcContext["user"]>;
+  req: import("../_core/context").TrpcContext["req"];
+}
+
+export function logActivity(ctx: AuthedContext, params: {
   action: string;
   resourceType?: string | null;
   resourceId?: number | null;
