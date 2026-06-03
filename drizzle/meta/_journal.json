@@ -127,6 +127,13 @@
       "when": 1780448203768,
       "tag": "0017_safe_phil_sheldon",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1780497317308,
+      "tag": "0018_giant_retro_girl",
+      "breakpoints": true
     }
   ]
 }
