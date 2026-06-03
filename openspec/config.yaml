@@ -1,0 +1,35 @@
+schema: spec-driven
+profile: custom
+
+context: |
+  Project: ALE DAN CPL System — enterprise quotation management platform for DAN product pricing.
+  Tech stack: TypeScript (strict, no `any`), React 18, Vite, Express, tRPC, Drizzle ORM, MySQL 8, Tailwind CSS, GSAP.
+  Monorepo: client/src/ (React frontend), server/ (Express + tRPC backend), shared/ (shared types/constants), drizzle/ (DB schema + migrations).
+  Path aliases: @/* → client/src/*, @shared/* → shared/*
+  i18n: react-i18next with 6 locales (zh, zh-TW, en, ja, es, fr). All UI text through useTranslation().
+  Frontend data fetching: strictly via tRPC React Query hooks (@/lib/trpc). No raw fetch/axios.
+  Backend: tRPC procedures at /api/trpc, cookie-based JWT auth (app_session_id).
+  DB: MySQL 8 via Drizzle ORM. db.execute(rawSQL) returns [rows, fields] tuple — always extract rows.
+  Animations: GSAP primary. Framer Motion available but GSAP preferred.
+  Testing: Vitest. Run with `pnpm test`. Type check with `pnpm check`.
+  Commands: pnpm dev (dev server), pnpm build (production), pnpm start, pnpm check, pnpm test, pnpm db:push.
+  Security: ownership checks on mutations, bcrypt DoS prevention (128-char cap), superAdmin passwords immutable via API.
+
+rules:
+  proposal:
+    - Always include "Non-goals" section
+    - Include rollback / mitigation strategy for risky changes
+    - Reference specific files and functions affected
+    - Keep proposals under 800 words
+  design:
+    - Include before/after architecture diagrams when changing structure
+    - List all affected route handlers, DB queries, and React components
+    - Specify migration strategy if schema changes
+  spec:
+    - Include acceptance criteria as testable assertions
+    - Reference existing test files that need updating
+    - Note security implications
+  tasks:
+    - Break tasks into chunks of max 2 hours
+    - Each task must have a verification step (test command or manual check)
+    - Order tasks by dependency (shared types → DB schema → backend → frontend)
