@@ -35,7 +35,7 @@ export const versionsRouter = router({
       const versions: QuotationVersion[] = await db.getQuotationVersions(input.quotationId);
       return versions.map((v) => {
         let parsed: SnapshotData | null = null;
-        try { parsed = JSON.parse(v.snapshot); } catch {}
+        try { parsed = JSON.parse(v.snapshot); } catch (e) { console.warn("[versions] snapshot parse failed for version", v.version, e instanceof Error ? e.message : e); }
         return {
           id: v.id,
           version: v.version,
@@ -61,8 +61,8 @@ export const versionsRouter = router({
       if (!fromV || !toV) return null;
 
       let fromData: SnapshotData | null = null, toData: SnapshotData | null = null;
-      try { fromData = JSON.parse(fromV.snapshot); } catch {}
-      try { toData = JSON.parse(toV.snapshot); } catch {}
+      try { fromData = JSON.parse(fromV.snapshot); } catch (e) { console.warn("[versions] snapshot parse failed for version", fromV.version, e instanceof Error ? e.message : e); }
+      try { toData = JSON.parse(toV.snapshot); } catch (e) { console.warn("[versions] snapshot parse failed for version", toV.version, e instanceof Error ? e.message : e); }
       if (!fromData || !toData) return null;
 
       const fromItems = new Map<string, SnapshotItem>((fromData.items || []).map((it) => [it.productModel, it]));

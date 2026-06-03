@@ -21,7 +21,7 @@ export async function getActivityLogs(params: {
   pageSize: number;
 }) {
   const db = await getDb();
-  if (!db) return { items: [] as any[], total: 0 };
+  if (!db) return { items: [] as typeof activityLogs.$inferSelect[], total: 0 };
   const { search, action, resourceType, userId, startDate, endDate, page, pageSize } = params;
 
   const conditions: SQL[] = [];

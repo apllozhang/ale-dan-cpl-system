@@ -104,6 +104,30 @@ function createPublicContext(): { ctx: TrpcContext; setCookies: CookieCall[] } {
   return { ctx, setCookies };
 }
 
+function createAuthedContext(): { ctx: TrpcContext; setCookies: CookieCall[] } {
+  const setCookies: CookieCall[] = [];
+  const ctx: TrpcContext = {
+    user: {
+      id: 1,
+      username: "aletss",
+      name: "ALE TSS",
+      role: "user",
+      isSuperAdmin: false,
+    } as TrpcContext["user"],
+    req: {
+      protocol: "https",
+      headers: {},
+    } as TrpcContext["req"],
+    res: {
+      cookie: (name: string, value: string, options: Record<string, unknown>) => {
+        setCookies.push({ name, value, options });
+      },
+      clearCookie: vi.fn(),
+    } as unknown as TrpcContext["res"],
+  };
+  return { ctx, setCookies };
+}
+
 describe("auth.login", () => {
   it("succeeds with correct credentials", async () => {
     const { ctx, setCookies } = createPublicContext();
@@ -141,7 +165,7 @@ describe("auth.login", () => {
 
 describe("cpl.sheets", () => {
   it("returns all sheets", async () => {
-    const { ctx } = createPublicContext();
+    const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
     const sheets = await caller.cpl.sheets();
@@ -153,7 +177,7 @@ describe("cpl.sheets", () => {
 
 describe("cpl.products", () => {
   it("returns products with pagination info", async () => {
-    const { ctx } = createPublicContext();
+    const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
     const result = await caller.cpl.products({
@@ -170,7 +194,7 @@ describe("cpl.products", () => {
 
 describe("cpl.summary", () => {
   it("returns latest summary", async () => {
-    const { ctx } = createPublicContext();
+    const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
     const summary = await caller.cpl.summary();

@@ -1,4 +1,4 @@
-import { router, publicProcedure, superAdminProcedure } from "../_core/trpc";
+import { router, protectedProcedure, superAdminProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { Organization, UserGroup, InsertCplProduct, InsertCplSheet } from "../../drizzle/schema";
@@ -111,12 +111,12 @@ function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]) {
 
 export const cplRouter = router({
   // Get all sheets
-  sheets: publicProcedure.query(async () => {
+  sheets: protectedProcedure.query(async () => {
     return db.getCplSheets({ pageSize: 9999 });
   }),
 
   // Get products with filtering, pagination, sorting
-  products: publicProcedure
+  products: protectedProcedure
     .input(z.object({
       sheetName: z.string().optional(),
       sheetNames: z.array(z.string()).optional(),
@@ -136,7 +136,7 @@ export const cplRouter = router({
     }),
 
   // Get products by IDs (for quotation pre-fill)
-  productsByIds: publicProcedure
+  productsByIds: protectedProcedure
     .input(z.object({
       ids: z.array(z.number()).min(1).max(200),
     }))
@@ -145,7 +145,7 @@ export const cplRouter = router({
     }),
 
   // Export all filtered products (no pagination limit)
-  exportProducts: publicProcedure
+  exportProducts: protectedProcedure
     .input(z.object({
       sheetName: z.string().optional(),
       sheetNames: z.array(z.string()).optional(),
@@ -163,22 +163,22 @@ export const cplRouter = router({
     }),
 
   // Get latest summary
-  summary: publicProcedure.query(async () => {
+  summary: protectedProcedure.query(async () => {
     return db.getLatestSummary();
   }),
 
   // Get active import log info
-  activeImport: publicProcedure.query(async () => {
+  activeImport: protectedProcedure.query(async () => {
     return db.getActiveImportLog();
   }),
 
   // Check if existing data exists
-  hasData: publicProcedure.query(async () => {
+  hasData: protectedProcedure.query(async () => {
     const count = await db.countCplProducts();
     return { hasData: count > 0, count };
   }),
 
-  stats: publicProcedure.query(async () => {
+  stats: protectedProcedure.query(async () => {
     return db.getCplStats();
   }),
 

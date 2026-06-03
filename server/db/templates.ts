@@ -12,7 +12,8 @@ export async function getQuotationTemplates(userId: number) {
       eq(quotationTemplates.createdBy, userId),
       eq(quotationTemplates.isPublic, true),
     ))
-    .orderBy(desc(quotationTemplates.updatedAt));
+    .orderBy(desc(quotationTemplates.updatedAt))
+    .limit(100);
 }
 
 export async function getQuotationTemplateById(id: number) {

@@ -5,7 +5,7 @@ import { getDb } from "./index";
 export async function getAllOrganizations() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(organizations);
+  return db.select().from(organizations).limit(500);
 }
 
 export async function createOrganization(data: { name: string }) {

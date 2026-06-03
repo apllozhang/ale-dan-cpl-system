@@ -14,7 +14,8 @@ export async function getAllUserGroups() {
     organizationName: organizations.name,
   })
     .from(userGroups)
-    .leftJoin(organizations, eq(userGroups.organizationId, organizations.id));
+    .leftJoin(organizations, eq(userGroups.organizationId, organizations.id))
+    .limit(500);
 }
 
 export async function createUserGroup(data: { name: string; organizationId: number }) {

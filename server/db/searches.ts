@@ -9,7 +9,8 @@ export async function getSavedSearches(userId: number, page: string) {
   if (!db) return [];
   return db.select().from(savedSearches)
     .where(and(eq(savedSearches.userId, userId), eq(savedSearches.page, page)))
-    .orderBy(desc(savedSearches.createdAt));
+    .orderBy(desc(savedSearches.createdAt))
+    .limit(100);
 }
 
 export async function createSavedSearch(data: InsertSavedSearch) {

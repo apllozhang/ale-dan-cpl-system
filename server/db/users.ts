@@ -55,7 +55,7 @@ export async function createUser(data: {
     name: data.name || data.username,
     email: data.email,
     loginMethod: "local",
-    role: (data.role as any) || "user",
+    role: (data.role as typeof users.$inferSelect.role) || "user",
     isSuperAdmin: data.isSuperAdmin || false,
     organizationId: data.organizationId,
     groupId: data.groupId,

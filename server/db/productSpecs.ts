@@ -50,8 +50,7 @@ export async function createProductSpecSet(data: InsertProductSpecSet) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(productSpecSets).values(data);
-  const insertId = (result as any)[0]?.insertId ?? (result as any).insertId;
-  return insertId;
+  return Number(result[0].insertId);
 }
 
 export async function bulkInsertProductSpecs(items: InsertProductSpec[]) {
@@ -80,8 +79,7 @@ export async function addProductSpecEntry(data: InsertProductSpec) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(productSpecs).values(data);
-  const insertId = (result as any)[0]?.insertId ?? (result as any).insertId;
-  return insertId;
+  return Number(result[0].insertId);
 }
 
 export async function deleteProductSpecEntry(id: number) {
@@ -174,7 +172,7 @@ export async function matchQuotationWithAllSpecs(quotationId: number): Promise<S
   const quotation = await getQuotationById(quotationId);
   if (!quotation) return { matched: [], unmatched: [], quotation: null };
 
-  const allSpecEntries = await db.select().from(productSpecs);
+  const allSpecEntries = await db.select().from(productSpecs).limit(500);
   const lookup = buildLookup(allSpecEntries);
 
   const matched: MatchedSpecItem[] = [];

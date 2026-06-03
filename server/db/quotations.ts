@@ -8,7 +8,7 @@ import { getDb } from "./index";
 
 export async function getQuotations(params: {
   search?: string;
-  status?: string;
+  status?: QuotationStatus | "all";
   page?: number;
   pageSize?: number;
   sortBy?: string;
@@ -26,7 +26,7 @@ export async function getQuotations(params: {
   }
 
   if (status && status !== "all") {
-    conditions.push(eq(quotations.status, status as any));
+    conditions.push(eq(quotations.status, status));
   }
 
   if (search && search.trim()) {
@@ -132,32 +132,43 @@ export async function createQuotation(data: InsertQuotation, items: InsertQuotat
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Generate quotationNo: QT-YYYYMMDD-NNN
+  // Generate quotationNo atomically: QT-YYYYMMDD-NNN
+  // Uses a transaction with SELECT FOR UPDATE to prevent concurrent duplicates
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `QT-${dateStr}-`;
-  const countResult = await db.select({ count: sql<number>`count(*)` })
-    .from(quotations)
-    .where(like(quotations.quotationNo, prefix + "%"));
-  const seq = Number(countResult[0]?.count ?? 0) + 1;
-  const quotationNo = `${prefix}${String(seq).padStart(3, "0")}`;
 
-  const result = await db.insert(quotations).values({
-    ...data,
-    quotationNo,
-  });
-  const quotationId = Number(result[0].insertId);
+  return await db.transaction(async (tx) => {
+    // Lock the matching rows to prevent concurrent sequence generation
+    const seqResult = await tx.execute(sql`
+      SELECT CAST(SUBSTRING_INDEX(quotationNo, '-', -1) AS UNSIGNED) AS seq
+      FROM quotations
+      WHERE quotationNo LIKE ${prefix + "%"}
+      ORDER BY seq DESC
+      LIMIT 1
+      FOR UPDATE
+    `);
+    const rows = Array.isArray(seqResult[0]) ? seqResult[0] as Array<{ seq: number }> : [];
+    const nextSeq = (rows[0]?.seq ?? 0) + 1;
+    const quotationNo = `${prefix}${String(nextSeq).padStart(3, "0")}`;
 
-  if (items.length > 0) {
-    const itemsWithQId = items.map(item => ({ ...item, quotationId }));
-    const batchSize = 100;
-    for (let i = 0; i < itemsWithQId.length; i += batchSize) {
-      const batch = itemsWithQId.slice(i, i + batchSize);
-      await db.insert(quotationItems).values(batch);
+    const result = await tx.insert(quotations).values({
+      ...data,
+      quotationNo,
+    });
+    const quotationId = Number(result[0].insertId);
+
+    if (items.length > 0) {
+      const itemsWithQId = items.map(item => ({ ...item, quotationId }));
+      const batchSize = 100;
+      for (let i = 0; i < itemsWithQId.length; i += batchSize) {
+        const batch = itemsWithQId.slice(i, i + batchSize);
+        await tx.insert(quotationItems).values(batch);
+      }
     }
-  }
 
-  return { id: quotationId, quotationNo };
+    return { id: quotationId, quotationNo };
+  });
 }
 
 export async function updateQuotation(id: number, data: Partial<InsertQuotation>, items?: InsertQuotationItem[], userId?: number) {
@@ -276,16 +287,18 @@ export async function deleteQuotation(id: number) {
   await db.delete(quotations).where(eq(quotations.id, id));
 }
 
-export async function updateQuotationStatus(id: number, status: string) {
+type QuotationStatus = typeof quotations.$inferSelect.status;
+
+export async function updateQuotationStatus(id: number, status: QuotationStatus) {
   const db = await getDb();
   if (!db) return;
-  await db.update(quotations).set({ status: status as any }).where(eq(quotations.id, id));
+  await db.update(quotations).set({ status }).where(eq(quotations.id, id));
 }
 
-export async function batchUpdateQuotationStatus(ids: number[], status: string) {
+export async function batchUpdateQuotationStatus(ids: number[], status: QuotationStatus) {
   const db = await getDb();
   if (!db || ids.length === 0) return;
-  await db.update(quotations).set({ status: status as any })
+  await db.update(quotations).set({ status })
     .where(inArray(quotations.id, ids));
 }
 
@@ -321,6 +334,7 @@ export async function getMyDashboardStats(userId: number, startDate?: Date, endD
   const row = Array.isArray(result[0]) ? result[0][0] : result[0];
   const statusCounts: Record<string, number> = {};
   const statusRows = Array.isArray(statusResult[0]) ? statusResult[0] : statusResult;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const sr of statusRows as any[]) {
     if (sr.status) statusCounts[sr.status] = Number(sr.count);
   }
@@ -490,11 +504,17 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       avgAmount: Number(summary.avgAmount ?? 0),
       conversionRate: Number(summary.conversionRate ?? 0),
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     byIndustry: industryRows as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     byCustomer: customerRows as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     bySalesRep: salesRepRows as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     byTime: timeRows as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     byStatus: statusRows as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     topProducts: productRows as any[],
   };
 }

@@ -15,5 +15,6 @@ export async function getQuotationVersions(quotationId: number) {
   if (!db) return [];
   return db.select().from(quotationVersions)
     .where(eq(quotationVersions.quotationId, quotationId))
-    .orderBy(desc(quotationVersions.version));
+    .orderBy(desc(quotationVersions.version))
+    .limit(50);
 }
