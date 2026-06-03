@@ -7,6 +7,7 @@ import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
+import { registerUploadRoutes } from "./upload";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { getDb } from "../db";
@@ -77,6 +78,7 @@ async function startServer() {
 
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  registerUploadRoutes(app);
 
   // Auth middleware for protected static files
   const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {

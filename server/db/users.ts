@@ -117,23 +117,9 @@ export async function getAllUsers(): Promise<PublicUser[]> {
   }).from(users).orderBy(sql`${users.createdAt} DESC`);
 }
 
-export async function getUserById(id: number): Promise<PublicUser | null> {
+export async function getUserById(id: number): Promise<User | null> {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.select({
-    id: users.id,
-    openId: users.openId,
-    username: users.username,
-    name: users.name,
-    email: users.email,
-    loginMethod: users.loginMethod,
-    role: users.role,
-    isSuperAdmin: users.isSuperAdmin,
-    organizationId: users.organizationId,
-    groupId: users.groupId,
-    createdAt: users.createdAt,
-    updatedAt: users.updatedAt,
-    lastSignedIn: users.lastSignedIn,
-  }).from(users).where(eq(users.id, id)).limit(1);
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return result[0] ?? null;
 }

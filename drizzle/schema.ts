@@ -369,6 +369,21 @@ export const eflashAttachments = mysqlTable("eflash_attachments", {
 export type EFlashAttachment = typeof eflashAttachments.$inferSelect;
 export type InsertEFlashAttachment = typeof eflashAttachments.$inferInsert;
 
+// Sessions table — server-side session management for token revocation
+export const sessions = mysqlTable("sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  revokedAt: timestamp("revokedAt"),
+}, (table) => [
+  index("sessions_userId_idx").on(table.userId),
+  index("sessions_expiresAt_idx").on(table.expiresAt),
+]);
+
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = typeof sessions.$inferInsert;
+
 // System locks table — replaces process-level import locks for multi-instance support
 export const systemLocks = mysqlTable("system_locks", {
   id: int("id").autoincrement().primaryKey(),

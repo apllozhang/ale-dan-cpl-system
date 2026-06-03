@@ -39,8 +39,10 @@ class OAuthService {
   }
 
   private decodeState(state: string): string {
-    const redirectUri = atob(state);
-    return redirectUri;
+    // New format: base64(nonce:redirectUri)
+    const decoded = Buffer.from(state, "base64").toString("utf-8");
+    const parts = decoded.split(":", 2);
+    return parts.length === 2 ? parts[1] : decoded;
   }
 
   async getTokenByCode(

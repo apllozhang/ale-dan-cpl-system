@@ -128,28 +128,42 @@ export function ProductDataImport() {
     setImportPhase(t('import.phaseParsing'));
     animateProgress(0, 25, 1500);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      // Phase 2: uploading data
+    try {
+      // Phase 2: upload file to server
       setImportPhase(t('import.phaseUploading'));
       animateProgress(25, 55, 2000);
 
-      const base64 = (reader.result as string).split(",")[1];
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadResponse = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.json();
+        throw new Error(error.error || "Upload failed");
+      }
+
+      const uploadResult = await uploadResponse.json();
+
+      // Phase 3: trigger import via tRPC
+      setImportPhase(t('import.phaseProcessing'));
+      animateProgress(55, 90, 8000);
+
       importMutation.mutate({
-        fileBase64: base64,
+        filePath: uploadResult.filePath,
         fileName: file.name,
         selectedSheets: Array.from(selectedSheets),
       });
-
-      // Phase 3: processing (after upload completes)
-      setTimeout(() => {
-        if (importMutation.isPending) {
-          setImportPhase(t('import.phaseProcessing'));
-          animateProgress(55, 90, 8000);
-        }
-      }, 2500);
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      cancelAnimationFrame(rafRef.current);
+      setImportPhase(null);
+      setProgress(0);
+      toast.error(error instanceof Error ? error.message : t('import.importFailed'));
+    }
   };
 
   const isImporting = importMutation.isPending || (importPhase !== null && progress < 100 && progress > 0);

@@ -219,7 +219,8 @@ export const cplRouter = router({
   // Import Excel file — always overwrite (old data preserved for switching)
   import: superAdminProcedure
     .input(z.object({
-      fileBase64: z.string().max(50_000_000),
+      fileBase64: z.string().max(50_000_000).optional(),
+      filePath: z.string().optional(),
       fileName: z.string(),
       selectedSheets: z.array(z.string()).optional(),
     }))
@@ -231,10 +232,27 @@ export const cplRouter = router({
       }
       try {
         let buffer: Buffer;
-        try {
-          buffer = Buffer.from(input.fileBase64, "base64");
-        } catch (error) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid file data: failed to decode base64", cause: error });
+
+        // Support both base64 and file path
+        if (input.filePath) {
+          // Read from file path (uploaded via /api/upload)
+          const fs = await import("fs/promises");
+          try {
+            buffer = await fs.readFile(input.filePath);
+            // Clean up temp file after reading
+            await fs.unlink(input.filePath).catch(() => {});
+          } catch (error) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to read uploaded file", cause: error });
+          }
+        } else if (input.fileBase64) {
+          // Legacy base64 support
+          try {
+            buffer = Buffer.from(input.fileBase64, "base64");
+          } catch (error) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid file data: failed to decode base64", cause: error });
+          }
+        } else {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Either fileBase64 or filePath is required" });
         }
 
         let parseResult: ReturnType<typeof parseExcelBuffer>;

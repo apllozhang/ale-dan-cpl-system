@@ -1,35 +1,19 @@
 import { router, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
 import * as db from "../db";
 import { compare } from "bcryptjs";
 import { logActivity } from "./helpers";
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
+import { createSession, revokeSession, SESSION_DURATION_MS } from "../db/sessions";
+import { parse as parseCookieHeader } from "cookie";
 
 // Simple in-memory login rate limiter
 const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-
-function getSessionSecret() {
-  return new TextEncoder().encode(ENV.cookieSecret);
-}
-
-async function createLocalSession(openId: string, name: string): Promise<string> {
-  const issuedAt = Date.now();
-  const expirationSeconds = Math.floor((issuedAt + ONE_YEAR_MS) / 1000);
-  return new SignJWT({
-    openId,
-    appId: ENV.appId,
-    name,
-  })
-    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-    .setExpirationTime(expirationSeconds)
-    .sign(getSessionSecret());
-}
 
 export const authRouter = router({
   me: publicProcedure.query(({ ctx }) => {
@@ -41,6 +25,17 @@ export const authRouter = router({
     if (ctx.user) {
       await logActivity({ user: ctx.user, req: ctx.req }, { action: "logout", resourceType: "auth" });
     }
+
+    // Revoke server-side session
+    const cookieHeader = ctx.req.headers.cookie;
+    if (cookieHeader) {
+      const cookies = parseCookieHeader(cookieHeader);
+      const sessionId = cookies[COOKIE_NAME];
+      if (sessionId) {
+        await revokeSession(sessionId).catch(console.error);
+      }
+    }
+
     const cookieOptions = getSessionCookieOptions(ctx.req);
     ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
     return { success: true } as const;
@@ -112,12 +107,12 @@ export const authRouter = router({
         action: "login", resourceType: "auth", detail: { method: "local" },
       });
 
-      // Create session token
-      const token = await createLocalSession(user.openId, user.name || user.username || "User");
+      // Create server-side session
+      const sessionId = await createSession(user.id, SESSION_DURATION_MS);
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, token, {
+      ctx.res.cookie(COOKIE_NAME, sessionId, {
         ...cookieOptions,
-        maxAge: ONE_YEAR_MS,
+        maxAge: SESSION_DURATION_MS,
       });
 
       return { success: true, name: user.name || user.username };

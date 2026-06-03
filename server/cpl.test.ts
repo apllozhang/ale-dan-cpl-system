@@ -80,6 +80,16 @@ vi.mock("./db", () => ({
   createActivityLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Mock sessions module
+vi.mock("./db/sessions", () => ({
+  createSession: vi.fn().mockResolvedValue("mock-session-id"),
+  validateSession: vi.fn().mockResolvedValue(null),
+  revokeSession: vi.fn().mockResolvedValue(undefined),
+  revokeAllUserSessions: vi.fn().mockResolvedValue(undefined),
+  cleanupSessions: vi.fn().mockResolvedValue(undefined),
+  SESSION_DURATION_MS: 24 * 60 * 60 * 1000,
+}));
+
 type CookieCall = {
   name: string;
   value: string;
