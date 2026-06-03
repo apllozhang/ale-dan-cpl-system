@@ -115,7 +115,11 @@ export const quotations = mysqlTable("quotations", {
   validUntil: timestamp("validUntil"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("quotations_createdBy_idx").on(table.createdBy),
+  index("quotations_status_idx").on(table.status),
+  index("quotations_createdAt_idx").on(table.createdAt),
+]);
 
 export type Quotation = typeof quotations.$inferSelect;
 export type InsertQuotation = typeof quotations.$inferInsert;
@@ -172,7 +176,9 @@ export const activityLogs = mysqlTable("activity_logs", {
   detail: text("detail"),
   ipAddress: varchar("ipAddress", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("activity_logs_userId_idx").on(table.userId),
+]);
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = typeof activityLogs.$inferInsert;
@@ -246,7 +252,9 @@ export const productSpecs = mysqlTable("product_specs", {
   specs: json("specs").notNull().$type<Record<string, string>>(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("product_specs_setId_idx").on(table.setId),
+]);
 
 export type ProductSpec = typeof productSpecs.$inferSelect;
 export type InsertProductSpec = typeof productSpecs.$inferInsert;
@@ -279,6 +287,7 @@ export const certifications = mysqlTable("certifications", {
   index("certifications_productCategory_idx").on(table.productCategory),
   index("certifications_expiryDate_idx").on(table.expiryDate),
   index("certifications_status_idx").on(table.status),
+  index("certifications_createdBy_idx").on(table.createdBy),
 ]);
 
 export type Certification = typeof certifications.$inferSelect;
@@ -320,6 +329,7 @@ export const eflashRecords = mysqlTable("eflash_records", {
   index("eflash_records_division_idx").on(table.division),
   index("eflash_records_scope_idx").on(table.scope),
   index("eflash_records_effectiveDate_idx").on(table.effectiveDate),
+  index("eflash_records_createdBy_idx").on(table.createdBy),
 ]);
 
 export type EFlashRecord = typeof eflashRecords.$inferSelect;

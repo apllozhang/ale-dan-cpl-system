@@ -202,6 +202,16 @@ export async function getQuotationById(id: number): Promise<QuotationDetail | nu
   return { ...quotation, items };
 }
 
+export async function getQuotationsByIds(ids: number[]): Promise<Pick<Quotation, "id" | "createdBy" | "status">[]> {
+  const db = await getDb();
+  if (!db || ids.length === 0) return [];
+  return db.select({
+    id: quotations.id,
+    createdBy: quotations.createdBy,
+    status: quotations.status,
+  }).from(quotations).where(inArray(quotations.id, ids));
+}
+
 export async function createQuotation(data: InsertQuotation, items: InsertQuotationItem[]): Promise<{ id: number; quotationNo: string }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
