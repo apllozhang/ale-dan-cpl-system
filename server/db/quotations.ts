@@ -3,8 +3,82 @@ import {
   quotations, quotationItems, InsertQuotation, InsertQuotationItem,
   quotationVersions,
   users,
+  Quotation, QuotationItem,
 } from "../../drizzle/schema";
 import { getDb } from "./index";
+
+type QuotationStatus = typeof quotations.$inferSelect.status;
+
+type QuotationListItem = Pick<Quotation, "id" | "quotationNo" | "customerName" | "customerContact" | "customerPhone" | "customerEmail" | "industry" | "projectName" | "status" | "discountRate" | "totalAmount" | "notes" | "createdBy" | "validUntil" | "createdAt" | "updatedAt"> & {
+  creatorName: string | null;
+  creatorUsername: string | null;
+};
+
+type QuotationDetail = QuotationListItem & {
+  version: number;
+  shareToken: string | null;
+  items: QuotationItem[];
+};
+
+type RecentQuotation = Pick<Quotation, "id" | "quotationNo" | "customerName" | "customerContact" | "projectName" | "status" | "totalAmount" | "createdAt" | "updatedAt">;
+
+interface AnalyticsSummary {
+  totalQuotations: number;
+  completedRevenue: number;
+  avgAmount: number;
+  conversionRate: number;
+}
+
+interface IndustryRow {
+  industry: string;
+  count: number | string;
+  totalAmount: number | string;
+}
+
+interface CustomerRow {
+  customerName: string;
+  industry: string;
+  count: number | string;
+  totalAmount: number | string;
+}
+
+interface SalesRepRow {
+  repName: string;
+  count: number | string;
+  totalAmount: number | string;
+  completedCount: number | string;
+  submittedCount: number | string;
+}
+
+interface TimeRow {
+  month: string;
+  count: number | string;
+  totalAmount: number | string;
+}
+
+interface StatusRow {
+  status: string;
+  count: number | string;
+  totalAmount: number | string;
+}
+
+interface TopProductRow {
+  productModel: string;
+  productDesc: string | null;
+  quotationCount: number | string;
+  totalQuantity: number | string;
+  totalRevenue: number | string;
+}
+
+interface QuotationAnalytics {
+  summary: AnalyticsSummary;
+  byIndustry: IndustryRow[];
+  byCustomer: CustomerRow[];
+  bySalesRep: SalesRepRow[];
+  byTime: TimeRow[];
+  byStatus: StatusRow[];
+  topProducts: TopProductRow[];
+}
 
 export async function getQuotations(params: {
   search?: string;
@@ -14,7 +88,7 @@ export async function getQuotations(params: {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   createdBy?: number;
-}) {
+}): Promise<{ items: QuotationListItem[]; total: number }> {
   const db = await getDb();
   if (!db) return { items: [], total: 0 };
 
@@ -90,7 +164,7 @@ export async function getQuotations(params: {
   };
 }
 
-export async function getQuotationById(id: number) {
+export async function getQuotationById(id: number): Promise<QuotationDetail | null> {
   const db = await getDb();
   if (!db) return null;
 
@@ -128,7 +202,7 @@ export async function getQuotationById(id: number) {
   return { ...quotation, items };
 }
 
-export async function createQuotation(data: InsertQuotation, items: InsertQuotationItem[]) {
+export async function createQuotation(data: InsertQuotation, items: InsertQuotationItem[]): Promise<{ id: number; quotationNo: string }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -171,7 +245,7 @@ export async function createQuotation(data: InsertQuotation, items: InsertQuotat
   });
 }
 
-export async function updateQuotation(id: number, data: Partial<InsertQuotation>, items?: InsertQuotationItem[], userId?: number) {
+export async function updateQuotation(id: number, data: Partial<InsertQuotation>, items?: InsertQuotationItem[], userId?: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
 
@@ -279,7 +353,7 @@ export async function updateQuotation(id: number, data: Partial<InsertQuotation>
   }
 }
 
-export async function deleteQuotation(id: number) {
+export async function deleteQuotation(id: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.delete(quotationItems).where(eq(quotationItems.quotationId, id));
@@ -287,22 +361,20 @@ export async function deleteQuotation(id: number) {
   await db.delete(quotations).where(eq(quotations.id, id));
 }
 
-type QuotationStatus = typeof quotations.$inferSelect.status;
-
-export async function updateQuotationStatus(id: number, status: QuotationStatus) {
+export async function updateQuotationStatus(id: number, status: QuotationStatus): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(quotations).set({ status }).where(eq(quotations.id, id));
 }
 
-export async function batchUpdateQuotationStatus(ids: number[], status: QuotationStatus) {
+export async function batchUpdateQuotationStatus(ids: number[], status: QuotationStatus): Promise<void> {
   const db = await getDb();
   if (!db || ids.length === 0) return;
   await db.update(quotations).set({ status })
     .where(inArray(quotations.id, ids));
 }
 
-export async function batchDeleteQuotations(ids: number[]) {
+export async function batchDeleteQuotations(ids: number[]): Promise<void> {
   const db = await getDb();
   if (!db || ids.length === 0) return;
   await db.delete(quotationItems).where(inArray(quotationItems.quotationId, ids));
@@ -311,7 +383,7 @@ export async function batchDeleteQuotations(ids: number[]) {
 }
 
 // ==================== Dashboard helpers ====================
-export async function getMyDashboardStats(userId: number, startDate?: Date, endDate?: Date) {
+export async function getMyDashboardStats(userId: number, startDate?: Date, endDate?: Date): Promise<{ totalQuotations: number; completedRevenue: number; statusCounts: Record<string, number> }> {
   const db = await getDb();
   if (!db) return { totalQuotations: 0, completedRevenue: 0, statusCounts: {} as Record<string, number> };
 
@@ -346,7 +418,7 @@ export async function getMyDashboardStats(userId: number, startDate?: Date, endD
   };
 }
 
-export async function getMyRecentQuotations(userId: number, limit = 5) {
+export async function getMyRecentQuotations(userId: number, limit = 5): Promise<RecentQuotation[]> {
   const db = await getDb();
   if (!db) return [];
   return db.select({
@@ -365,7 +437,7 @@ export async function getMyRecentQuotations(userId: number, limit = 5) {
     .limit(limit);
 }
 
-export async function getQuotationAnalytics(params: { startDate?: Date; endDate?: Date; userId?: number }) {
+export async function getQuotationAnalytics(params: { startDate?: Date; endDate?: Date; userId?: number }): Promise<QuotationAnalytics> {
   const db = await getDb();
   const empty = { summary: { totalQuotations: 0, completedRevenue: 0, avgAmount: 0, conversionRate: 0 }, byIndustry: [], byCustomer: [], bySalesRep: [], byTime: [], byStatus: [], topProducts: [] };
   if (!db) return empty;
@@ -504,17 +576,11 @@ export async function getQuotationAnalytics(params: { startDate?: Date; endDate?
       avgAmount: Number(summary.avgAmount ?? 0),
       conversionRate: Number(summary.conversionRate ?? 0),
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    byIndustry: industryRows as any[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    byCustomer: customerRows as any[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    bySalesRep: salesRepRows as any[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    byTime: timeRows as any[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    byStatus: statusRows as any[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    topProducts: productRows as any[],
+    byIndustry: industryRows as IndustryRow[],
+    byCustomer: customerRows as CustomerRow[],
+    bySalesRep: salesRepRows as SalesRepRow[],
+    byTime: timeRows as TimeRow[],
+    byStatus: statusRows as StatusRow[],
+    topProducts: productRows as TopProductRow[],
   };
 }

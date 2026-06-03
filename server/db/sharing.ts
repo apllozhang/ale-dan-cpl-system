@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import {
-  quotations, quotationItems,
+  quotations, quotationItems, Quotation, QuotationItem,
 } from "../../drizzle/schema";
 import { getDb } from "./index";
 
-export async function getQuotationByShareToken(token: string) {
+export async function getQuotationByShareToken(token: string): Promise<Omit<Quotation, 'createdBy' | 'shareToken'> & { items: QuotationItem[] } | null> {
   const db = await getDb();
   if (!db) return null;
   const [result] = await db.select({
@@ -27,5 +27,5 @@ export async function getQuotationByShareToken(token: string) {
   }).from(quotations).where(eq(quotations.shareToken, token)).limit(1);
   if (!result) return null;
   const items = await db.select().from(quotationItems).where(eq(quotationItems.quotationId, result.id));
-  return { ...result, items };
+  return { ...result, items } as Omit<Quotation, 'createdBy' | 'shareToken'> & { items: QuotationItem[] };
 }

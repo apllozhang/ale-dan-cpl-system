@@ -1,8 +1,8 @@
 import { eq, sql } from "drizzle-orm";
-import { userGroups, organizations } from "../../drizzle/schema";
+import { userGroups, organizations, UserGroup } from "../../drizzle/schema";
 import { getDb } from "./index";
 
-export async function getAllUserGroups() {
+export async function getAllUserGroups(): Promise<Array<UserGroup & { organizationName: string | null }>> {
   const db = await getDb();
   if (!db) return [];
   return db.select({
@@ -18,20 +18,20 @@ export async function getAllUserGroups() {
     .limit(500);
 }
 
-export async function createUserGroup(data: { name: string; organizationId: number }) {
+export async function createUserGroup(data: { name: string; organizationId: number }): Promise<{ id: number }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(userGroups).values(data);
   return { id: Number(result[0].insertId) };
 }
 
-export async function updateUserGroup(id: number, data: { name?: string; organizationId?: number }) {
+export async function updateUserGroup(id: number, data: { name?: string; organizationId?: number }): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(userGroups).set(data).where(eq(userGroups.id, id));
 }
 
-export async function deleteUserGroup(id: number) {
+export async function deleteUserGroup(id: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.delete(userGroups).where(eq(userGroups.id, id));

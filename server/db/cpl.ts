@@ -10,13 +10,13 @@ type DbInstance = ReturnType<typeof drizzle>;
 type DbTransaction = Parameters<Parameters<DbInstance["transaction"]>[0]>[0];
 
 // ==================== Import Logs helpers ====================
-export async function deactivateAllImports() {
+export async function deactivateAllImports(): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(importLogs).set({ isActive: false }).where(ne(importLogs.id, -1));
 }
 
-export async function activateImport(importLogId: number) {
+export async function activateImport(importLogId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(importLogs).set({ isActive: true }).where(eq(importLogs.id, importLogId));
@@ -47,18 +47,17 @@ async function createImportLogAndGetId(tx: DbTransaction, data: Omit<InsertImpor
   if (!row || !row.id || row.id <= 0) {
     throw new Error(`Failed to retrieve import log after insert for batchId=${batchId}`);
   }
-  console.log(`[import] Created import_log id=${row.id}, batchId=${batchId}, fileName=${data.fileName}`);
   return row.id;
 }
 
-export async function getImportLogById(id: number) {
+export async function getImportLogById(id: number): Promise<typeof importLogs.$inferSelect | null> {
   const db = await getDb();
   if (!db) return null;
   const [log] = await db.select().from(importLogs).where(eq(importLogs.id, id));
   return log || null;
 }
 
-export async function getActiveImportLog() {
+export async function getActiveImportLog(): Promise<typeof importLogs.$inferSelect | null> {
   const db = await getDb();
   if (!db) return null;
   const [log] = await db.select().from(importLogs).where(eq(importLogs.isActive, true));
@@ -68,7 +67,7 @@ export async function getActiveImportLog() {
 // getImportLogs is in ./importLogs.ts — do not re-export from here
 
 // ==================== CPL Sheets helpers ====================
-export async function getCplSheets(params: { importLogId?: number; page?: number; pageSize?: number } = {}) {
+export async function getCplSheets(params: { importLogId?: number; page?: number; pageSize?: number } = {}): Promise<typeof cplSheets.$inferSelect[]> {
   const db = await getDb();
   if (!db) return [];
 
@@ -103,7 +102,7 @@ export async function getCplProducts(params: {
   newOnly?: boolean;
   priceMin?: number;
   priceMax?: number;
-} = {}) {
+} = {}): Promise<{ items: typeof cplProducts.$inferSelect[]; total: number }> {
   const db = await getDb();
   if (!db) return { items: [], total: 0 };
 
@@ -212,7 +211,7 @@ export async function getCplProducts(params: {
   };
 }
 
-export async function getCplProductsByIds(ids: number[]) {
+export async function getCplProductsByIds(ids: number[]): Promise<typeof cplProducts.$inferSelect[]> {
   const db = await getDb();
   if (!db || ids.length === 0) return [];
   const activeImportId = await getActiveImportLogId();
@@ -255,8 +254,6 @@ export async function importCplOverwrite(data: {
       productsCount: data.productsCount,
       isActive: false,
     });
-    console.log(`[import] Starting overwrite importLogId=${importLogId}, sheets=${data.sheets.length}, products=${data.products.length}`);
-
     // 2. Deactivate ALL other imports
     await tx.update(importLogs).set({ isActive: false }).where(ne(importLogs.id, importLogId));
 
@@ -301,12 +298,25 @@ export async function importCplOverwrite(data: {
 }
 
 // ==================== CPL Stats helpers ====================
+
+type CplStatsResult = {
+  importLogId: number;
+  fileName: string;
+  sheetsCount: number;
+  productsCount: number;
+  createdAt: Date;
+  bySheet: { sheetName: string; count: number }[];
+  byStatus: { status: string | null; count: number }[];
+  bySalesCategory: { category: string | null; count: number }[];
+  total: number;
+};
+
 export async function getActiveImportLogId(): Promise<number | null> {
   const log = await getActiveImportLog();
   return log?.id ?? null;
 }
 
-export async function getLatestSummary() {
+export async function getLatestSummary(): Promise<typeof cplSummary.$inferSelect | null> {
   const db = await getDb();
   if (!db) return null;
   const activeImportId = await getActiveImportLogId();
@@ -315,7 +325,7 @@ export async function getLatestSummary() {
   return result.length > 0 ? result[0] : null;
 }
 
-export async function countCplProducts() {
+export async function countCplProducts(): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
   const activeImportId = await getActiveImportLogId();
@@ -323,7 +333,7 @@ export async function countCplProducts() {
   return db.$count(cplProducts, eq(cplProducts.importLogId, activeImportId));
 }
 
-export async function getCplStats() {
+export async function getCplStats(): Promise<CplStatsResult> {
   const db = await getDb();
   if (!db) return {
     importLogId: 0, fileName: "", sheetsCount: 0, productsCount: 0, createdAt: new Date(),

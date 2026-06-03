@@ -1,6 +1,8 @@
 import { eq, like, or, sql } from "drizzle-orm";
-import { InsertUser, users } from "../../drizzle/schema";
+import { InsertUser, User, users } from "../../drizzle/schema";
 import { getDb } from "./index";
+
+type PublicUser = Omit<User, 'passwordHash'>;
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
@@ -20,14 +22,14 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 }
 
-export async function getUserByOpenId(openId: string) {
+export async function getUserByOpenId(openId: string): Promise<User | null> {
   const db = await getDb();
   if (!db) return null;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0] ?? null;
 }
 
-export async function getUserByUsername(username: string) {
+export async function getUserByUsername(username: string): Promise<User | null> {
   const db = await getDb();
   if (!db) return null;
   const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
@@ -43,7 +45,7 @@ export async function createUser(data: {
   isSuperAdmin?: boolean;
   organizationId?: number;
   groupId?: number;
-}) {
+}): Promise<{ id: number }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -72,7 +74,7 @@ export async function updateUser(id: number, data: {
   isSuperAdmin?: boolean;
   organizationId?: number | null;
   groupId?: number | null;
-}) {
+}): Promise<void> {
   const db = await getDb();
   if (!db) return;
   const updateData: Record<string, unknown> = {};
@@ -89,13 +91,13 @@ export async function updateUser(id: number, data: {
   }
 }
 
-export async function deleteUser(id: number) {
+export async function deleteUser(id: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.delete(users).where(eq(users.id, id));
 }
 
-export async function getAllUsers() {
+export async function getAllUsers(): Promise<PublicUser[]> {
   const db = await getDb();
   if (!db) return [];
   return db.select({
@@ -115,7 +117,7 @@ export async function getAllUsers() {
   }).from(users).orderBy(sql`${users.createdAt} DESC`);
 }
 
-export async function getUserById(id: number) {
+export async function getUserById(id: number): Promise<PublicUser | null> {
   const db = await getDb();
   if (!db) return null;
   const result = await db.select({

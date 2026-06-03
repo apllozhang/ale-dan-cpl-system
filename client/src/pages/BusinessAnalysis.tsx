@@ -540,12 +540,12 @@ export default function BusinessAnalysis() {
                   </tr>
                 </thead>
                 <tbody>
-                  {productTable.sortData(topProducts.map((p: { productModel: string; productDesc?: string; quotationCount: number | string; totalQuantity: number | string; totalRevenue: number | string; [key: string]: unknown }) => ({
+                  {productTable.sortData(topProducts.map((p: { productModel: string; productDesc: string | null; quotationCount: number | string; totalQuantity: number | string; totalRevenue: number | string }) => ({
                     ...p,
                     quotationCount: Number(p.quotationCount),
                     totalQuantity: Number(p.totalQuantity),
                     totalRevenue: Number(p.totalRevenue),
-                  }))).map((p: { productModel: string; productDesc?: string; quotationCount: number; totalQuantity: number; totalRevenue: number }, i: number) => (
+                  }))).map((p: { productModel: string; productDesc: string | null; quotationCount: number; totalQuantity: number; totalRevenue: number }, i: number) => (
                     <tr key={i} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
                       {productTable.renderCell(productColumns[0], false,
                         i < 3 ? (

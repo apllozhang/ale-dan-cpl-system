@@ -4,7 +4,7 @@ import {
 } from "../../drizzle/schema";
 import { getDb } from "./index";
 
-export async function createActivityLog(data: InsertActivityLog) {
+export async function createActivityLog(data: InsertActivityLog): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.insert(activityLogs).values(data);
