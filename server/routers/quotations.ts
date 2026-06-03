@@ -2,7 +2,7 @@ import { router, protectedProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
-import { logActivity } from "./helpers";
+import { logActivity, isManagerOrAdmin, calculateSubtotal } from "./helpers";
 import { QUOTATION_STATUS_TRANSITIONS, QUOTATION_STATUS_LABELS } from "@shared/const";
 import { quotations } from "../../drizzle/schema";
 
@@ -31,10 +31,13 @@ export const quotationsRouter = router({
     }),
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       try {
         const quotation = await db.getQuotationById(input.id);
         if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
+        if (!isManagerOrAdmin(ctx.user) && quotation.createdBy !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
+        }
         return quotation;
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -78,7 +81,7 @@ export const quotationsRouter = router({
         const processedItems = items.map(item => {
           const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
           const discount = item.discountRate ?? input.discountRate ?? 0;
-          const subtotal = unitPrice * item.quantity * (discount / 100);
+          const subtotal = calculateSubtotal(unitPrice, item.quantity, discount);
           return {
             quotationId: createdQuotation.id,
             productId: item.productId ?? null,
@@ -129,7 +132,7 @@ export const quotationsRouter = router({
         const { id, items, validUntil, ...quotationData } = input;
         const quotation = await db.getQuotationById(id);
         if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
-        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        const isAdmin = isManagerOrAdmin(ctx.user);
         if (!isAdmin && quotation.createdBy !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
         }
@@ -176,8 +179,7 @@ export const quotationsRouter = router({
       try {
         const quotation = await db.getQuotationById(input.id);
         if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
-        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
-        if (!isAdmin && quotation.createdBy !== ctx.user.id) {
+        if (!isManagerOrAdmin(ctx.user) && quotation.createdBy !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
         }
         const currentStatus = quotation.status;
@@ -199,8 +201,7 @@ export const quotationsRouter = router({
       try {
         const quotation = await db.getQuotationById(input.id);
         if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
-        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
-        if (!isAdmin && quotation.createdBy !== ctx.user.id) {
+        if (!isManagerOrAdmin(ctx.user) && quotation.createdBy !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
         }
         await logActivity(ctx, { action: "delete_quotation", resourceType: "quotation", resourceId: input.id, detail: { quotationNo: quotation.quotationNo, customerName: quotation.customerName } });
@@ -218,7 +219,7 @@ export const quotationsRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
-        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        const isAdmin = isManagerOrAdmin(ctx.user);
         const quotations = await db.getQuotationsByIds(input.ids);
         const validIds = quotations
           .filter(q => (isAdmin || q.createdBy === ctx.user.id) && (QUOTATION_STATUS_TRANSITIONS[q.status] || []).includes(input.status))
@@ -238,7 +239,7 @@ export const quotationsRouter = router({
     .input(z.object({ ids: z.array(z.number()).min(1) }))
     .mutation(async ({ input, ctx }) => {
       try {
-        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        const isAdmin = isManagerOrAdmin(ctx.user);
         const quotations = await db.getQuotationsByIds(input.ids);
         const validIds = quotations
           .filter(q => isAdmin || q.createdBy === ctx.user.id)
@@ -261,7 +262,7 @@ export const quotationsRouter = router({
     }))
     .query(async ({ input, ctx }) => {
       try {
-        const isAdmin = ['admin', 'sales_manager'].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        const isAdmin = isManagerOrAdmin(ctx.user);
         return await db.getQuotationAnalytics({
           startDate: input.startDate ? new Date(input.startDate) : undefined,
           endDate: input.endDate ? new Date(input.endDate) : undefined,

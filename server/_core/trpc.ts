@@ -52,7 +52,7 @@ const loggingMiddleware = t.middleware(async opts => {
       const logEntry = { requestId, userId, path, type, duration: Date.now() - start, outcome: 'rate_limited' };
       console.log(JSON.stringify(logEntry));
       throw new TRPCError({
-        code: "FORBIDDEN",
+        code: "TOO_MANY_REQUESTS",
         message: `Rate limit exceeded. Try again in ${retryAfter}s`,
       });
     }

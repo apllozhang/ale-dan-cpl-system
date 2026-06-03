@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import type { QuotationVersion } from "../../drizzle/schema";
 import * as db from "../db";
+import { isManagerOrAdmin } from "./helpers";
 
 interface SnapshotData {
   changeSummary?: string | null;
@@ -32,8 +33,14 @@ interface DiffResult {
 export const versionsRouter = router({
   list: protectedProcedure
     .input(z.object({ quotationId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       try {
+        // Verify ownership
+        const quotation = await db.getQuotationById(input.quotationId);
+        if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
+        if (!isManagerOrAdmin(ctx.user) && quotation.createdBy !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
+        }
         const versions: QuotationVersion[] = await db.getQuotationVersions(input.quotationId);
         return versions.map((v) => {
           let parsed: SnapshotData | null = null;
@@ -60,8 +67,14 @@ export const versionsRouter = router({
       fromVersion: z.number(),
       toVersion: z.number(),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       try {
+        // Verify ownership
+        const quotation = await db.getQuotationById(input.quotationId);
+        if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
+        if (!isManagerOrAdmin(ctx.user) && quotation.createdBy !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
+        }
         const versions: QuotationVersion[] = await db.getQuotationVersions(input.quotationId);
         const fromV = versions.find((v) => v.version === input.fromVersion);
         const toV = versions.find((v) => v.version === input.toVersion);

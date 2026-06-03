@@ -116,6 +116,7 @@ export async function getQuotations(params: {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sortColumnMap: Record<string, any> = {
     quotationNo: quotations.quotationNo,
     customerName: quotations.customerName,
@@ -257,139 +258,149 @@ export async function createQuotation(data: InsertQuotation, items: InsertQuotat
 
 export async function updateQuotation(id: number, data: Partial<InsertQuotation>, items?: InsertQuotationItem[], userId?: number): Promise<void> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error("Database not available");
 
-  // Snapshot current state BEFORE update (for version tracking)
-  let shouldCreateVersion = false;
-  const oldItems = await db.select().from(quotationItems).where(eq(quotationItems.quotationId, id));
-  const [oldQuotation] = await db.select({
-    version: quotations.version,
-    totalAmount: quotations.totalAmount,
-    customerName: quotations.customerName,
-    projectName: quotations.projectName,
-    status: quotations.status,
-    notes: quotations.notes,
-  }).from(quotations).where(eq(quotations.id, id)).limit(1);
+  await db.transaction(async (tx) => {
+    // Snapshot current state BEFORE update (for version tracking)
+    let shouldCreateVersion = false;
+    const oldItems = await tx.select().from(quotationItems).where(eq(quotationItems.quotationId, id));
+    const [oldQuotation] = await tx.select({
+      version: quotations.version,
+      totalAmount: quotations.totalAmount,
+      customerName: quotations.customerName,
+      projectName: quotations.projectName,
+      status: quotations.status,
+      notes: quotations.notes,
+    }).from(quotations).where(eq(quotations.id, id)).limit(1);
 
-  const updateSet: Record<string, unknown> = {};
-  if (data.customerName !== undefined) updateSet.customerName = data.customerName;
-  if (data.customerContact !== undefined) updateSet.customerContact = data.customerContact;
-  if (data.customerPhone !== undefined) updateSet.customerPhone = data.customerPhone;
-  if (data.customerEmail !== undefined) updateSet.customerEmail = data.customerEmail;
-  if (data.industry !== undefined) updateSet.industry = data.industry;
-  if (data.projectName !== undefined) updateSet.projectName = data.projectName;
-  if (data.discountRate !== undefined) updateSet.discountRate = data.discountRate;
-  if (data.totalAmount !== undefined) updateSet.totalAmount = data.totalAmount;
-  if (data.notes !== undefined) updateSet.notes = data.notes;
-  if (data.validUntil !== undefined) updateSet.validUntil = data.validUntil;
-  if (data.status !== undefined) updateSet.status = data.status;
+    if (!oldQuotation) throw new Error(`Quotation ${id} not found`);
 
-  if (Object.keys(updateSet).length > 0) {
-    shouldCreateVersion = true;
-    await db.update(quotations).set(updateSet).where(eq(quotations.id, id));
-  }
+    const updateSet: Record<string, unknown> = {};
+    if (data.customerName !== undefined) updateSet.customerName = data.customerName;
+    if (data.customerContact !== undefined) updateSet.customerContact = data.customerContact;
+    if (data.customerPhone !== undefined) updateSet.customerPhone = data.customerPhone;
+    if (data.customerEmail !== undefined) updateSet.customerEmail = data.customerEmail;
+    if (data.industry !== undefined) updateSet.industry = data.industry;
+    if (data.projectName !== undefined) updateSet.projectName = data.projectName;
+    if (data.discountRate !== undefined) updateSet.discountRate = data.discountRate;
+    if (data.totalAmount !== undefined) updateSet.totalAmount = data.totalAmount;
+    if (data.notes !== undefined) updateSet.notes = data.notes;
+    if (data.validUntil !== undefined) updateSet.validUntil = data.validUntil;
+    if (data.status !== undefined) updateSet.status = data.status;
 
-  if (items !== undefined) {
-    shouldCreateVersion = true;
-    await db.delete(quotationItems).where(eq(quotationItems.quotationId, id));
-    if (items.length > 0) {
-      const itemsWithQId = items.map(item => ({ ...item, quotationId: id }));
-      const batchSize = 100;
-      for (let i = 0; i < itemsWithQId.length; i += batchSize) {
-        const batch = itemsWithQId.slice(i, i + batchSize);
-        await db.insert(quotationItems).values(batch);
-      }
+    if (Object.keys(updateSet).length > 0) {
+      shouldCreateVersion = true;
+      await tx.update(quotations).set(updateSet).where(eq(quotations.id, id));
     }
-  }
-
-  // Auto-create version snapshot with change summary
-  if (shouldCreateVersion && oldQuotation) {
-    const newVersion = (oldQuotation.version ?? 1) + 1;
-    await db.update(quotations).set({ version: newVersion }).where(eq(quotations.id, id));
-
-    // Compute diff summary
-    const oldItemMap = new Map(oldItems.map(it => [it.productModel, it]));
-    const newItems = items ?? oldItems;
-    const added: string[] = [];
-    const removed: string[] = [];
-    const modified: string[] = [];
 
     if (items !== undefined) {
-      for (const ni of newItems) {
-        const oi = oldItemMap.get(ni.productModel);
-        if (!oi) {
-          added.push(ni.productModel);
-        } else {
-          if (Number(oi.quantity) !== ni.quantity || Number(oi.discountRate ?? 0) !== Number(ni.discountRate ?? 0)) {
-            modified.push(ni.productModel);
-          }
+      shouldCreateVersion = true;
+      await tx.delete(quotationItems).where(eq(quotationItems.quotationId, id));
+      if (items.length > 0) {
+        const itemsWithQId = items.map(item => ({ ...item, quotationId: id }));
+        const batchSize = 100;
+        for (let i = 0; i < itemsWithQId.length; i += batchSize) {
+          const batch = itemsWithQId.slice(i, i + batchSize);
+          await tx.insert(quotationItems).values(batch);
         }
-      }
-      const newItemSet = new Set(newItems.map(it => it.productModel));
-      for (const oi of oldItems) {
-        if (!newItemSet.has(oi.productModel)) removed.push(oi.productModel);
       }
     }
 
-    const changes: string[] = [];
-    if (added.length > 0) changes.push(`+${added.length}项: ${added.slice(0, 3).join(", ")}${added.length > 3 ? "..." : ""}`);
-    if (removed.length > 0) changes.push(`-${removed.length}项: ${removed.slice(0, 3).join(", ")}${removed.length > 3 ? "..." : ""}`);
-    if (modified.length > 0) changes.push(`改${modified.length}项: ${modified.slice(0, 3).join(", ")}${modified.length > 3 ? "..." : ""}`);
-    if (data.customerName && data.customerName !== oldQuotation.customerName) changes.push("客户名称变更");
-    if (data.projectName && data.projectName !== oldQuotation.projectName) changes.push("项目名称变更");
-    if (data.status && data.status !== oldQuotation.status) changes.push(`状态→${data.status}`);
+    // Auto-create version snapshot with change summary
+    if (shouldCreateVersion) {
+      const newVersion = (oldQuotation.version ?? 1) + 1;
 
-    const snapshot = JSON.stringify({
-      items: (items ?? oldItems).map(it => ({
-        productModel: it.productModel,
-        productDesc: it.productDesc,
-        listPrice: it.listPrice,
-        quantity: it.quantity,
-        unitPrice: it.unitPrice,
-        discountRate: it.discountRate,
-        subtotal: it.subtotal,
-      })),
-      totalAmount: data.totalAmount ?? oldQuotation.totalAmount,
-      changeSummary: changes.length > 0 ? changes.join("; ") : "信息更新",
-      diff: { added, removed, modified },
-    });
+      // Compute diff summary
+      const oldItemMap = new Map(oldItems.map(it => [it.productModel, it]));
+      const newItems = items ?? oldItems;
+      const added: string[] = [];
+      const removed: string[] = [];
+      const modified: string[] = [];
 
-    await db.insert(quotationVersions).values({
-      quotationId: id,
-      version: newVersion,
-      snapshot,
-      createdBy: userId ?? 0,
-    });
-  }
+      if (items !== undefined) {
+        for (const ni of newItems) {
+          const oi = oldItemMap.get(ni.productModel);
+          if (!oi) {
+            added.push(ni.productModel);
+          } else {
+            if (Number(oi.quantity) !== ni.quantity || Number(oi.discountRate ?? 0) !== Number(ni.discountRate ?? 0)) {
+              modified.push(ni.productModel);
+            }
+          }
+        }
+        const newItemSet = new Set(newItems.map(it => it.productModel));
+        for (const oi of oldItems) {
+          if (!newItemSet.has(oi.productModel)) removed.push(oi.productModel);
+        }
+      }
+
+      const changes: string[] = [];
+      if (added.length > 0) changes.push(`+${added.length}项: ${added.slice(0, 3).join(", ")}${added.length > 3 ? "..." : ""}`);
+      if (removed.length > 0) changes.push(`-${removed.length}项: ${removed.slice(0, 3).join(", ")}${removed.length > 3 ? "..." : ""}`);
+      if (modified.length > 0) changes.push(`改${modified.length}项: ${modified.slice(0, 3).join(", ")}${modified.length > 3 ? "..." : ""}`);
+      if (data.customerName && data.customerName !== oldQuotation.customerName) changes.push("客户名称变更");
+      if (data.projectName && data.projectName !== oldQuotation.projectName) changes.push("项目名称变更");
+      if (data.status && data.status !== oldQuotation.status) changes.push(`状态→${data.status}`);
+
+      const snapshot = JSON.stringify({
+        items: (items ?? oldItems).map(it => ({
+          productModel: it.productModel,
+          productDesc: it.productDesc,
+          listPrice: it.listPrice,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          discountRate: it.discountRate,
+          subtotal: it.subtotal,
+        })),
+        totalAmount: data.totalAmount ?? oldQuotation.totalAmount,
+        changeSummary: changes.length > 0 ? changes.join("; ") : "信息更新",
+        diff: { added, removed, modified },
+      });
+
+      await tx.update(quotations).set({ version: newVersion }).where(eq(quotations.id, id));
+      await tx.insert(quotationVersions).values({
+        quotationId: id,
+        version: newVersion,
+        snapshot,
+        createdBy: userId ?? 0,
+      });
+    }
+  });
 }
 
 export async function deleteQuotation(id: number): Promise<void> {
   const db = await getDb();
-  if (!db) return;
-  await db.delete(quotationItems).where(eq(quotationItems.quotationId, id));
-  await db.delete(quotationVersions).where(eq(quotationVersions.quotationId, id));
-  await db.delete(quotations).where(eq(quotations.id, id));
+  if (!db) throw new Error("Database not available");
+  await db.transaction(async (tx) => {
+    await tx.delete(quotationItems).where(eq(quotationItems.quotationId, id));
+    await tx.delete(quotationVersions).where(eq(quotationVersions.quotationId, id));
+    await tx.delete(quotations).where(eq(quotations.id, id));
+  });
 }
 
 export async function updateQuotationStatus(id: number, status: QuotationStatus): Promise<void> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error("Database not available");
   await db.update(quotations).set({ status }).where(eq(quotations.id, id));
 }
 
 export async function batchUpdateQuotationStatus(ids: number[], status: QuotationStatus): Promise<void> {
   const db = await getDb();
-  if (!db || ids.length === 0) return;
+  if (!db) throw new Error("Database not available");
+  if (ids.length === 0) return;
   await db.update(quotations).set({ status })
     .where(inArray(quotations.id, ids));
 }
 
 export async function batchDeleteQuotations(ids: number[]): Promise<void> {
   const db = await getDb();
-  if (!db || ids.length === 0) return;
-  await db.delete(quotationItems).where(inArray(quotationItems.quotationId, ids));
-  await db.delete(quotationVersions).where(inArray(quotationVersions.quotationId, ids));
-  await db.delete(quotations).where(inArray(quotations.id, ids));
+  if (!db) throw new Error("Database not available");
+  if (ids.length === 0) return;
+  await db.transaction(async (tx) => {
+    await tx.delete(quotationItems).where(inArray(quotationItems.quotationId, ids));
+    await tx.delete(quotationVersions).where(inArray(quotationVersions.quotationId, ids));
+    await tx.delete(quotations).where(inArray(quotations.id, ids));
+  });
 }
 
 // ==================== Dashboard helpers ====================
@@ -416,9 +427,9 @@ export async function getMyDashboardStats(userId: number, startDate?: Date, endD
   const row = Array.isArray(result[0]) ? result[0][0] : result[0];
   const statusCounts: Record<string, number> = {};
   const statusRows = Array.isArray(statusResult[0]) ? statusResult[0] : statusResult;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const sr of statusRows as any[]) {
-    if (sr.status) statusCounts[sr.status] = Number(sr.count);
+  for (const sr of statusRows) {
+    const r = sr as { status: string | null; count: number | string };
+    if (r.status) statusCounts[r.status] = Number(r.count);
   }
 
   return {

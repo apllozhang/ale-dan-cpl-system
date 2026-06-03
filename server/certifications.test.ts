@@ -1,6 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 
-describe("certifications DB", () => {
+const hasDb = !!process.env.DATABASE_URL;
+
+describe.skipIf(!hasDb)("certifications DB", () => {
   it("listCertifications returns paginated results", async () => {
     const { listCertifications } = await import("./db");
     const result = await listCertifications({ page: 1, pageSize: 10 });

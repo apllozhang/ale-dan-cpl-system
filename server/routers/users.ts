@@ -38,6 +38,10 @@ export const usersRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
+        // Only super admins can set isSuperAdmin flag
+        if (input.isSuperAdmin && !ctx.user.isSuperAdmin) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only super admins can create super admin users" });
+        }
         const existingUser = await db.getUserByUsername(input.username);
         if (existingUser) {
           throw new TRPCError({ code: "CONFLICT", message: "用户名已存在" });

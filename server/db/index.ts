@@ -1,7 +1,6 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import type { MySql2Database } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { TRPCError } from "@trpc/server";
 
 let _db: MySql2Database<Record<string, unknown>> | null = null;
 
@@ -18,10 +17,7 @@ export async function getDb() {
       _db = drizzle(pool);
     } catch (error) {
       if (error instanceof Error && error.message.includes("acquire")) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database busy, try again",
-        });
+        throw new Error("Database busy, try again");
       }
       console.warn("[Database] Failed to connect:", error);
       _db = null;

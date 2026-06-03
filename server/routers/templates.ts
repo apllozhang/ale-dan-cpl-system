@@ -7,7 +7,7 @@ import { PERMISSIONS, hasPermission } from "@shared/const";
 export const templatesRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     try {
-      return await db.getQuotationTemplates(ctx.user!.id);
+      return await db.getQuotationTemplates(ctx.user.id);
     } catch (error) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to list templates", cause: error });
     }
@@ -38,8 +38,9 @@ export const templatesRouter = router({
       try {
         return await db.createQuotationTemplate({
           ...input,
-          createdBy: ctx.user!.id,
-        } as any);
+          discountRate: input.discountRate !== undefined ? String(input.discountRate) : undefined,
+          createdBy: ctx.user.id,
+        });
       } catch (error) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create template", cause: error });
       }
@@ -57,13 +58,15 @@ export const templatesRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
-        const { id, ...data } = input;
+        const { id, discountRate, ...rest } = input;
         const template = await db.getQuotationTemplateById(id);
         if (!template) throw new TRPCError({ code: "NOT_FOUND", message: "Template not found" });
-        if (template.createdBy !== ctx.user!.id && !hasPermission(ctx.user!, PERMISSIONS.MANAGE_USERS)) {
+        if (template.createdBy !== ctx.user.id && !hasPermission(ctx.user, PERMISSIONS.MANAGE_USERS)) {
           throw new TRPCError({ code: "FORBIDDEN", message: "只能编辑自己的模板" });
         }
-        await db.updateQuotationTemplate(id, data as any);
+        const updateData: Record<string, unknown> = { ...rest };
+        if (discountRate !== undefined) updateData.discountRate = String(discountRate);
+        await db.updateQuotationTemplate(id, updateData);
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;

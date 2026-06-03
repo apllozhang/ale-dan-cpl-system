@@ -17,7 +17,7 @@ export const sharingRouter = router({
         }
         if (q.shareToken) return { shareToken: q.shareToken };
         const token = randomBytes(16).toString("hex");
-        await db.updateQuotation(input.id, { shareToken: token } as any, undefined);
+        await db.updateQuotation(input.id, { shareToken: token }, undefined);
         return { shareToken: token };
       } catch (error) {
         if (error instanceof TRPCError) throw error;

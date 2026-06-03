@@ -21,3 +21,21 @@ export function logActivity(ctx: AuthedContext, params: {
     ipAddress: ctx.req.ip || ctx.req.headers["x-forwarded-for"] as string || null,
   }).catch((err) => console.error("[ActivityLog] Failed:", err));
 }
+
+/** Check if user has manager/admin privileges */
+export function isManagerOrAdmin(user: { role: string; isSuperAdmin: boolean }): boolean {
+  return ["admin", "sales_manager"].includes(user.role) || user.isSuperAdmin;
+}
+
+/** Calculate discount subtotal: unitPrice × quantity × (discountRate / 100) */
+export function calculateSubtotal(unitPrice: number, quantity: number, discountRate: number): number {
+  return unitPrice * quantity * (discountRate / 100);
+}
+
+/** Escape a value for CSV export */
+export function csvEscape(val: string | null | undefined): string {
+  if (!val) return '';
+  const str = String(val);
+  if (/^[=+\-@]/.test(str)) return "'" + str;
+  return '"' + str.replace(/"/g, '""') + '"';
+}

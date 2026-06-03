@@ -59,6 +59,21 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
+  // Auth middleware for protected static files
+  const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { getUserFromRequest } = await import("./context");
+    try {
+      const user = await getUserFromRequest(req);
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      next();
+    } catch {
+      res.status(401).json({ error: "Unauthorized" });
+    }
+  };
+
   // Health check — no auth required
   app.get("/api/health", async (_req, res) => {
     try {
@@ -87,8 +102,8 @@ async function startServer() {
       createContext,
     })
   );
-  // Serve eFlash uploaded files
-  app.use("/uploads/eflash", (req, res, next) => {
+  // Serve eFlash uploaded files (requires auth)
+  app.use("/uploads/eflash", requireAuth, (req, res, next) => {
     const uploadsPath = path.resolve(process.cwd(), "uploads/eflash");
     express.static(uploadsPath)(req, res, next);
   });

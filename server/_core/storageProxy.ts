@@ -1,8 +1,21 @@
 import type { Express } from "express";
 import { ENV } from "./env";
+import { getUserFromRequest } from "./context";
 
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {
+    // Require authentication
+    try {
+      const user = await getUserFromRequest(req);
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+    } catch {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
     const key = (req.params as Record<string, string>)[0];
     if (!key) {
       res.status(400).send("Missing storage key");

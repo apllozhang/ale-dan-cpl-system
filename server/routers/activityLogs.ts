@@ -3,13 +3,7 @@ import { z } from "zod";
 import * as db from "../db";
 import { PERMISSIONS } from "@shared/const";
 import { TRPCError } from "@trpc/server";
-
-function csvEscape(val: string | null | undefined): string {
-  if (!val) return '';
-  const str = String(val);
-  if (/^[=+\-@]/.test(str)) return "'" + str;
-  return '"' + str.replace(/"/g, '""') + '"';
-}
+import { csvEscape } from "./helpers";
 
 export const activityLogsRouter = router({
   list: permissionProcedure(PERMISSIONS.VIEW_ACTIVITY_LOGS)

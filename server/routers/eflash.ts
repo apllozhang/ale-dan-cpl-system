@@ -9,6 +9,21 @@ import fs from "fs/promises";
 import { TRPCError } from "@trpc/server";
 import { parseExcelDateToDate } from "../lib/excel-date-parser";
 
+/** Sanitize filename to prevent path traversal */
+function sanitizeFileName(name: string): string {
+  // Strip path separators and null bytes, keep only the basename
+  const base = path.basename(name).replace(/[\x00]/g, "");
+  // Reject if the result is empty or is a reserved name
+  if (!base || base === "." || base === "..") return "";
+  return base;
+}
+
+/** Allowed file extensions for eFlash attachments */
+const ALLOWED_EXTENSIONS = new Set([
+  ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+  ".txt", ".csv", ".png", ".jpg", ".jpeg", ".gif", ".zip", ".rar",
+]);
+
 const EFLASH_MANAGE = PERMISSIONS.EFLASH_MANAGE;
 
 const uploadDir = path.resolve(process.cwd(), "uploads/eflash");
@@ -299,16 +314,26 @@ export const eflashRouter = router({
         const record = await db.getEFlashRecordById(input.recordId);
         if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "Record not found" });
 
+        // Sanitize filename to prevent path traversal
+        const safeName = sanitizeFileName(input.fileName);
+        if (!safeName) throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid file name" });
+
+        // Validate file extension
+        const ext = path.extname(safeName).toLowerCase();
+        if (!ALLOWED_EXTENSIONS.has(ext)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `File type ${ext} is not allowed` });
+        }
+
         const recordDir = path.join(uploadDir, record.eflashId);
         await fs.mkdir(recordDir, { recursive: true });
 
-        const filePath = path.join(recordDir, input.fileName);
+        const filePath = path.join(recordDir, safeName);
         const buffer = Buffer.from(input.fileBase64, "base64");
         await fs.writeFile(filePath, buffer);
 
         const id = await db.createAttachment({
           recordId: input.recordId,
-          fileName: input.fileName,
+          fileName: safeName,
           filePath,
           fileSize: buffer.length,
           uploadedBy: ctx.user.id,
