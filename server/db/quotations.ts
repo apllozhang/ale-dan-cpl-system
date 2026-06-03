@@ -5,7 +5,7 @@ import {
   users,
   Quotation, QuotationItem,
 } from "../../drizzle/schema";
-import { getDb } from "./index";
+import { requireDb } from "./index";
 
 type QuotationStatus = typeof quotations.$inferSelect.status;
 
@@ -89,8 +89,7 @@ export async function getQuotations(params: {
   sortOrder?: "asc" | "desc";
   createdBy?: number;
 }): Promise<{ items: QuotationListItem[]; total: number }> {
-  const db = await getDb();
-  if (!db) return { items: [], total: 0 };
+  const db = await requireDb();
 
   const { search, status, page = 1, pageSize = 20, sortBy, sortOrder = "desc", createdBy } = params;
   const conditions: SQL[] = [];
@@ -166,8 +165,7 @@ export async function getQuotations(params: {
 }
 
 export async function getQuotationById(id: number): Promise<QuotationDetail | null> {
-  const db = await getDb();
-  if (!db) return null;
+  const db = await requireDb();
 
   const [quotation] = await db.select({
     id: quotations.id,
@@ -204,8 +202,8 @@ export async function getQuotationById(id: number): Promise<QuotationDetail | nu
 }
 
 export async function getQuotationsByIds(ids: number[]): Promise<Pick<Quotation, "id" | "createdBy" | "status">[]> {
-  const db = await getDb();
-  if (!db || ids.length === 0) return [];
+  if (ids.length === 0) return [];
+  const db = await requireDb();
   return db.select({
     id: quotations.id,
     createdBy: quotations.createdBy,
@@ -214,8 +212,7 @@ export async function getQuotationsByIds(ids: number[]): Promise<Pick<Quotation,
 }
 
 export async function createQuotation(data: InsertQuotation, items: InsertQuotationItem[]): Promise<{ id: number; quotationNo: string }> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const db = await requireDb();
 
   // Generate quotationNo atomically: QT-YYYYMMDD-NNN
   // Uses a transaction with SELECT FOR UPDATE to prevent concurrent duplicates
@@ -257,8 +254,7 @@ export async function createQuotation(data: InsertQuotation, items: InsertQuotat
 }
 
 export async function updateQuotation(id: number, data: Partial<InsertQuotation>, items?: InsertQuotationItem[], userId?: number): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const db = await requireDb();
 
   await db.transaction(async (tx) => {
     // Snapshot current state BEFORE update (for version tracking)
@@ -369,8 +365,7 @@ export async function updateQuotation(id: number, data: Partial<InsertQuotation>
 }
 
 export async function deleteQuotation(id: number): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const db = await requireDb();
   await db.transaction(async (tx) => {
     await tx.delete(quotationItems).where(eq(quotationItems.quotationId, id));
     await tx.delete(quotationVersions).where(eq(quotationVersions.quotationId, id));
@@ -379,23 +374,20 @@ export async function deleteQuotation(id: number): Promise<void> {
 }
 
 export async function updateQuotationStatus(id: number, status: QuotationStatus): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const db = await requireDb();
   await db.update(quotations).set({ status }).where(eq(quotations.id, id));
 }
 
 export async function batchUpdateQuotationStatus(ids: number[], status: QuotationStatus): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
   if (ids.length === 0) return;
+  const db = await requireDb();
   await db.update(quotations).set({ status })
     .where(inArray(quotations.id, ids));
 }
 
 export async function batchDeleteQuotations(ids: number[]): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
   if (ids.length === 0) return;
+  const db = await requireDb();
   await db.transaction(async (tx) => {
     await tx.delete(quotationItems).where(inArray(quotationItems.quotationId, ids));
     await tx.delete(quotationVersions).where(inArray(quotationVersions.quotationId, ids));
@@ -405,8 +397,7 @@ export async function batchDeleteQuotations(ids: number[]): Promise<void> {
 
 // ==================== Dashboard helpers ====================
 export async function getMyDashboardStats(userId: number, startDate?: Date, endDate?: Date): Promise<{ totalQuotations: number; completedRevenue: number; statusCounts: Record<string, number> }> {
-  const db = await getDb();
-  if (!db) return { totalQuotations: 0, completedRevenue: 0, statusCounts: {} as Record<string, number> };
+  const db = await requireDb();
 
   const conditions = [eq(quotations.createdBy, userId)];
   if (startDate) conditions.push(gte(quotations.createdAt, startDate));
@@ -440,8 +431,7 @@ export async function getMyDashboardStats(userId: number, startDate?: Date, endD
 }
 
 export async function getMyRecentQuotations(userId: number, limit = 5): Promise<RecentQuotation[]> {
-  const db = await getDb();
-  if (!db) return [];
+  const db = await requireDb();
   return db.select({
     id: quotations.id,
     quotationNo: quotations.quotationNo,
@@ -459,9 +449,7 @@ export async function getMyRecentQuotations(userId: number, limit = 5): Promise<
 }
 
 export async function getQuotationAnalytics(params: { startDate?: Date; endDate?: Date; userId?: number }): Promise<QuotationAnalytics> {
-  const db = await getDb();
-  const empty = { summary: { totalQuotations: 0, completedRevenue: 0, avgAmount: 0, conversionRate: 0 }, byIndustry: [], byCustomer: [], bySalesRep: [], byTime: [], byStatus: [], topProducts: [] };
-  if (!db) return empty;
+  const db = await requireDb();
 
   const conditions: SQL[] = [];
   if (params.startDate) conditions.push(gte(quotations.createdAt, params.startDate));

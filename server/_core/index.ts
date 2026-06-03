@@ -36,6 +36,12 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  // Trust proxy — only enable behind a reverse proxy
+  // Prevents x-forwarded-for spoofing
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   // CORS — origin allowlist from env, credentials for cookie auth
   const allowedOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(",").map((o) => o.trim())
@@ -56,6 +62,19 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // CSRF protection for mutations — validate Origin/Referer
+  app.use((req, res, next) => {
+    if (req.method === "POST" || req.method === "PUT" || req.method === "DELETE" || req.method === "PATCH") {
+      const origin = req.headers.origin || req.headers.referer;
+      if (origin && !allowedOrigins.some(o => origin.startsWith(o))) {
+        res.status(403).json({ error: "CSRF validation failed" });
+        return;
+      }
+    }
+    next();
+  });
+
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
@@ -115,10 +134,21 @@ async function startServer() {
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
 
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  // Production: bind to specified port or fail fast
+  // Development: auto-find available port
+  let port: number;
+  if (process.env.NODE_ENV === "production") {
+    if (!(await isPortAvailable(preferredPort))) {
+      console.error(`Port ${preferredPort} is not available in production mode`);
+      process.exit(1);
+    }
+    port = preferredPort;
+  } else {
+    port = await findAvailablePort(preferredPort);
+    if (port !== preferredPort) {
+      console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    }
   }
 
   server.listen(port, () => {

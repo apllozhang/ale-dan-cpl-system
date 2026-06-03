@@ -3,11 +3,13 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { Organization, UserGroup, InsertCplProduct, InsertCplSheet } from "../../drizzle/schema";
 import * as db from "../db";
+import { acquireLock, releaseLock } from "../db/locks";
 import * as XLSX from "xlsx";
 import { logActivity } from "./helpers";
 
-// Import lock to prevent concurrent imports
-let importInProgress = false;
+// Import lock name and TTL (10 minutes)
+const IMPORT_LOCK_NAME = "cpl_import";
+const IMPORT_LOCK_TTL_MS = 10 * 60 * 1000;
 
 // Column name mapping for various sheet formats
 const COLUMN_MAP: Record<string, string> = {
@@ -222,10 +224,11 @@ export const cplRouter = router({
       selectedSheets: z.array(z.string()).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      if (importInProgress) {
+      const lockOwner = `user:${ctx.user.id}:${Date.now()}`;
+      const lockAcquired = await acquireLock(IMPORT_LOCK_NAME, lockOwner, IMPORT_LOCK_TTL_MS);
+      if (!lockAcquired) {
         throw new TRPCError({ code: "CONFLICT", message: "Another import is in progress, please wait" });
       }
-      importInProgress = true;
       try {
         let buffer: Buffer;
         try {
@@ -302,7 +305,7 @@ export const cplRouter = router({
           hasSummary: !!summaryContent,
         };
       } finally {
-        importInProgress = false;
+        await releaseLock(IMPORT_LOCK_NAME, lockOwner);
       }
     }),
 });

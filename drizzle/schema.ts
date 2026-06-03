@@ -35,7 +35,7 @@ export type InsertOrganization = typeof organizations.$inferInsert;
 export const userGroups = mysqlTable("user_groups", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 128 }).notNull(),
-  organizationId: int("organizationId").notNull(),
+  organizationId: int("organizationId").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -127,7 +127,7 @@ export type InsertQuotation = typeof quotations.$inferInsert;
 // Quotation items table
 export const quotationItems = mysqlTable("quotation_items", {
   id: int("id").autoincrement().primaryKey(),
-  quotationId: int("quotationId").notNull(),
+  quotationId: int("quotationId").notNull().references(() => quotations.id, { onDelete: "cascade" }),
   productId: int("productId"),
   productModel: varchar("productModel", { length: 256 }).notNull(),
   productDesc: text("productDesc"),
@@ -151,7 +151,7 @@ export const importLogs = mysqlTable("import_logs", {
   batchId: varchar("batchId", { length: 36 }).notNull(),
   isActive: boolean("isActive").default(false).notNull(),
   fileName: varchar("fileName", { length: 256 }).notNull(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id),
   username: varchar("username", { length: 64 }).notNull(),
   orgName: varchar("orgName", { length: 128 }),
   groupName: varchar("groupName", { length: 128 }),
@@ -168,7 +168,7 @@ export type InsertImportLog = typeof importLogs.$inferInsert;
 // Activity / Audit log table
 export const activityLogs = mysqlTable("activity_logs", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id),
   username: varchar("username", { length: 64 }),
   action: varchar("action", { length: 64 }).notNull(),
   resourceType: varchar("resourceType", { length: 64 }),
@@ -188,7 +188,7 @@ export const quotationTemplates = mysqlTable("quotation_templates", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 256 }).notNull(),
   description: text("description"),
-  createdBy: int("createdBy").notNull(),
+  createdBy: int("createdBy").notNull().references(() => users.id),
   isPublic: boolean("isPublic").default(false).notNull(),
   discountRate: decimal("discountRate", { precision: 5, scale: 2 }).default("0"),
   notes: text("notes"),
@@ -204,10 +204,10 @@ export type InsertQuotationTemplate = typeof quotationTemplates.$inferInsert;
 // Quotation versions
 export const quotationVersions = mysqlTable("quotation_versions", {
   id: int("id").autoincrement().primaryKey(),
-  quotationId: int("quotationId").notNull(),
+  quotationId: int("quotationId").notNull().references(() => quotations.id, { onDelete: "cascade" }),
   version: int("version").notNull(),
   snapshot: text("snapshot").notNull(),
-  createdBy: int("createdBy").notNull(),
+  createdBy: int("createdBy").notNull().references(() => users.id),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -217,7 +217,7 @@ export type InsertQuotationVersion = typeof quotationVersions.$inferInsert;
 // Saved searches
 export const savedSearches = mysqlTable("saved_searches", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 128 }).notNull(),
   page: varchar("page", { length: 32 }).notNull(),
   conditions: text("conditions").notNull(),
@@ -235,7 +235,7 @@ export const productSpecSets = mysqlTable("product_spec_sets", {
   description: text("description"),
   summaryContent: text("summaryContent"),
   modelCount: int("modelCount").notNull().default(0),
-  createdBy: int("createdBy").notNull(),
+  createdBy: int("createdBy").notNull().references(() => users.id),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -246,7 +246,7 @@ export type InsertProductSpecSet = typeof productSpecSets.$inferInsert;
 // Product spec entries (one per productModel within a set)
 export const productSpecs = mysqlTable("product_specs", {
   id: int("id").autoincrement().primaryKey(),
-  setId: int("setId").notNull(),
+  setId: int("setId").notNull().references(() => productSpecSets.id, { onDelete: "cascade" }),
   productModel: varchar("productModel", { length: 256 }).notNull(),
   productDesc: text("productDesc"),
   specs: json("specs").notNull().$type<Record<string, string>>(),
@@ -368,3 +368,15 @@ export const eflashAttachments = mysqlTable("eflash_attachments", {
 
 export type EFlashAttachment = typeof eflashAttachments.$inferSelect;
 export type InsertEFlashAttachment = typeof eflashAttachments.$inferInsert;
+
+// System locks table — replaces process-level import locks for multi-instance support
+export const systemLocks = mysqlTable("system_locks", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 64 }).notNull().unique(),
+  owner: varchar("owner", { length: 128 }),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SystemLock = typeof systemLocks.$inferSelect;
+export type InsertSystemLock = typeof systemLocks.$inferInsert;

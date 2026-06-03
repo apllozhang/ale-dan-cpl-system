@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import type { MySql2Database } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
+import { TRPCError } from "@trpc/server";
 
 let _db: MySql2Database<Record<string, unknown>> | null = null;
 
@@ -24,6 +25,21 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+/**
+ * Get database connection or throw error
+ * Use this for operations that require database connectivity
+ */
+export async function requireDb() {
+  const db = await getDb();
+  if (!db) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Database unavailable",
+    });
+  }
+  return db;
 }
 
 // Re-export all modules

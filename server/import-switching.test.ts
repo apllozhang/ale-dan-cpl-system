@@ -35,6 +35,12 @@ vi.mock("./db", () => ({
   upsertUser: vi.fn(),
 }));
 
+// Mock locks module
+vi.mock("./db/locks", () => ({
+  acquireLock: vi.fn().mockResolvedValue(true),
+  releaseLock: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Import db after mocking
 import * as db from "./db";
 
