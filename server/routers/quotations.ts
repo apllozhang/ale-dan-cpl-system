@@ -19,16 +19,27 @@ export const quotationsRouter = router({
       sortOrder: z.enum(["asc", "desc"]).default("desc"),
     }))
     .query(async ({ input, ctx }) => {
-      return db.getQuotations({
-        ...input,
-        status: input.status as QuotationStatus | "all" | undefined,
-        createdBy: ctx.user.role === "admin" ? undefined : ctx.user.id,
-      });
+      try {
+        return await db.getQuotations({
+          ...input,
+          status: input.status as QuotationStatus | "all" | undefined,
+          createdBy: ctx.user.role === "admin" ? undefined : ctx.user.id,
+        });
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to list quotations", cause: error });
+      }
     }),
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return db.getQuotationById(input.id);
+      try {
+        const quotation = await db.getQuotationById(input.id);
+        if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
+        return quotation;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get quotation", cause: error });
+      }
     }),
   create: protectedProcedure
     .input(z.object({
@@ -52,39 +63,44 @@ export const quotationsRouter = router({
       })),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { items, validUntil, ...quotationData } = input;
-      const quotation = {
-        ...quotationData,
-        quotationNo: "",
-        status: "draft" as const,
-        totalAmount: "0",
-        discountRate: String(input.discountRate ?? 0),
-        validUntil: validUntil ? new Date(validUntil) : undefined,
-        createdBy: ctx.user.id,
-      };
-      const createdQuotation = await db.createQuotation(quotation, []);
-      const processedItems = items.map(item => {
-        const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
-        const discount = item.discountRate ?? input.discountRate ?? 0;
-        const subtotal = unitPrice * item.quantity * (discount / 100);
-        return {
-          quotationId: createdQuotation.id,
-          productId: item.productId ?? null,
-          productModel: item.productModel,
-          productDesc: item.productDesc ?? null,
-          listPrice: item.listPrice ?? null,
-          quantity: item.quantity,
-          unitPrice: String(unitPrice),
-          discountRate: String(discount),
-          subtotal: String(subtotal),
+      try {
+        const { items, validUntil, ...quotationData } = input;
+        const quotation = {
+          ...quotationData,
+          quotationNo: "",
+          status: "draft" as const,
+          totalAmount: "0",
+          discountRate: String(input.discountRate ?? 0),
+          validUntil: validUntil ? new Date(validUntil) : undefined,
+          createdBy: ctx.user.id,
         };
-      });
-      const totalAmount = processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
-      const result = await db.updateQuotation(createdQuotation.id, {
-        totalAmount: String(totalAmount),
-      }, processedItems);
-      await logActivity(ctx, { action: "create_quotation", resourceType: "quotation", resourceId: createdQuotation.id, detail: { customerName: input.customerName, itemCount: items.length } });
-      return result;
+        const createdQuotation = await db.createQuotation(quotation, []);
+        const processedItems = items.map(item => {
+          const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
+          const discount = item.discountRate ?? input.discountRate ?? 0;
+          const subtotal = unitPrice * item.quantity * (discount / 100);
+          return {
+            quotationId: createdQuotation.id,
+            productId: item.productId ?? null,
+            productModel: item.productModel,
+            productDesc: item.productDesc ?? null,
+            listPrice: item.listPrice ?? null,
+            quantity: item.quantity,
+            unitPrice: String(unitPrice),
+            discountRate: String(discount),
+            subtotal: String(subtotal),
+          };
+        });
+        const totalAmount = processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+        const result = await db.updateQuotation(createdQuotation.id, {
+          totalAmount: String(totalAmount),
+        }, processedItems);
+        await logActivity(ctx, { action: "create_quotation", resourceType: "quotation", resourceId: createdQuotation.id, detail: { customerName: input.customerName, itemCount: items.length } });
+        return result;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create quotation", cause: error });
+      }
     }),
   update: protectedProcedure
     .input(z.object({
@@ -109,43 +125,47 @@ export const quotationsRouter = router({
       })).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { id, items, validUntil, ...quotationData } = input;
-      // Ownership check: only owner or admin/sales_manager can update
-      const quotation = await db.getQuotationById(id);
-      if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "报价单不存在" });
-      const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
-      if (!isAdmin && quotation.createdBy !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "无权编辑此报价单" });
+      try {
+        const { id, items, validUntil, ...quotationData } = input;
+        const quotation = await db.getQuotationById(id);
+        if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        if (!isAdmin && quotation.createdBy !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
+        }
+        let processedItems = undefined;
+        let totalAmount = undefined;
+        if (items) {
+          processedItems = items.map(item => {
+            const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
+            const discount = item.discountRate ?? input.discountRate ?? 0;
+            const subtotal = unitPrice * item.quantity * (discount / 100);
+            return {
+              quotationId: id,
+              productId: item.productId ?? null,
+              productModel: item.productModel,
+              productDesc: item.productDesc ?? null,
+              listPrice: item.listPrice ?? null,
+              quantity: item.quantity,
+              unitPrice: String(unitPrice),
+              discountRate: String(discount),
+              subtotal: String(subtotal),
+            };
+          });
+          totalAmount = String(processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0));
+        }
+        const result = await db.updateQuotation(id, {
+          ...quotationData,
+          totalAmount,
+          discountRate: input.discountRate !== undefined ? String(input.discountRate) : undefined,
+          validUntil: validUntil ? new Date(validUntil) : undefined,
+        }, processedItems, ctx.user.id);
+        await logActivity(ctx, { action: "update_quotation", resourceType: "quotation", resourceId: id, detail: { quotationNo: quotation.quotationNo } });
+        return result;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to update quotation", cause: error });
       }
-      let processedItems = undefined;
-      let totalAmount = undefined;
-      if (items) {
-        processedItems = items.map(item => {
-          const unitPrice = item.unitPrice ?? parseFloat(item.listPrice || "0");
-          const discount = item.discountRate ?? input.discountRate ?? 0;
-          const subtotal = unitPrice * item.quantity * (discount / 100);
-          return {
-            quotationId: id,
-            productId: item.productId ?? null,
-            productModel: item.productModel,
-            productDesc: item.productDesc ?? null,
-            listPrice: item.listPrice ?? null,
-            quantity: item.quantity,
-            unitPrice: String(unitPrice),
-            discountRate: String(discount),
-            subtotal: String(subtotal),
-          };
-        });
-        totalAmount = String(processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0));
-      }
-      const result = await db.updateQuotation(id, {
-        ...quotationData,
-        totalAmount,
-        discountRate: input.discountRate !== undefined ? String(input.discountRate) : undefined,
-        validUntil: validUntil ? new Date(validUntil) : undefined,
-      }, processedItems, ctx.user.id);
-      await logActivity(ctx, { action: "update_quotation", resourceType: "quotation", resourceId: id, detail: { quotationNo: quotation.quotationNo } });
-      return result;
     }),
   updateStatus: protectedProcedure
     .input(z.object({
@@ -153,32 +173,42 @@ export const quotationsRouter = router({
       status: z.enum(["draft", "submitted", "approved", "sent", "completed", "cancelled"]),
     }))
     .mutation(async ({ input, ctx }) => {
-      const quotation = await db.getQuotationById(input.id);
-      if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "报价单不存在" });
-      const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
-      if (!isAdmin && quotation.createdBy !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "无权修改此报价单状态" });
+      try {
+        const quotation = await db.getQuotationById(input.id);
+        if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        if (!isAdmin && quotation.createdBy !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
+        }
+        const currentStatus = quotation.status;
+        const allowed = QUOTATION_STATUS_TRANSITIONS[currentStatus] || [];
+        if (!allowed.includes(input.status)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid status transition from "${currentStatus}" to "${input.status}"` });
+        }
+        await db.updateQuotationStatus(input.id, input.status);
+        await logActivity(ctx, { action: "update_status", resourceType: "quotation", resourceId: input.id, detail: { quotationNo: quotation.quotationNo, oldStatus: currentStatus, newStatus: input.status } });
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to update quotation status", cause: error });
       }
-      const currentStatus = quotation.status;
-      const allowed = QUOTATION_STATUS_TRANSITIONS[currentStatus] || [];
-      if (!allowed.includes(input.status)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `不能从"${QUOTATION_STATUS_LABELS[currentStatus] || currentStatus}"变为"${QUOTATION_STATUS_LABELS[input.status] || input.status}"` });
-      }
-      await db.updateQuotationStatus(input.id, input.status);
-      await logActivity(ctx, { action: "update_status", resourceType: "quotation", resourceId: input.id, detail: { quotationNo: quotation.quotationNo, oldStatus: currentStatus, newStatus: input.status } });
-      return { success: true };
     }),
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      const quotation = await db.getQuotationById(input.id);
-      if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "报价单不存在" });
-      const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
-      if (!isAdmin && quotation.createdBy !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "无权删除此报价单" });
+      try {
+        const quotation = await db.getQuotationById(input.id);
+        if (!quotation) throw new TRPCError({ code: "NOT_FOUND", message: "Quotation not found" });
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        if (!isAdmin && quotation.createdBy !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
+        }
+        await logActivity(ctx, { action: "delete_quotation", resourceType: "quotation", resourceId: input.id, detail: { quotationNo: quotation.quotationNo, customerName: quotation.customerName } });
+        return await db.deleteQuotation(input.id);
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to delete quotation", cause: error });
       }
-      await logActivity(ctx, { action: "delete_quotation", resourceType: "quotation", resourceId: input.id, detail: { quotationNo: quotation.quotationNo, customerName: quotation.customerName } });
-      return db.deleteQuotation(input.id);
     }),
 
   batchUpdateStatus: protectedProcedure
@@ -187,39 +217,41 @@ export const quotationsRouter = router({
       status: z.enum(["draft", "submitted", "approved", "sent", "completed", "cancelled"]),
     }))
     .mutation(async ({ input, ctx }) => {
-      const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
-      const validIds: number[] = [];
-      for (const id of input.ids) {
-        const q = await db.getQuotationById(id);
-        if (!q) continue;
-        if (!isAdmin && q.createdBy !== ctx.user.id) continue;
-        const allowed = QUOTATION_STATUS_TRANSITIONS[q.status] || [];
-        if (!allowed.includes(input.status)) continue;
-        validIds.push(id);
+      try {
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        const quotations = await db.getQuotationsByIds(input.ids);
+        const validIds = quotations
+          .filter(q => (isAdmin || q.createdBy === ctx.user.id) && (QUOTATION_STATUS_TRANSITIONS[q.status] || []).includes(input.status))
+          .map(q => q.id);
+        if (validIds.length > 0) {
+          await db.batchUpdateQuotationStatus(validIds, input.status);
+          await logActivity(ctx, { action: "update_status", resourceType: "quotation", detail: { status: input.status, count: validIds.length } });
+        }
+        return { success: true, updated: validIds.length };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to batch update quotation statuses", cause: error });
       }
-      if (validIds.length > 0) {
-        await db.batchUpdateQuotationStatus(validIds, input.status);
-        await logActivity(ctx, { action: "update_status", resourceType: "quotation", detail: { status: input.status, count: validIds.length } });
-      }
-      return { success: true, updated: validIds.length };
     }),
 
   batchDelete: protectedProcedure
     .input(z.object({ ids: z.array(z.number()).min(1) }))
     .mutation(async ({ input, ctx }) => {
-      const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
-      const validIds: number[] = [];
-      for (const id of input.ids) {
-        const q = await db.getQuotationById(id);
-        if (q && (isAdmin || q.createdBy === ctx.user.id)) {
-          validIds.push(id);
+      try {
+        const isAdmin = ["admin", "sales_manager"].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        const quotations = await db.getQuotationsByIds(input.ids);
+        const validIds = quotations
+          .filter(q => isAdmin || q.createdBy === ctx.user.id)
+          .map(q => q.id);
+        if (validIds.length > 0) {
+          await db.batchDeleteQuotations(validIds);
+          await logActivity(ctx, { action: "delete_quotation", resourceType: "quotation", detail: { count: validIds.length } });
         }
+        return { success: true, deleted: validIds.length };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to batch delete quotations", cause: error });
       }
-      if (validIds.length > 0) {
-        await db.batchDeleteQuotations(validIds);
-        await logActivity(ctx, { action: "delete_quotation", resourceType: "quotation", detail: { count: validIds.length } });
-      }
-      return { success: true, deleted: validIds.length };
     }),
 
   analytics: protectedProcedure
@@ -228,12 +260,16 @@ export const quotationsRouter = router({
       endDate: z.string().optional(),
     }))
     .query(async ({ input, ctx }) => {
-      const isAdmin = ['admin', 'sales_manager'].includes(ctx.user.role) || ctx.user.isSuperAdmin;
-      return db.getQuotationAnalytics({
-        startDate: input.startDate ? new Date(input.startDate) : undefined,
-        endDate: input.endDate ? new Date(input.endDate) : undefined,
-        userId: isAdmin ? undefined : ctx.user.id,
-      });
+      try {
+        const isAdmin = ['admin', 'sales_manager'].includes(ctx.user.role) || ctx.user.isSuperAdmin;
+        return await db.getQuotationAnalytics({
+          startDate: input.startDate ? new Date(input.startDate) : undefined,
+          endDate: input.endDate ? new Date(input.endDate) : undefined,
+          userId: isAdmin ? undefined : ctx.user.id,
+        });
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get quotation analytics", cause: error });
+      }
     }),
 
   myDashboard: protectedProcedure
@@ -242,14 +278,18 @@ export const quotationsRouter = router({
       endDate: z.string().optional(),
     }))
     .query(async ({ input, ctx }) => {
-      const [stats, recent] = await Promise.all([
-        db.getMyDashboardStats(
-          ctx.user.id,
-          input.startDate ? new Date(input.startDate) : undefined,
-          input.endDate ? new Date(input.endDate) : undefined,
-        ),
-        db.getMyRecentQuotations(ctx.user.id, 6),
-      ]);
-      return { stats, recent };
+      try {
+        const [stats, recent] = await Promise.all([
+          db.getMyDashboardStats(
+            ctx.user.id,
+            input.startDate ? new Date(input.startDate) : undefined,
+            input.endDate ? new Date(input.endDate) : undefined,
+          ),
+          db.getMyRecentQuotations(ctx.user.id, 6),
+        ]);
+        return { stats, recent };
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get dashboard data", cause: error });
+      }
     }),
 });

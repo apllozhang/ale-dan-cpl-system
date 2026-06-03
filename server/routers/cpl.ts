@@ -112,7 +112,11 @@ function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]) {
 export const cplRouter = router({
   // Get all sheets
   sheets: protectedProcedure.query(async () => {
-    return db.getCplSheets({ pageSize: 9999 });
+    try {
+      return await db.getCplSheets({ pageSize: 9999 });
+    } catch (error) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch CPL sheets", cause: error });
+    }
   }),
 
   // Get products with filtering, pagination, sorting
@@ -132,7 +136,11 @@ export const cplRouter = router({
       priceMax: z.number().optional(),
     }))
     .query(async ({ input }) => {
-      return db.getCplProducts(input);
+      try {
+        return await db.getCplProducts(input);
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch CPL products", cause: error });
+      }
     }),
 
   // Get products by IDs (for quotation pre-fill)
@@ -141,7 +149,11 @@ export const cplRouter = router({
       ids: z.array(z.number()).min(1).max(200),
     }))
     .query(async ({ input }) => {
-      return db.getCplProductsByIds(input.ids);
+      try {
+        return await db.getCplProductsByIds(input.ids);
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch CPL products by IDs", cause: error });
+      }
     }),
 
   // Export all filtered products (no pagination limit)
@@ -159,27 +171,47 @@ export const cplRouter = router({
       priceMax: z.number().optional(),
     }))
     .query(async ({ input }) => {
-      return db.getCplProducts({ ...input, page: 1, pageSize: 50000 });
+      try {
+        return await db.getCplProducts({ ...input, page: 1, pageSize: 10000 });
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to export CPL products", cause: error });
+      }
     }),
 
   // Get latest summary
   summary: protectedProcedure.query(async () => {
-    return db.getLatestSummary();
+    try {
+      return await db.getLatestSummary();
+    } catch (error) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch CPL summary", cause: error });
+    }
   }),
 
   // Get active import log info
   activeImport: protectedProcedure.query(async () => {
-    return db.getActiveImportLog();
+    try {
+      return await db.getActiveImportLog();
+    } catch (error) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch active import log", cause: error });
+    }
   }),
 
   // Check if existing data exists
   hasData: protectedProcedure.query(async () => {
-    const count = await db.countCplProducts();
-    return { hasData: count > 0, count };
+    try {
+      const count = await db.countCplProducts();
+      return { hasData: count > 0, count };
+    } catch (error) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to check CPL data existence", cause: error });
+    }
   }),
 
   stats: protectedProcedure.query(async () => {
-    return db.getCplStats();
+    try {
+      return await db.getCplStats();
+    } catch (error) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch CPL stats", cause: error });
+    }
   }),
 
   // Import Excel file — always overwrite (old data preserved for switching)
@@ -195,44 +227,73 @@ export const cplRouter = router({
       }
       importInProgress = true;
       try {
-        const buffer = Buffer.from(input.fileBase64, "base64");
-        const { products, sheetMeta, summaryContent } = parseExcelBuffer(buffer, input.selectedSheets);
+        let buffer: Buffer;
+        try {
+          buffer = Buffer.from(input.fileBase64, "base64");
+        } catch (error) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid file data: failed to decode base64", cause: error });
+        }
+
+        let parseResult: ReturnType<typeof parseExcelBuffer>;
+        try {
+          parseResult = parseExcelBuffer(buffer, input.selectedSheets);
+        } catch (error) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to parse Excel file", cause: error });
+        }
+        const { products, sheetMeta, summaryContent } = parseResult;
+
+        if (products.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "No valid products found in the imported file" });
+        }
 
         // Fetch org/group names for logging
         let orgName = "";
         let groupName = "";
-        if (ctx.user!.organizationId) {
-          const orgs: Organization[] = await db.getAllOrganizations();
-          orgName = orgs.find((o) => o.id === ctx.user!.organizationId)?.name || "";
-        }
-        if (ctx.user!.groupId) {
-          const groups: UserGroup[] = await db.getAllUserGroups();
-          groupName = groups.find((g) => g.id === ctx.user!.groupId)?.name || "";
+        try {
+          if (ctx.user!.organizationId) {
+            const orgs: Organization[] = await db.getAllOrganizations();
+            orgName = orgs.find((o) => o.id === ctx.user!.organizationId)?.name || "";
+          }
+          if (ctx.user!.groupId) {
+            const groups: UserGroup[] = await db.getAllUserGroups();
+            groupName = groups.find((g) => g.id === ctx.user!.groupId)?.name || "";
+          }
+        } catch (error) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch organization info for import", cause: error });
         }
 
         const cleanedSheets: Omit<InsertCplSheet, "id">[] = sheetMeta.map((s) => {
           const { id, ...rest } = s as InsertCplSheet & { id?: number };
           return rest;
         });
-        await db.importCplOverwrite({
-          fileName: input.fileName,
-          userId: ctx.user!.id,
-          username: ctx.user!.username || "unknown",
-          orgName: orgName || null,
-          groupName: groupName || null,
-          sheetNames: sheetMeta.map((s) => s.sheetName),
-          sheetsCount: sheetMeta.length,
-          productsCount: products.length,
-          products: products as InsertCplProduct[],
-          sheets: cleanedSheets as Omit<InsertCplSheet, "id">[],
-          summary: summaryContent ? { content: summaryContent, version: input.fileName } : undefined,
-        });
+
+        try {
+          await db.importCplOverwrite({
+            fileName: input.fileName,
+            userId: ctx.user!.id,
+            username: ctx.user!.username || "unknown",
+            orgName: orgName || null,
+            groupName: groupName || null,
+            sheetNames: sheetMeta.map((s) => s.sheetName),
+            sheetsCount: sheetMeta.length,
+            productsCount: products.length,
+            products: products as InsertCplProduct[],
+            sheets: cleanedSheets as Omit<InsertCplSheet, "id">[],
+            summary: summaryContent ? { content: summaryContent, version: input.fileName } : undefined,
+          });
+        } catch (error) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to import CPL data into database", cause: error });
+        }
 
         // Audit log
-        await logActivity(ctx, {
-          action: "import_data", resourceType: "import",
-          detail: { fileName: input.fileName, mode: "overwrite", productsCount: products.length },
-        });
+        try {
+          await logActivity(ctx, {
+            action: "import_data", resourceType: "import",
+            detail: { fileName: input.fileName, mode: "overwrite", productsCount: products.length },
+          });
+        } catch (error) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to log import activity", cause: error });
+        }
 
         return {
           success: true,

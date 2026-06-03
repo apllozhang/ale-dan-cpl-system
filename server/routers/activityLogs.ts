@@ -2,6 +2,7 @@ import { router, permissionProcedure, superAdminProcedure } from "../_core/trpc"
 import { z } from "zod";
 import * as db from "../db";
 import { PERMISSIONS } from "@shared/const";
+import { TRPCError } from "@trpc/server";
 
 function csvEscape(val: string | null | undefined): string {
   if (!val) return '';
@@ -23,11 +24,19 @@ export const activityLogsRouter = router({
       pageSize: z.number().min(1).max(100).default(20),
     }))
     .query(async ({ input }) => {
-      return db.getActivityLogs(input);
+      try {
+        return await db.getActivityLogs(input);
+      } catch (error) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch activity logs', cause: error });
+      }
     }),
   stats: permissionProcedure(PERMISSIONS.VIEW_ACTIVITY_LOGS)
     .query(async () => {
-      return db.getActivityStats();
+      try {
+        return await db.getActivityStats();
+      } catch (error) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch activity stats', cause: error });
+      }
     }),
   export: permissionProcedure(PERMISSIONS.VIEW_ACTIVITY_LOGS)
     .input(z.object({
@@ -38,15 +47,23 @@ export const activityLogsRouter = router({
       endDate: z.string().optional(),
     }))
     .query(async ({ input }) => {
-      const { items } = await db.getActivityLogs({ ...input, page: 1, pageSize: 10000 });
-      const header = "ID,时间,用户,操作,资源类型,资源ID,详情,IP";
-      const rows = items.map((l: { id: number; createdAt: Date | string; username: string | null; action: string; resourceType: string | null; resourceId: number | null; detail: string | null; ipAddress: string | null }) =>
-        `${l.id},${csvEscape(new Date(l.createdAt).toLocaleString("zh-CN"))},${csvEscape(l.username)},${csvEscape(l.action)},${csvEscape(l.resourceType)},${l.resourceId || ''},${csvEscape((l.detail || "").slice(0, 200))},${csvEscape(l.ipAddress)}`
-      );
-      return header + "\n" + rows.join("\n");
+      try {
+        const { items } = await db.getActivityLogs({ ...input, page: 1, pageSize: 10000 });
+        const header = "ID,时间,用户,操作,资源类型,资源ID,详情,IP";
+        const rows = items.map((l: { id: number; createdAt: Date | string; username: string | null; action: string; resourceType: string | null; resourceId: number | null; detail: string | null; ipAddress: string | null }) =>
+          `${l.id},${csvEscape(new Date(l.createdAt).toLocaleString("zh-CN"))},${csvEscape(l.username)},${csvEscape(l.action)},${csvEscape(l.resourceType)},${l.resourceId || ''},${csvEscape((l.detail || "").slice(0, 200))},${csvEscape(l.ipAddress)}`
+        );
+        return header + "\n" + rows.join("\n");
+      } catch (error) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to export activity logs', cause: error });
+      }
     }),
   clear: superAdminProcedure.mutation(async () => {
-    await db.clearActivityLogs();
-    return { success: true };
+    try {
+      await db.clearActivityLogs();
+      return { success: true };
+    } catch (error) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to clear activity logs', cause: error });
+    }
   }),
 });

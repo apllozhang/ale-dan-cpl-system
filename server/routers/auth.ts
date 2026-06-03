@@ -46,6 +46,7 @@ export const authRouter = router({
     return { success: true } as const;
   }),
   login: publicProcedure
+    .meta({ rateLimit: { max: 5, windowMs: 900_000 } })
     .input(z.object({
       username: z.string().max(128),
       password: z.string().max(128),

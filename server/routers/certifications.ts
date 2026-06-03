@@ -5,10 +5,13 @@ import * as db from "../db";
 import * as XLSX from "xlsx";
 import { PERMISSIONS, CERT_PRODUCT_CATEGORIES, CERT_STANDARD_TYPES } from "@shared/const";
 import { logActivity } from "./helpers";
+import { parseExcelDateToString } from "../lib/excel-date-parser";
 
 const CERT_STATUSES = ["active", "expired", "revoked", "pending"] as const;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_IMPORT_ROWS = 5000;
+
+const parseExcelDate = parseExcelDateToString;
 
 const FIELD_LENGTHS: Record<string, number> = {
   certNo: 128,
@@ -21,21 +24,6 @@ const FIELD_LENGTHS: Record<string, number> = {
   factoryNo: 128,
   testReportNo: 128,
 };
-
-function parseExcelDate(val: unknown): string {
-  if (val == null || val === "") return "";
-  if (typeof val === "number") {
-    // Excel serial date number
-    const d = new Date((val - 25569) * 86400 * 1000);
-    return d.toISOString().split("T")[0];
-  }
-  const s = String(val).trim();
-  if (DATE_REGEX.test(s)) return s;
-  // Try parsing common date formats
-  const d = new Date(s);
-  if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
-  return s;
-}
 
 function truncate(str: string, maxLen: number): string {
   return str.length > maxLen ? str.slice(0, maxLen) : str;
@@ -54,27 +42,44 @@ export const certificationsRouter = router({
       pageSize: z.number().min(1).max(100).default(20),
     }))
     .query(async ({ input }) => {
-      return db.listCertifications(input);
+      try {
+        return await db.listCertifications(input);
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to list certifications", cause: error });
+      }
     }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      const cert = await db.getCertificationById(input.id);
-      if (!cert) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
-      return cert;
+      try {
+        const cert = await db.getCertificationById(input.id);
+        if (!cert) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
+        return cert;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get certification", cause: error });
+      }
     }),
 
   byProduct: protectedProcedure
     .input(z.object({ productModel: z.string() }))
     .query(async ({ input }) => {
-      return db.getCertificationsByProduct(input.productModel);
+      try {
+        return await db.getCertificationsByProduct(input.productModel);
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get certifications by product", cause: error });
+      }
     }),
 
   expiring: protectedProcedure
     .input(z.object({ days: z.number().min(1).max(365).default(90) }))
     .query(async ({ input }) => {
-      return db.getExpiringCertifications(input.days);
+      try {
+        return await db.getExpiringCertifications(input.days);
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get expiring certifications", cause: error });
+      }
     }),
 
   export: protectedProcedure
@@ -87,21 +92,25 @@ export const certificationsRouter = router({
       keyword: z.string().optional(),
     }))
     .query(async ({ input }) => {
-      const { items } = await db.listCertifications({ ...input, page: 1, pageSize: 10000 });
-      const headers = [
-        "证书编号", "证书名称", "认证标准", "产品类别", "产品系列", "认证机构", "持有人",
-        "工厂编号", "检测报告编号", "认证范围", "发证日期", "到期日期", "状态", "备注",
-      ];
-      const rows = items.map((c) => [
-        c.certNo, c.certName, c.standardType ?? "", c.productCategory ?? "", c.productSeries ?? "",
-        c.issuer, c.holder, c.factoryNo ?? "", c.testReportNo ?? "", c.certScope ?? "",
-        c.issueDate, c.expiryDate ?? "", c.status, c.remark ?? "",
-      ]);
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "证书清单");
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-      return buffer.toString("base64");
+      try {
+        const { items } = await db.listCertifications({ ...input, page: 1, pageSize: 10000 });
+        const headers = [
+          "证书编号", "证书名称", "认证标准", "产品类别", "产品系列", "认证机构", "持有人",
+          "工厂编号", "检测报告编号", "认证范围", "发证日期", "到期日期", "状态", "备注",
+        ];
+        const rows = items.map((c) => [
+          c.certNo, c.certName, c.standardType ?? "", c.productCategory ?? "", c.productSeries ?? "",
+          c.issuer, c.holder, c.factoryNo ?? "", c.testReportNo ?? "", c.certScope ?? "",
+          c.issueDate, c.expiryDate ?? "", c.status, c.remark ?? "",
+        ]);
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "证书清单");
+        const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+        return buffer.toString("base64");
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to export certifications", cause: error });
+      }
     }),
 
   create: permissionProcedure(PERMISSIONS.MANAGE_CERTIFICATIONS)
@@ -125,17 +134,22 @@ export const certificationsRouter = router({
       productModels: z.array(z.string()).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { productModels, ...certData } = input;
-      if (certData.certType === "product" && (!productModels || productModels.length === 0)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "产品认证必须关联至少一个产品型号" });
+      try {
+        const { productModels, ...certData } = input;
+        if (certData.certType === "product" && (!productModels || productModels.length === 0)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "产品认证必须关联至少一个产品型号" });
+        }
+        const existing = await db.getCertificationByCertNo(certData.certNo);
+        if (existing) {
+          throw new TRPCError({ code: "CONFLICT", message: `证书编号 ${certData.certNo} 已存在` });
+        }
+        const id = await db.createCertification({ ...certData, createdBy: ctx.user.id }, productModels);
+        await logActivity(ctx, { action: "create_certification", resourceType: "certification", resourceId: id });
+        return { id };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create certification", cause: error });
       }
-      const existing = await db.getCertificationByCertNo(certData.certNo);
-      if (existing) {
-        throw new TRPCError({ code: "CONFLICT", message: `证书编号 ${certData.certNo} 已存在` });
-      }
-      const id = await db.createCertification({ ...certData, createdBy: ctx.user.id }, productModels);
-      await logActivity(ctx, { action: "create_certification", resourceType: "certification", resourceId: id });
-      return { id };
     }),
 
   update: permissionProcedure(PERMISSIONS.MANAGE_CERTIFICATIONS)
@@ -160,26 +174,36 @@ export const certificationsRouter = router({
       productModels: z.array(z.string()).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { id, productModels, ...certData } = input;
-      const existing = await db.getCertificationById(id);
-      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
-      if (certData.certNo && certData.certNo !== existing.certNo) {
-        const dup = await db.getCertificationByCertNo(certData.certNo);
-        if (dup) throw new TRPCError({ code: "CONFLICT", message: `证书编号 ${certData.certNo} 已存在` });
+      try {
+        const { id, productModels, ...certData } = input;
+        const existing = await db.getCertificationById(id);
+        if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
+        if (certData.certNo && certData.certNo !== existing.certNo) {
+          const dup = await db.getCertificationByCertNo(certData.certNo);
+          if (dup) throw new TRPCError({ code: "CONFLICT", message: `证书编号 ${certData.certNo} 已存在` });
+        }
+        await db.updateCertification(id, certData, productModels);
+        await logActivity(ctx, { action: "update_certification", resourceType: "certification", resourceId: id });
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to update certification", cause: error });
       }
-      await db.updateCertification(id, certData, productModels);
-      await logActivity(ctx, { action: "update_certification", resourceType: "certification", resourceId: id });
-      return { success: true };
     }),
 
   delete: permissionProcedure(PERMISSIONS.MANAGE_CERTIFICATIONS)
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      const existing = await db.getCertificationById(input.id);
-      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
-      await db.deleteCertification(input.id);
-      await logActivity(ctx, { action: "delete_certification", resourceType: "certification", resourceId: input.id });
-      return { success: true };
+      try {
+        const existing = await db.getCertificationById(input.id);
+        if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
+        await db.deleteCertification(input.id);
+        await logActivity(ctx, { action: "delete_certification", resourceType: "certification", resourceId: input.id });
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to delete certification", cause: error });
+      }
     }),
 
   import: permissionProcedure(PERMISSIONS.MANAGE_CERTIFICATIONS)
@@ -198,89 +222,94 @@ export const certificationsRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "无法解析 Excel 文件，请确认文件格式正确" });
       }
 
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      try {
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-      if (rows.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Excel 文件为空" });
-      if (rows.length > MAX_IMPORT_ROWS) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `导入行数超出限制（最多 ${MAX_IMPORT_ROWS} 行）` });
-      }
-
-      const imported: string[] = [];
-      const errors: string[] = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const certNo = String(row["证书编号"] ?? "").trim();
-        if (!certNo) { errors.push(`第 ${i + 2} 行: 缺少证书编号`); continue; }
-
-        const certName = truncate(String(row["证书名称"] ?? "").trim(), FIELD_LENGTHS.certName);
-        const issuer = truncate(String(row["认证机构"] ?? "").trim(), FIELD_LENGTHS.issuer);
-        const holder = truncate(String(row["持有人"] ?? "").trim(), FIELD_LENGTHS.holder);
-        const issueDate = parseExcelDate(row["发证日期"]);
-
-        if (!certName || !issuer || !holder || !issueDate || !DATE_REGEX.test(issueDate)) {
-          errors.push(`第 ${i + 2} 行: 缺少必填字段（证书名称/认证机构/持有人/发证日期）或日期格式错误`);
-          continue;
+        if (rows.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Excel 文件为空" });
+        if (rows.length > MAX_IMPORT_ROWS) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `导入行数超出限制（最多 ${MAX_IMPORT_ROWS} 行）` });
         }
 
-        const expiryDateRaw = parseExcelDate(row["到期日期"]);
-        const expiryDate = expiryDateRaw && DATE_REGEX.test(expiryDateRaw) ? expiryDateRaw : null;
+        const imported: string[] = [];
+        const errors: string[] = [];
 
-        const standardTypeRaw = truncate(String(row["认证标准"] ?? "").trim(), FIELD_LENGTHS.standardType) || null;
-        const productCategoryRaw = String(row["产品类别"] ?? "").trim() || null;
-        const productSeriesRaw = truncate(String(row["产品系列"] ?? "").trim(), 128) || null;
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const certNo = String(row["证书编号"] ?? "").trim();
+          if (!certNo) { errors.push(`第 ${i + 2} 行: 缺少证书编号`); continue; }
 
-        const certData = {
-          certType: input.certType,
-          certNo: truncate(certNo, FIELD_LENGTHS.certNo),
-          certName,
-          standardType: standardTypeRaw,
-          productCategory: productCategoryRaw,
-          productSeries: productSeriesRaw,
-          issuer,
-          holder,
-          factoryNo: truncate(String(row["工厂编号"] ?? "").trim(), FIELD_LENGTHS.factoryNo) || null,
-          testReportNo: truncate(String(row["检测报告编号"] ?? "").trim(), FIELD_LENGTHS.testReportNo) || null,
-          certScope: String(row["认证范围"] ?? row["适用范围"] ?? "").trim() || null,
-          issueDate,
-          expiryDate,
-          status: "active" as const,
-          remark: String(row["备注"] ?? "").trim() || null,
-          createdBy: ctx.user.id,
-        };
+          const certName = truncate(String(row["证书名称"] ?? "").trim(), FIELD_LENGTHS.certName);
+          const issuer = truncate(String(row["认证机构"] ?? "").trim(), FIELD_LENGTHS.issuer);
+          const holder = truncate(String(row["持有人"] ?? "").trim(), FIELD_LENGTHS.holder);
+          const issueDate = parseExcelDate(row["发证日期"]);
 
-        const modelsStr = String(row["关联产品型号"] ?? "").trim();
-        const productModels = input.certType === "product" && modelsStr
-          ? modelsStr.split(/[,;，；]/).map(s => s.trim()).filter(Boolean)
-          : undefined;
-
-        if (input.certType === "product" && (!productModels || productModels.length === 0)) {
-          errors.push(`第 ${i + 2} 行: 产品认证缺少关联产品型号`);
-          continue;
-        }
-
-        const existing = await db.getCertificationByCertNo(certNo);
-        if (existing) {
-          if (input.duplicateStrategy === "overwrite") {
-            await db.updateCertification(existing.id, certData, productModels);
-            imported.push(certNo);
+          if (!certName || !issuer || !holder || !issueDate || !DATE_REGEX.test(issueDate)) {
+            errors.push(`第 ${i + 2} 行: 缺少必填字段（证书名称/认证机构/持有人/发证日期）或日期格式错误`);
             continue;
           }
-          errors.push(`第 ${i + 2} 行: 证书编号 ${certNo} 已存在`);
-          continue;
+
+          const expiryDateRaw = parseExcelDate(row["到期日期"]);
+          const expiryDate = expiryDateRaw && DATE_REGEX.test(expiryDateRaw) ? expiryDateRaw : null;
+
+          const standardTypeRaw = truncate(String(row["认证标准"] ?? "").trim(), FIELD_LENGTHS.standardType) || null;
+          const productCategoryRaw = String(row["产品类别"] ?? "").trim() || null;
+          const productSeriesRaw = truncate(String(row["产品系列"] ?? "").trim(), 128) || null;
+
+          const certData = {
+            certType: input.certType,
+            certNo: truncate(certNo, FIELD_LENGTHS.certNo),
+            certName,
+            standardType: standardTypeRaw,
+            productCategory: productCategoryRaw,
+            productSeries: productSeriesRaw,
+            issuer,
+            holder,
+            factoryNo: truncate(String(row["工厂编号"] ?? "").trim(), FIELD_LENGTHS.factoryNo) || null,
+            testReportNo: truncate(String(row["检测报告编号"] ?? "").trim(), FIELD_LENGTHS.testReportNo) || null,
+            certScope: String(row["认证范围"] ?? row["适用范围"] ?? "").trim() || null,
+            issueDate,
+            expiryDate,
+            status: "active" as const,
+            remark: String(row["备注"] ?? "").trim() || null,
+            createdBy: ctx.user.id,
+          };
+
+          const modelsStr = String(row["关联产品型号"] ?? "").trim();
+          const productModels = input.certType === "product" && modelsStr
+            ? modelsStr.split(/[,;，；]/).map(s => s.trim()).filter(Boolean)
+            : undefined;
+
+          if (input.certType === "product" && (!productModels || productModels.length === 0)) {
+            errors.push(`第 ${i + 2} 行: 产品认证缺少关联产品型号`);
+            continue;
+          }
+
+          const existing = await db.getCertificationByCertNo(certNo);
+          if (existing) {
+            if (input.duplicateStrategy === "overwrite") {
+              await db.updateCertification(existing.id, certData, productModels);
+              imported.push(certNo);
+              continue;
+            }
+            errors.push(`第 ${i + 2} 行: 证书编号 ${certNo} 已存在`);
+            continue;
+          }
+
+          await db.createCertification(certData, productModels);
+          imported.push(certNo);
         }
 
-        await db.createCertification(certData, productModels);
-        imported.push(certNo);
+        await logActivity(ctx, {
+          action: "import_certifications",
+          resourceType: "certification",
+          detail: { imported: imported.length, failed: errors.length },
+        });
+
+        return { imported: imported.length, errors };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to import certifications", cause: error });
       }
-
-      await logActivity(ctx, {
-        action: "import_certifications",
-        resourceType: "certification",
-        detail: { imported: imported.length, failed: errors.length },
-      });
-
-      return { imported: imported.length, errors };
     }),
 });

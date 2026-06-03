@@ -7,12 +7,23 @@ import { logActivity } from "./helpers";
 
 export const usersRouter = router({
   list: adminProcedure.query(async () => {
-    return db.getAllUsers();
+    try {
+      return await db.getAllUsers();
+    } catch (error) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to list users", cause: error });
+    }
   }),
   getById: adminProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return db.getUserById(input.id);
+      try {
+        const user = await db.getUserById(input.id);
+        if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+        return user;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get user", cause: error });
+      }
     }),
   create: adminProcedure
     .input(z.object({
@@ -26,23 +37,28 @@ export const usersRouter = router({
       groupId: z.number().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const existingUser = await db.getUserByUsername(input.username);
-      if (existingUser) {
-        throw new TRPCError({ code: "CONFLICT", message: "用户名已存在" });
+      try {
+        const existingUser = await db.getUserByUsername(input.username);
+        if (existingUser) {
+          throw new TRPCError({ code: "CONFLICT", message: "用户名已存在" });
+        }
+        const passwordHash = await hash(input.password, 10);
+        const result = await db.createUser({
+          username: input.username,
+          passwordHash,
+          name: input.name,
+          email: input.email,
+          role: input.role,
+          isSuperAdmin: input.isSuperAdmin,
+          organizationId: input.organizationId,
+          groupId: input.groupId,
+        });
+        await logActivity(ctx, { action: "create_user", resourceType: "user", detail: { username: input.username, role: input.role } });
+        return result;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create user", cause: error });
       }
-      const passwordHash = await hash(input.password, 10);
-      const result = await db.createUser({
-        username: input.username,
-        passwordHash,
-        name: input.name,
-        email: input.email,
-        role: input.role,
-        isSuperAdmin: input.isSuperAdmin,
-        organizationId: input.organizationId,
-        groupId: input.groupId,
-      });
-      await logActivity(ctx, { action: "create_user", resourceType: "user", detail: { username: input.username, role: input.role } });
-      return result;
     }),
   update: adminProcedure
     .input(z.object({
@@ -57,38 +73,47 @@ export const usersRouter = router({
       groupId: z.number().nullable().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { id, password, username, ...rest } = input;
-      // Only super admins can modify isSuperAdmin
-      if (rest.isSuperAdmin !== undefined && !ctx.user.isSuperAdmin) {
-        delete (rest as Record<string, unknown>).isSuperAdmin;
-      }
-      const updateData: Record<string, unknown> = { ...rest };
-      if (password) {
-        const target = await db.getUserById(id);
-        if (target?.isSuperAdmin) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "超管密码不允许修改" });
+      try {
+        const { id, password, username, ...rest } = input;
+        if (rest.isSuperAdmin !== undefined && !ctx.user.isSuperAdmin) {
+          delete (rest as Record<string, unknown>).isSuperAdmin;
         }
-        updateData.passwordHash = await hash(password, 10);
-      }
-      if (username) {
-        const existing = await db.getUserByUsername(username);
-        if (existing && existing.id !== id) {
-          throw new TRPCError({ code: "CONFLICT", message: "用户名已存在" });
+        const updateData: Record<string, unknown> = { ...rest };
+        if (password) {
+          const target = await db.getUserById(id);
+          if (target?.isSuperAdmin) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "超管密码不允许修改" });
+          }
+          updateData.passwordHash = await hash(password, 10);
         }
-        updateData.username = username;
+        if (username) {
+          const existing = await db.getUserByUsername(username);
+          if (existing && existing.id !== id) {
+            throw new TRPCError({ code: "CONFLICT", message: "用户名已存在" });
+          }
+          updateData.username = username;
+        }
+        const result = await db.updateUser(id, updateData);
+        await logActivity(ctx, { action: "update_user", resourceType: "user", resourceId: id, detail: { username: username || (await db.getUserById(id))?.username } });
+        return result;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to update user", cause: error });
       }
-      const result = await db.updateUser(id, updateData);
-      await logActivity(ctx, { action: "update_user", resourceType: "user", resourceId: id, detail: { username: username || (await db.getUserById(id))?.username } });
-      return result;
     }),
   delete: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      const target = await db.getUserById(input.id);
-      if (target?.isSuperAdmin) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "超级用户不可删除" });
+      try {
+        const target = await db.getUserById(input.id);
+        if (target?.isSuperAdmin) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "超级用户不可删除" });
+        }
+        await logActivity(ctx, { action: "delete_user", resourceType: "user", resourceId: input.id, detail: { username: target?.username || target?.name } });
+        return await db.deleteUser(input.id);
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to delete user", cause: error });
       }
-      await logActivity(ctx, { action: "delete_user", resourceType: "user", resourceId: input.id, detail: { username: target?.username || target?.name } });
-      return db.deleteUser(input.id);
     }),
 });
