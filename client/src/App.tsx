@@ -5,20 +5,20 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import ProductDataPage from "./pages/ProductDataPage";
-import Summary from "./pages/Summary";
-import Import from "./pages/Import";
-import QuotationList from "./pages/QuotationList";
-import QuotationDetail from "./pages/QuotationDetail";
-import UserManagement from "./pages/UserManagement";
-import ActivityLog from "./pages/ActivityLog";
-import BusinessAnalysis from "./pages/BusinessAnalysis";
-import Customers from "./pages/Customers";
-import ProductSpecsPage, { SpecSetDetail } from "@/pages/ProductSpecsPage";
-import CertificationsPage from "@/pages/CertificationsPage";
-import EFlashPage from "@/pages/EFlashPage";
+import Home from "@/features/dashboard/pages/Home";
+import Login from "@/features/auth/pages/Login";
+import ProductDataPage from "@/features/cpl-data/pages/ProductDataPage";
+import Summary from "@/features/cpl-data/pages/Summary";
+import Import from "@/features/cpl-data/pages/Import";
+import QuotationList from "@/features/quotations/pages/QuotationList";
+import QuotationDetail from "@/features/quotations/pages/QuotationDetail";
+import UserManagement from "@/features/admin/pages/UserManagement";
+import ActivityLog from "@/features/admin/pages/ActivityLog";
+import BusinessAnalysis from "@/features/dashboard/pages/BusinessAnalysis";
+import Customers from "@/features/customers/pages/Customers";
+import ProductSpecsPage, { SpecSetDetail } from "@/features/product-specs/pages/ProductSpecsPage";
+import CertificationsPage from "@/features/certifications/pages/CertificationsPage";
+import EFlashPage from "@/features/eflash/pages/EFlashPage";
 
 function DashboardRoutes() {
   return (
@@ -50,7 +50,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/share/:token" component={() => {
         // Lazy load to avoid circular deps
-        const QuotationShared = require("./pages/QuotationShared").default;
+        const QuotationShared = require("@/features/quotations/pages/QuotationShared").default;
         return <QuotationShared />;
       }} />
       <Route component={DashboardRoutes} />
