@@ -146,6 +146,10 @@ export function registerUploadRoutes(app: Express) {
       });
     } catch (error) {
       logger.error("upload_failed", { error: error instanceof Error ? error.message : String(error) });
+      // Clean up temp file if it was written but DB operations failed
+      if (req.file?.path) {
+        await fsPromises.unlink(req.file.path).catch(() => {});
+      }
       res.status(500).json({ error: "Upload failed" });
     }
   });
