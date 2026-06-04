@@ -17,6 +17,7 @@ import { sql } from "drizzle-orm";
 import { serveStatic, setupVite } from "./vite";
 import { startImportWorker } from "../workers/importWorker";
 import { logger, logSlowOperation } from "./logger";
+import { startMaintenanceTasks } from "./maintenance";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -365,6 +366,8 @@ async function startServer() {
     logger.info("server_started", { port, env: process.env.NODE_ENV || "development" });
     // Start background import worker
     startImportWorker();
+    // Start scheduled maintenance tasks (cleanup expired data)
+    startMaintenanceTasks();
   });
 }
 
