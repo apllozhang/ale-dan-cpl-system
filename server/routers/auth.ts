@@ -8,7 +8,11 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { createSession, revokeSession, SESSION_DURATION_MS } from "../db/sessions";
 import { parse as parseCookieHeader } from "cookie";
-import { checkLoginRateLimit, recordLoginFailure, clearLoginAttempts } from "../db/loginAttempts";
+
+// Simple in-memory login rate limiter
+const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 export const authRouter = router({
   me: publicProcedure.query(({ ctx }) => {
@@ -42,23 +46,31 @@ export const authRouter = router({
       password: z.string().max(128),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Rate limiting by IP — now backed by database for multi-instance support
+      // Rate limiting by IP
       const clientIp = ctx.req.ip || (ctx.req.headers["x-forwarded-for"] as string) || "unknown";
-      const rateLimitKey = `login:${clientIp}`;
-
-      // Check rate limit
-      const { blocked, remaining } = await checkLoginRateLimit(rateLimitKey);
-      if (blocked) {
-        throw new TRPCError({
-          code: "TOO_MANY_REQUESTS",
-          message: "登录尝试次数过多，请15分钟后重试",
-        });
+      const now = Date.now();
+      const attempts = loginAttempts.get(clientIp);
+      if (attempts) {
+        if (now - attempts.lastAttempt < LOGIN_WINDOW_MS) {
+          if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+            throw new TRPCError({
+              code: "TOO_MANY_REQUESTS",
+              message: "登录尝试次数过多，请15分钟后重试",
+            });
+          }
+        } else {
+          // Window expired, reset
+          loginAttempts.delete(clientIp);
+        }
       }
 
       const user = await db.getUserByUsername(input.username);
       if (!user || !user.passwordHash) {
         // Track failed login attempt
-        await recordLoginFailure(rateLimitKey);
+        const record = loginAttempts.get(clientIp) || { count: 0, lastAttempt: 0 };
+        record.count++;
+        record.lastAttempt = now;
+        loginAttempts.set(clientIp, record);
 
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -69,7 +81,10 @@ export const authRouter = router({
       const valid = await compare(input.password, user.passwordHash);
       if (!valid) {
         // Track failed login attempt
-        await recordLoginFailure(rateLimitKey);
+        const record = loginAttempts.get(clientIp) || { count: 0, lastAttempt: 0 };
+        record.count++;
+        record.lastAttempt = now;
+        loginAttempts.set(clientIp, record);
 
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -78,7 +93,7 @@ export const authRouter = router({
       }
 
       // Clear rate limit on successful login
-      await clearLoginAttempts(rateLimitKey);
+      loginAttempts.delete(clientIp);
 
       // Update lastSignedIn
       await db.upsertUser({

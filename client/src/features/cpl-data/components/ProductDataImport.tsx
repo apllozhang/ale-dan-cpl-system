@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
@@ -30,17 +30,11 @@ export function ProductDataImport() {
   const [progress, setProgress] = useState(0);
   const rafRef = useRef<number>(0);
 
-  // Async job state
-  const [activeJobId, setActiveJobId] = useState<string | null>(null);
-
   const utils = trpc.useUtils();
 
   const hasDataQuery = trpc.cpl.hasData.useQuery();
   const hasExistingData = hasDataQuery.data?.hasData ?? false;
   const existingCount = hasDataQuery.data?.count ?? 0;
-
-  // Async import mutation
-  const importAsyncMutation = trpc.cpl.importAsync.useMutation();
 
   // Duplicate file detection
   const duplicateCheck = trpc.importLogs.checkDuplicate.useQuery(
@@ -49,74 +43,6 @@ export function ProductDataImport() {
   );
   const duplicates = duplicateCheck.data ?? [];
   const hasDuplicates = duplicates.length > 0;
-
-  // Poll job status when there's an active job
-  const jobStatusQuery = trpc.importJobs.getById.useQuery(
-    { id: activeJobId! },
-    {
-      enabled: !!activeJobId,
-      refetchInterval: (query) => {
-        const data = query.state.data;
-        if (!data) return 2000;
-        // Stop polling when job is done
-        if (data.status === "succeeded" || data.status === "failed" || data.status === "cancelled") {
-          return false;
-        }
-        return 2000; // Poll every 2 seconds
-      },
-    }
-  );
-
-  // Handle job status changes
-  useEffect(() => {
-    const job = jobStatusQuery.data;
-    if (!job || !activeJobId) return;
-
-    if (job.status === "processing") {
-      setImportPhase(t('import.phaseProcessing'));
-      setProgress(job.progress || 0);
-    } else if (job.status === "succeeded") {
-      cancelAnimationFrame(rafRef.current);
-      setProgress(100);
-      setImportPhase(t('import.phaseComplete'));
-      setTimeout(() => {
-        setImportPhase(null);
-        setProgress(0);
-        setActiveJobId(null);
-      }, 800);
-
-      if (job.result) {
-        setImportResult({
-          sheetsImported: job.result.sheetsImported ?? 0,
-          productsImported: job.result.productsImported ?? 0,
-          hasSummary: job.result.hasSummary ?? false,
-        });
-      }
-
-      setFile(null);
-      setSheetInfo([]);
-      setSelectedSheets(new Set());
-      toast.success(t('import.importSuccess'));
-
-      utils.cpl.sheets.invalidate();
-      utils.cpl.products.invalidate();
-      utils.cpl.summary.invalidate();
-      utils.cpl.hasData.invalidate();
-      utils.importLogs.list.invalidate();
-    } else if (job.status === "failed") {
-      cancelAnimationFrame(rafRef.current);
-      setImportPhase(null);
-      setProgress(0);
-      setActiveJobId(null);
-      toast.error(job.errorMessage || t('import.importFailed'));
-    } else if (job.status === "cancelled") {
-      cancelAnimationFrame(rafRef.current);
-      setImportPhase(null);
-      setProgress(0);
-      setActiveJobId(null);
-      toast.error(t('import.importCancelled', { defaultValue: 'Import cancelled' }));
-    }
-  }, [jobStatusQuery.data, activeJobId, t, utils]);
 
   const animateProgress = useCallback((from: number, to: number, duration: number) => {
     cancelAnimationFrame(rafRef.current);
@@ -130,6 +56,32 @@ export function ProductDataImport() {
     };
     rafRef.current = requestAnimationFrame(frame);
   }, []);
+
+  const importMutation = trpc.cpl.import.useMutation({
+    onSuccess: (data) => {
+      cancelAnimationFrame(rafRef.current);
+      setProgress(100);
+      setImportPhase(t('import.phaseComplete'));
+      setTimeout(() => {
+        setImportPhase(null);
+        setProgress(0);
+      }, 800);
+      setImportResult(data);
+      setFile(null); setSheetInfo([]); setSelectedSheets(new Set());
+      toast.success(t('import.importSuccess'));
+      utils.cpl.sheets.invalidate();
+      utils.cpl.products.invalidate();
+      utils.cpl.summary.invalidate();
+      utils.cpl.hasData.invalidate();
+      utils.importLogs.list.invalidate();
+    },
+    onError: (err) => {
+      cancelAnimationFrame(rafRef.current);
+      setImportPhase(null);
+      setProgress(0);
+      toast.error(err.message || t('import.importFailed'));
+    },
+  });
 
   const handleFileSelect = async (f: File) => {
     if (!f.name.endsWith(".xlsx") && !f.name.endsWith(".xls")) {
@@ -197,23 +149,15 @@ export function ProductDataImport() {
 
       const uploadResult = await uploadResponse.json();
 
-      // Phase 3: create async import job
+      // Phase 3: trigger import via tRPC
       setImportPhase(t('import.phaseProcessing'));
-      animateProgress(55, 70, 1000);
+      animateProgress(55, 90, 8000);
 
-      // Use the async import endpoint
-      const result = await importAsyncMutation.mutateAsync({
-        uploadId: uploadResult.uploadId,
+      importMutation.mutate({
+        filePath: uploadResult.filePath,
         fileName: file.name,
         selectedSheets: Array.from(selectedSheets),
       });
-
-      if (result.success && result.jobId) {
-        setActiveJobId(result.jobId);
-        // The useEffect will handle the rest via polling
-      } else {
-        throw new Error("Failed to create import job");
-      }
     } catch (error) {
       cancelAnimationFrame(rafRef.current);
       setImportPhase(null);
@@ -222,8 +166,7 @@ export function ProductDataImport() {
     }
   };
 
-  const isImporting = importPhase !== null && progress < 100 && progress > 0;
-  const isPolling = !!activeJobId;
+  const isImporting = importMutation.isPending || (importPhase !== null && progress < 100 && progress > 0);
 
   return (
     <>
@@ -316,7 +259,7 @@ export function ProductDataImport() {
 
       {/* Import button or Progress bar */}
       {file && (
-        (isImporting || isPolling) ? (
+        isImporting ? (
           <div className="bg-card border rounded-lg p-5 space-y-3">
             <div className="flex items-center gap-3">
               <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" />
@@ -398,9 +341,15 @@ export function ProductDataImport() {
         </div>
       )}
 
-      {importPhase === null && !importResult && file === null && (
-        <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-5 hidden">
-          {/* This div is hidden, but we show errors via toast */}
+      {importMutation.isError && (
+        <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-5">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-destructive">{t('import.failed')}</p>
+              <p className="text-sm text-destructive/80 mt-1">{importMutation.error?.message || t('import.checkFormat')}</p>
+            </div>
+          </div>
         </div>
       )}
 

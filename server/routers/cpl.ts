@@ -6,7 +6,6 @@ import * as db from "../db";
 import { acquireLock, releaseLock } from "../db/locks";
 import * as XLSX from "xlsx";
 import { logActivity } from "./helpers";
-import crypto from "crypto";
 
 // Import lock name and TTL (10 minutes)
 const IMPORT_LOCK_NAME = "cpl_import";
@@ -47,7 +46,7 @@ const COLUMN_MAP: Record<string, string> = {
   "Comment": "remark",
 };
 
-export function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]) {
+function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheetsToSkip = ["Summary", "LBS场景化报价模型"];
   const products: InsertCplProduct[] = [];
@@ -218,7 +217,6 @@ export const cplRouter = router({
   }),
 
   // Import Excel file — always overwrite (old data preserved for switching)
-  // DEPRECATED: Use importAsync for new imports. This synchronous version is kept for backward compatibility.
   import: superAdminProcedure
     .input(z.object({
       fileBase64: z.string().max(50_000_000).optional(),
@@ -326,46 +324,6 @@ export const cplRouter = router({
         };
       } finally {
         await releaseLock(IMPORT_LOCK_NAME, lockOwner);
-      }
-    }),
-
-  // Async import — creates a job for background processing
-  importAsync: superAdminProcedure
-    .input(z.object({
-      uploadId: z.string().min(1).max(64),
-      fileName: z.string(),
-      selectedSheets: z.array(z.string()).optional(),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      try {
-        // Verify upload exists and belongs to this user
-        const upload = await db.getTempUploadForUser(input.uploadId, ctx.user!.id);
-        if (!upload) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Upload not found, expired, or already consumed",
-          });
-        }
-
-        // Create import job
-        const jobId = crypto.randomUUID();
-        await db.createImportJob({
-          id: jobId,
-          type: "cpl",
-          fileName: input.fileName,
-          uploadId: input.uploadId,
-          createdBy: ctx.user!.id,
-          selectedSheets: input.selectedSheets,
-        });
-
-        return { success: true, jobId };
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to create import job",
-          cause: error,
-        });
       }
     }),
 });
