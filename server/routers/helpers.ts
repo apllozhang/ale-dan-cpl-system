@@ -1,5 +1,8 @@
 import * as db from "../db";
 
+// Re-export from shared for backward compatibility
+export { calculateSubtotal } from "@shared/quotationMath";
+
 interface AuthedContext {
   user: NonNullable<import("../_core/context").TrpcContext["user"]>;
   req: import("../_core/context").TrpcContext["req"];
@@ -25,11 +28,6 @@ export function logActivity(ctx: AuthedContext, params: {
 /** Check if user has manager/admin privileges */
 export function isManagerOrAdmin(user: { role: string; isSuperAdmin: boolean }): boolean {
   return ["admin", "sales_manager"].includes(user.role) || user.isSuperAdmin;
-}
-
-/** Calculate discount subtotal: unitPrice × quantity × (discountRate / 100) */
-export function calculateSubtotal(unitPrice: number, quantity: number, discountRate: number): number {
-  return unitPrice * quantity * (discountRate / 100);
 }
 
 /** Escape a value for CSV export */

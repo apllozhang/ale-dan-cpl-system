@@ -1,4 +1,5 @@
 ﻿import ExcelJS from 'exceljs';
+import { calculateSubtotal } from "@shared/quotationMath";
 
 
 export interface QuotationItem {
@@ -134,7 +135,7 @@ export async function generateQuotationExcel(data: QuotationData): Promise<Buffe
       item.listPrice,
       item.quantity,
       item.discountRate,
-      item.listPrice * item.quantity * (item.discountRate / 100),
+      calculateSubtotal(item.listPrice, item.quantity, item.discountRate),
     ];
 
     cells.forEach((value, index) => {
