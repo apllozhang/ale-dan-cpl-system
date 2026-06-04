@@ -42,7 +42,11 @@ export const COLUMN_MAP: Record<string, string> = {
   "Comment": "remark",
 };
 
-export function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]) {
+export function parseExcelBuffer(buffer: Buffer, selectedSheets?: string[]): {
+  products: InsertCplProduct[];
+  sheetMeta: { sheetName: string; displayOrder: number; productCount: number }[];
+  summaryContent: string;
+} {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheetsToSkip = ["Summary", "LBS场景化报价模型"];
   const products: InsertCplProduct[] = [];
