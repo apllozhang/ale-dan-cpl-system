@@ -5,7 +5,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
-    ignores: ["dist/", "node_modules/", ".manus/", ".manus-logs/", "patches/"],
+    ignores: ["dist/", "node_modules/", ".manus/", ".manus-logs/", "patches/", ".claude/"],
   },
   {
     files: ["**/*.{ts,tsx}"],
