@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import * as db from "../db";
 import { hash } from "bcryptjs";
 import { logActivity } from "./helpers";
+import { revokeAllUserSessions } from "../db/sessions";
 
 export const usersRouter = router({
   list: adminProcedure.query(async () => {
@@ -89,6 +90,8 @@ export const usersRouter = router({
             throw new TRPCError({ code: "FORBIDDEN", message: "超管密码不允许修改" });
           }
           updateData.passwordHash = await hash(password, 10);
+          // Revoke all sessions so user must re-login
+          await revokeAllUserSessions(id);
         }
         if (username) {
           const existing = await db.getUserByUsername(username);
@@ -118,6 +121,33 @@ export const usersRouter = router({
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to delete user", cause: error });
+      }
+    }),
+  forceLogout: adminProcedure
+    .input(z.object({ userId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const target = await db.getUserById(input.userId);
+        if (!target) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+        }
+        if (target.isSuperAdmin) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot force logout super admin" });
+        }
+
+        await revokeAllUserSessions(input.userId);
+
+        await logActivity(ctx, {
+          action: "force_logout",
+          resourceType: "user",
+          resourceId: input.userId,
+          detail: { username: target.username || target.name },
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to force logout user", cause: error });
       }
     }),
 });
