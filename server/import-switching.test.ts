@@ -64,7 +64,7 @@ function createSuperAdminContext(): { ctx: TrpcContext; setCookies: CookieCall[]
       groupId: null,
       passwordHash: null,
       createdAt: new Date(),
-    } as any,
+    } as unknown as TrpcContext["user"],
     req: {
       protocol: "https",
       headers: {},
@@ -92,7 +92,7 @@ function createNonSuperAdminContext(): { ctx: TrpcContext } {
       groupId: null,
       passwordHash: null,
       createdAt: new Date(),
-    } as any,
+    } as unknown as TrpcContext["user"],
     req: {
       protocol: "https",
       headers: {},
@@ -117,9 +117,9 @@ describe("importLogs.switchActive", () => {
     const caller = appRouter.createCaller(ctx);
 
     const mockLog = { id: 5, fileName: "test.xlsx", isActive: false };
-    vi.mocked(db.getImportLogById).mockResolvedValue(mockLog as any);
-    vi.mocked(db.deactivateAllImports).mockResolvedValue(undefined as any);
-    vi.mocked(db.activateImport).mockResolvedValue(undefined as any);
+    vi.mocked(db.getImportLogById).mockResolvedValue(mockLog as never);
+    vi.mocked(db.deactivateAllImports).mockResolvedValue(undefined as never);
+    vi.mocked(db.activateImport).mockResolvedValue(undefined as never);
 
     const result = await caller.importLogs.switchActive({ id: 5 });
 
@@ -156,8 +156,8 @@ describe("importLogs.deleteLog", () => {
     const caller = appRouter.createCaller(ctx);
 
     const mockLog = { id: 3, fileName: "old.xlsx", isActive: false };
-    vi.mocked(db.getImportLogById).mockResolvedValue(mockLog as any);
-    vi.mocked(db.deleteImportLog).mockResolvedValue(undefined as any);
+    vi.mocked(db.getImportLogById).mockResolvedValue(mockLog as never);
+    vi.mocked(db.deleteImportLog).mockResolvedValue(undefined as never);
 
     const result = await caller.importLogs.deleteLog({ id: 3 });
 
@@ -171,7 +171,7 @@ describe("importLogs.deleteLog", () => {
     const caller = appRouter.createCaller(ctx);
 
     const mockLog = { id: 1, fileName: "active.xlsx", isActive: true };
-    vi.mocked(db.getImportLogById).mockResolvedValue(mockLog as any);
+    vi.mocked(db.getImportLogById).mockResolvedValue(mockLog as never);
 
     await expect(caller.importLogs.deleteLog({ id: 1 })).rejects.toThrow(
       "当前正在使用的导入不能删除，请先切换到其他导入"
@@ -208,7 +208,7 @@ describe("importLogs.list", () => {
       { id: 2, fileName: "latest.xlsx", username: "admin", mode: "overwrite", isActive: true, sheetsCount: 3, productsCount: 100, createdAt: new Date() },
       { id: 1, fileName: "old.xlsx", username: "admin", mode: "merge", isActive: false, sheetsCount: 2, productsCount: 50, createdAt: new Date() },
     ];
-    vi.mocked(db.getImportLogs).mockResolvedValue({ items: mockItems, total: 2 } as any);
+    vi.mocked(db.getImportLogs).mockResolvedValue({ items: mockItems, total: 2 } as never);
 
     const result = await caller.importLogs.list({ page: 1, pageSize: 20 });
 
@@ -221,7 +221,7 @@ describe("importLogs.list", () => {
     const { ctx } = createSuperAdminContext();
     const caller = appRouter.createCaller(ctx);
 
-    vi.mocked(db.getImportLogs).mockResolvedValue({ items: [], total: 0 } as any);
+    vi.mocked(db.getImportLogs).mockResolvedValue({ items: [], total: 0 } as never);
 
     await caller.importLogs.list({ page: 1, pageSize: 20, search: "test" });
 
@@ -232,7 +232,7 @@ describe("importLogs.list", () => {
     const { ctx } = createSuperAdminContext();
     const caller = appRouter.createCaller(ctx);
 
-    vi.mocked(db.getImportLogs).mockResolvedValue({ items: [], total: 0 } as any);
+    vi.mocked(db.getImportLogs).mockResolvedValue({ items: [], total: 0 } as never);
 
     const result = await caller.importLogs.list({ page: 1, pageSize: 20 });
 
@@ -255,8 +255,8 @@ describe("cpl.import", () => {
     const { ctx } = createSuperAdminContext();
     const caller = appRouter.createCaller(ctx);
 
-    vi.mocked(db.importCplOverwrite).mockResolvedValue({ importLogId: 1 } as any);
-    vi.mocked(db.createActivityLog).mockResolvedValue(undefined as any);
+    vi.mocked(db.importCplOverwrite).mockResolvedValue({ importLogId: 1 } as never);
+    vi.mocked(db.createActivityLog).mockResolvedValue(undefined as never);
 
     // Create a minimal valid xlsx buffer as base64
     // We need to mock XLSX parsing — since parseExcelBuffer is internal,

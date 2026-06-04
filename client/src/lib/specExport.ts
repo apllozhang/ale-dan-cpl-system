@@ -3,7 +3,7 @@ import { saveArrayBufferWithPicker } from "./saveFile";
 import type { SpecQuotationInfo, MatchedSpecItem, UnmatchedSpecItem } from "@shared/types";
 
 const FONT_CN = "黑体";
-const FONT_EN = "Trebuchet MS";
+const _FONT_EN = "Trebuchet MS";
 
 const COLOR_HEADER_BG = "4B0082";
 const COLOR_HEADER_FG = "FFFFFF";

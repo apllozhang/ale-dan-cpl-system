@@ -68,7 +68,7 @@ export default function QuotationList() {
   const isMobilePreview = useMobilePreview();
   const [showCompare, setShowCompare] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchLoading, _setBatchLoading] = useState(false);
 
   const tableColumns = useMemo<ColumnDef[]>(() => [
     { key: "quotationNo", label: t("quotation.no"), defaultWidth: 120, sortable: true },

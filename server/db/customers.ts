@@ -1,4 +1,4 @@
-import { eq, like, and, sql } from "drizzle-orm";
+import { like, and, sql } from "drizzle-orm";
 import { quotations } from "../../drizzle/schema";
 import { getDb } from "./index";
 

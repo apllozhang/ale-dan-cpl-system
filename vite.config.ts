@@ -104,15 +104,15 @@ function vitePluginManusDebugCollector(): Plugin {
           return next();
         }
 
-        const handlePayload = (payload: any) => {
+        const handlePayload = (payload: Record<string, unknown>) => {
           // Write logs directly to files
-          if (payload.consoleLogs?.length > 0) {
+          if (Array.isArray(payload.consoleLogs) && payload.consoleLogs.length > 0) {
             writeToLogFile("browserConsole", payload.consoleLogs);
           }
-          if (payload.networkRequests?.length > 0) {
+          if (Array.isArray(payload.networkRequests) && payload.networkRequests.length > 0) {
             writeToLogFile("networkRequests", payload.networkRequests);
           }
-          if (payload.sessionEvents?.length > 0) {
+          if (Array.isArray(payload.sessionEvents) && payload.sessionEvents.length > 0) {
             writeToLogFile("sessionReplay", payload.sessionEvents);
           }
 
@@ -123,7 +123,7 @@ function vitePluginManusDebugCollector(): Plugin {
         const reqBody = (req as { body?: unknown }).body;
         if (reqBody && typeof reqBody === "object") {
           try {
-            handlePayload(reqBody);
+            handlePayload(reqBody as Record<string, unknown>);
           } catch (e) {
             res.writeHead(400, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ success: false, error: String(e) }));

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
 import { logActivity, isManagerOrAdmin, calculateSubtotal } from "./helpers";
-import { QUOTATION_STATUS_TRANSITIONS, QUOTATION_STATUS_LABELS } from "@shared/const";
+import { QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
 import { quotations } from "../../drizzle/schema";
 
 type QuotationStatus = typeof quotations.$inferSelect.status;

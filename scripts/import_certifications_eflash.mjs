@@ -11,13 +11,8 @@
  */
 
 import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
 import ExcelJS from 'exceljs';
 import mysql from 'mysql2/promise';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.join(__dirname, '..');
 
 // 获取数据库连接
 async function getConnection() {

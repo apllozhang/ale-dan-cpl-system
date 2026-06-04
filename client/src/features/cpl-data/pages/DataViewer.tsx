@@ -1,5 +1,4 @@
-﻿import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
+﻿import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -19,7 +18,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
@@ -31,7 +29,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { trpc } from "@/lib/trpc";
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   Search,
@@ -50,7 +48,6 @@ import {
   Eye,
   EyeOff,
   Settings2,
-  GripVertical,
   Download,
   FileSpreadsheet,
   Network,
@@ -614,7 +611,7 @@ export default function DataViewer() {
                       title={t('common.selectAll')}
                     />
                   </TableHead>
-                  {visibleColumnsList.map((col, idx) => (
+                  {visibleColumnsList.map((col) => (
                     <TableHead
                       key={col.key}
                       className="cursor-pointer select-none text-xs font-semibold text-foreground/80 hover:text-foreground transition-colors border-r border-border/50 last:border-r-0 px-3 py-2 whitespace-nowrap relative group"

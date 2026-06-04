@@ -21,7 +21,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
@@ -39,7 +38,6 @@ import {
   Users,
   Building2,
   Activity,
-  BarChart3,
   TrendingUp,
   Sun,
   Moon,
@@ -151,7 +149,7 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme, setTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
@@ -168,7 +166,7 @@ function DashboardLayoutContent({
     if (item.permission && !hasPermission(user!, item.permission as Permission)) return false;
     return true;
   });
-  const isMobile = useIsMobile();
+  const _isMobile = useIsMobile();
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Initial menu items stagger animation

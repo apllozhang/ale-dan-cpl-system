@@ -53,7 +53,7 @@ export async function createContext(
         }
       }
     }
-  } catch (error) {
+  } catch {
     // Authentication is optional for public procedures.
     user = null;
   }

@@ -25,7 +25,7 @@ export async function acquireLock(name: string, owner: string, ttlMs: number): P
       expiresAt,
     });
     return true;
-  } catch (error) {
+  } catch {
     // Lock already exists — check if it's expired
     const [existing] = await db.select().from(systemLocks).where(eq(systemLocks.name, name)).limit(1);
     if (existing && existing.expiresAt < now) {

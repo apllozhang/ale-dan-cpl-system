@@ -1,7 +1,7 @@
-import { eq, and, or, like, desc, sql, inArray, between } from "drizzle-orm";
+import { eq, and, or, like, desc, sql, inArray } from "drizzle-orm";
 import { getDb } from "./index";
 import { eflashRecords, eflashTags, eflashRecordTags, eflashAttachments } from "../../drizzle/schema";
-import type { InsertEFlashRecord, InsertEFlashTag, InsertEFlashAttachment } from "../../drizzle/schema";
+import type { InsertEFlashRecord, InsertEFlashAttachment } from "../../drizzle/schema";
 
 // ==================== Records ====================
 

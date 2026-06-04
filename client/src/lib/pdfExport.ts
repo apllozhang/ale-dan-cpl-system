@@ -3,6 +3,8 @@ import autoTable from "jspdf-autotable";
 import { saveBlobWithPicker } from "./saveFile";
 import type { SpecQuotationInfo, MatchedSpecItem, UnmatchedSpecItem } from "@shared/types";
 
+type AutoTableDoc = jsPDF & { lastAutoTable?: { finalY: number } };
+
 const COLOR_HEADER_BG: [number, number, number] = [75, 0, 130];
 const COLOR_HEADER_FG: [number, number, number] = [255, 255, 255];
 const COLOR_TITLE: [number, number, number] = [27, 0, 51];
@@ -81,7 +83,7 @@ export async function exportQuotationToPdf(quotation: SpecQuotationInfo, items: 
     "", "合  计", "", "", "", `¥${total.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`, "", "",
   ]);
 
-  const lastInfoY = (doc as any).lastAutoTable?.finalY || 45;
+  const lastInfoY = (doc as AutoTableDoc).lastAutoTable?.finalY || 45;
 
   autoTable(doc, {
     startY: lastInfoY + 4,
@@ -129,7 +131,7 @@ export async function exportQuotationToPdf(quotation: SpecQuotationInfo, items: 
   });
 
   // Footer
-  let footerY = (doc as any).lastAutoTable?.finalY + 6 || 100;
+  let footerY = ((doc as AutoTableDoc).lastAutoTable?.finalY ?? 0) + 6 || 100;
 
   // Notes
   if (quotation.notes) {
@@ -209,7 +211,7 @@ export async function exportSpecTableToPdf(params: {
     ...specKeys.map(k => item.specs?.[k] || "—"),
   ]);
 
-  const lastY = (doc as any).lastAutoTable?.finalY || 35;
+  const lastY = (doc as AutoTableDoc).lastAutoTable?.finalY || 35;
 
   autoTable(doc, {
     startY: lastY + 4,
@@ -242,7 +244,7 @@ export async function exportSpecTableToPdf(params: {
 
   // Unmatched section
   if (unmatched.length > 0) {
-    let unmatchedY = (doc as any).lastAutoTable?.finalY + 6 || 100;
+    let unmatchedY = ((doc as AutoTableDoc).lastAutoTable?.finalY ?? 0) + 6 || 100;
     doc.setFontSize(9);
     doc.setTextColor(204, 0, 0);
     doc.text(`未匹配产品（${unmatched.length} 项，无对应参数数据）`, margin, unmatchedY);

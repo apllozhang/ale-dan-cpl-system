@@ -96,7 +96,7 @@ interface ProductSelectorDialogProps {
 }
 
 export default function ProductSelectorDialog({
-  open, onOpenChange, onAddProducts, discountRate, existingProductIds,
+  open, onOpenChange, onAddProducts, discountRate: _discountRate, existingProductIds,
 }: ProductSelectorDialogProps) {
   const { t } = useTranslation();
   const [activeNav, setActiveNav] = useState<CategoryNavItem | null>(null);

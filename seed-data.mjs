@@ -29,11 +29,6 @@ const COLUMN_MAP = {
   "子类别": "serviceCategory",
 };
 
-function escapeStr(s) {
-  if (!s) return "''";
-  return "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
-}
-
 async function main() {
   console.log('Reading Excel file...');
   const buffer = fs.readFileSync(EXCEL_PATH);

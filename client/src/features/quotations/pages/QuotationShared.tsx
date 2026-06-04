@@ -1,11 +1,9 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Loader2, Download, Share2 } from "lucide-react";
+import { Loader2, Share2 } from "lucide-react";
 import { useParams } from "wouter";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
-import { exportQuotationToExcel } from "@/lib/quotationExport";
 
 export default function QuotationShared() {
   const { token } = useParams<{ token: string }>();

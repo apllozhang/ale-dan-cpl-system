@@ -1,7 +1,6 @@
 import { router, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { ENV } from "../_core/env";
 import * as db from "../db";
 import { compare } from "bcryptjs";
 import { logActivity } from "./helpers";
@@ -18,7 +17,7 @@ const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 export const authRouter = router({
   me: publicProcedure.query(({ ctx }) => {
     if (!ctx.user) return null;
-    const { passwordHash, ...safeUser } = ctx.user;
+    const { passwordHash: _passwordHash, ...safeUser } = ctx.user;
     return safeUser;
   }),
   logout: publicProcedure.mutation(async ({ ctx }) => {

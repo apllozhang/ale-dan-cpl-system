@@ -1,4 +1,4 @@
-import { eq, like, or, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { InsertUser, User, users } from "../../drizzle/schema";
 import { getDb } from "./index";
 

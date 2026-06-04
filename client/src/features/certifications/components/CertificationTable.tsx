@@ -117,7 +117,7 @@ export function CertificationTable({
           <tbody ref={tbodyRef}>
             {sortedItems.map((cert: CertificationItem) => (
               <tr key={cert.id} className="hover:bg-muted/50 transition-colors">
-                {getColumns(t, certType).map((col, i) => {
+                {getColumns(t, certType).map((col) => {
                   if (col.key === "certNo") return renderCell(col, false, <span className="font-mono text-xs">{cert.certNo}</span>);
                   if (col.key === "certName") return renderCell(col, false, <span className="text-xs">{cert.certName}</span>);
                   if (col.key === "standardType") return renderCell(col, false, <span className="text-xs">{cert.standardType ? t(`certifications.standards.${cert.standardType}`, cert.standardType) : "-"}</span>);
@@ -162,7 +162,7 @@ export function CertificationTable({
         total={data.total}
         pageSize={pageSize}
         onPageChange={onPageChange}
-        onPageSizeChange={(size) => { onPageChange(1); onPageChange(0); }}
+        onPageSizeChange={(_size) => { onPageChange(1); onPageChange(0); }}
       />
     </div>
   );

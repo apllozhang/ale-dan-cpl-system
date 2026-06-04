@@ -7,7 +7,7 @@ import { useStaggerIn } from "@/hooks/useStaggerIn";
 import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";
 import { useMemo } from "react";
 
-interface EFlashItem {
+type EFlashItem = {
   id: number;
   eflashId: string;
   type: "phase_in" | "phase_out" | "service" | "pricing" | "program";

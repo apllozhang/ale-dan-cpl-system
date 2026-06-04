@@ -44,7 +44,7 @@ export async function exportToExcel(
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // Set column widths based on content
-  const colWidths = columns.map((col, idx) => {
+  const colWidths = columns.map((col) => {
     const headerWidth = col.label.length;
     const maxContentWidth = Math.max(
       ...data.map(row => {

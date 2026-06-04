@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Database, FileSpreadsheet, Layers, FileText, ArrowRight, Plus, List, Loader2, ChevronsUpDown, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { Database, FileSpreadsheet, Layers, FileText, ArrowRight, Plus, List, Loader2, ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,7 +141,7 @@ export default function Home() {
   });
 
   const sheets: { sheetName: string; productCount: number }[] = sheetsQuery.data ?? [];
-  const summary = summaryQuery.data;
+  const _summary = summaryQuery.data;
   const totalProducts = sheets.reduce((sum, s) => sum + s.productCount, 0);
   const stats = dashboardQuery.data?.stats;
   const recent = dashboardQuery.data?.recent ?? [];

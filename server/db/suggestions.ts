@@ -1,4 +1,5 @@
 import { like } from "drizzle-orm";
+import type { MySqlColumn } from "drizzle-orm/mysql-core";
 import {
   cplProducts,
 } from "../../drizzle/schema";
@@ -7,7 +8,7 @@ import { getDb } from "./index";
 export async function getSearchSuggestions(field: string, query: string, limit: number = 10) {
   const db = await getDb();
   if (!db || !query) return [];
-  const columnMap: Record<string, any> = {
+  const columnMap: Record<string, MySqlColumn | undefined> = {
     productModel: cplProducts.productModel,
     productDesc: cplProducts.productDesc,
     productGroup: cplProducts.productGroup,

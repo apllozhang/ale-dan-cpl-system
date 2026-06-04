@@ -156,7 +156,7 @@ describe("Quotation authorization", () => {
 
   it("allows viewer to view products but not create quotations (based on permission matrix)", async () => {
     const ctx = createContext(6, "viewer");
-    const caller = appRouter.createCaller(ctx);
+    const _caller = appRouter.createCaller(ctx);
 
     // Viewer can view products
     expect(ctx.user.role).toBe("viewer");
@@ -168,7 +168,7 @@ describe("Quotation authorization", () => {
 
   it("prevents non-super-admin from creating super-admin users", async () => {
     const ctx = createContext(1, "admin");
-    const caller = appRouter.createCaller(ctx);
+    const _caller = appRouter.createCaller(ctx);
 
     // This should be tested if users.create is accessible
     // For now, we verify the context is set up correctly

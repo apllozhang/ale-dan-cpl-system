@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
-import { TRPCError } from "@trpc/server";
 import type { TrpcContext } from "./_core/context";
 
 // Mock ENV before routers imports it

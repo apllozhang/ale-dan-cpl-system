@@ -6,16 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import {
   ArrowLeft, Save, Plus, Trash2, Loader2, Download,
   Send, CheckCircle, CheckCircle2, Mail, XCircle, Share2, Copy, Pencil,
-  Search, Check, FileSpreadsheet, Printer, ClipboardList,
+  Search, Check, FileSpreadsheet, ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
@@ -188,8 +185,8 @@ function QuotationItemsTable({
 export default function QuotationDetail() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const [match, params] = useRoute("/quotations/:id");
-  const { user } = useAuth();
+  const [_match, params] = useRoute("/quotations/:id");
+  const { user: _user } = useAuth();
 
   const isNew = !params?.id || params.id === "new";
   const quotationId = isNew ? null : Number(params?.id);
@@ -228,7 +225,7 @@ export default function QuotationDetail() {
   // Quick search state
   const [quickSearch, setQuickSearch] = useState("");
   const [quickResults, setQuickResults] = useState<Array<{ id: number; productModel: string | null; productDesc: string | null; listPrice: string | null; [key: string]: unknown }>>([]);
-  const quickSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const _quickSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quickSearchRef = useRef<HTMLDivElement>(null);
 
   // Load existing quotation
@@ -775,7 +772,7 @@ export default function QuotationDetail() {
 
 // ==================== Version Timeline Component ====================
 function VersionTimeline({ versions, quotationId }: { versions: Array<{ id: number; version: number; createdAt: string | Date; itemCount: number; totalAmount?: string | number | null; changeSummary?: string | null }>; quotationId: number }) {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [diffData, setDiffData] = useState<{
     fromVersion: number;
     toVersion: number;

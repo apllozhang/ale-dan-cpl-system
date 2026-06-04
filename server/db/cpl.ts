@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
-import { eq, ne, like, or, and, sql, asc, desc, isNotNull, inArray, SQL } from "drizzle-orm";
+import { eq, ne, like, or, and, sql, asc, desc, inArray, type SQL } from "drizzle-orm";
+import type { MySqlColumn } from "drizzle-orm/mysql-core";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   importLogs, cplSheets, cplProducts, cplSummary, InsertImportLog, InsertCplSheet, InsertCplProduct,
@@ -139,7 +140,7 @@ export async function getCplProducts(params: {
   if (filters) {
     for (const [key, value] of Object.entries(filters)) {
       if (!value || !value.trim()) continue;
-      const columnMap: Record<string, any> = {
+      const columnMap: Record<string, MySqlColumn | undefined> = {
         productGroup: cplProducts.productGroup,
         taxCategory: cplProducts.taxCategory,
         productModel: cplProducts.productModel,
@@ -182,7 +183,7 @@ export async function getCplProducts(params: {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const sortColumnMap: Record<string, any> = {
+  const sortColumnMap: Record<string, MySqlColumn | undefined> = {
     productGroup: cplProducts.productGroup,
     taxCategory: cplProducts.taxCategory,
     productModel: cplProducts.productModel,

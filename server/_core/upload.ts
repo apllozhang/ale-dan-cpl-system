@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import multer from "multer";
 import path from "path";
 import crypto from "crypto";
+import fs from "node:fs";
 import { getUserFromRequest } from "./context";
 
 // Configure multer for temporary file storage
@@ -39,7 +40,6 @@ const upload = multer({
 
 export function registerUploadRoutes(app: Express) {
   // Ensure temp directory exists
-  const fs = require("fs");
   const tempDir = path.join(process.cwd(), "uploads", "temp");
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });

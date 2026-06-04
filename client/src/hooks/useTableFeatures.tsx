@@ -56,7 +56,7 @@ export function useTableFeatures(columns: ColumnDef[]) {
       : <ChevronDown className="w-3 h-3 text-primary" />;
   }, [sortBy, sortOrder]);
 
-  const sortData = useCallback(<T extends Record<string, any>>(data: T[]): T[] => {
+  const sortData = useCallback(<T extends Record<string, unknown>>(data: T[]): T[] => {
     if (!sortBy) return data;
     return [...data].sort((a, b) => {
       const va = a[sortBy] ?? "";

@@ -15,16 +15,16 @@ import { useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   ClipboardList, Upload, Trash2, ArrowLeft, Plus, X, Search,
-  Loader2, Edit2, Check,
+  Loader2, Edit2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useMobilePreview } from "@/contexts/MobilePreviewContext";
 
 export default function ProductSpecsPage() {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [, setLocation] = useLocation();
-  const isMobilePreview = useMobilePreview();
+  const _isMobilePreview = useMobilePreview();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page] = useState(1);
@@ -283,7 +283,7 @@ export function SpecSetDetail({ setId, onBack }: { setId: number; onBack: () => 
 
 // ==================== Edit Entry Dialog ====================
 
-function EditEntryDialog({ entry, set, onClose }: { entry: { id: number; productModel: string; productDesc: string | null; specs: Record<string, string> }; set: { name: string; modelCount: number; fileName?: string }; onClose: () => void }) {
+function EditEntryDialog({ entry, set: _set, onClose }: { entry: { id: number; productModel: string; productDesc: string | null; specs: Record<string, string> }; set: { name: string; modelCount: number; fileName?: string }; onClose: () => void }) {
   const { t } = useTranslation();
   const [specs, setSpecs] = useState<Record<string, string>>(entry.specs || {});
   const [productDesc, setProductDesc] = useState(entry.productDesc || "");

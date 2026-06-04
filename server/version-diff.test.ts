@@ -1,8 +1,9 @@
 ﻿import { describe, it, expect } from "vitest";
 
 describe("Quotation version diff", () => {
-  function computeDiff(oldItems: any[], newItems: any[]) {
-    const oldItemMap = new Map(oldItems.map((it: any) => [it.productModel, it]));
+  interface VersionItem { productModel: string; quantity: number | string; discountRate?: number | string }
+  function computeDiff(oldItems: VersionItem[], newItems: VersionItem[]) {
+    const oldItemMap = new Map(oldItems.map((it) => [it.productModel, it]));
     const added: string[] = [];
     const removed: string[] = [];
     const modified: string[] = [];
@@ -17,7 +18,7 @@ describe("Quotation version diff", () => {
         }
       }
     }
-    const newItemSet = new Set(newItems.map((it: any) => it.productModel));
+    const newItemSet = new Set(newItems.map((it) => it.productModel));
     for (const oi of oldItems) {
       if (!newItemSet.has(oi.productModel)) removed.push(oi.productModel);
     }

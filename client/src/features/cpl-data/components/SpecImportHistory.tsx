@@ -15,7 +15,7 @@ import TablePagination from "@/components/TablePagination";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
-interface ImportGroup {
+type ImportGroup = {
   id: string;
   fileName: string;
   createdAt: Date | string;

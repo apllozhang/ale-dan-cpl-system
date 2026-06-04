@@ -263,7 +263,7 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [, setLocation] = useLocation();
+  const [, _setLocation] = useLocation();
   const loginRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);

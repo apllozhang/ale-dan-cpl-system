@@ -5,17 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Loader2, FileText, TrendingUp, Calculator, Target, Calendar, X } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  PieChart, Pie, Cell, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  PieChart, Pie, Cell,
   AreaChart, Area,
 } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useMobilePreview } from "@/contexts/MobilePreviewContext";
-import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS } from "@shared/const";
+import { QUOTATION_STATUS_LABELS } from "@shared/const";
 import { useTableFeatures, type ColumnDef } from "@/hooks/useTableFeatures";
 import gsap from "gsap";
 

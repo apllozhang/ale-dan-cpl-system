@@ -101,7 +101,7 @@ const STORAGE_KEY_SIDEBAR_COLLAPSED = "ale-cpl-sidebar-collapsed";
 
 export function ProductDataContent() {
   const { t } = useTranslation();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const sheetsQuery = trpc.cpl.sheets.useQuery();
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     try {
@@ -135,7 +135,7 @@ export function ProductDataContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [selectAll, setSelectAll] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const _sidebarOpen = true;
 
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
     try {
@@ -417,11 +417,6 @@ export function ProductDataContent() {
     setSelectedCategoryId(categoryId);
     setSelectedSubcategoryId("");
     // Sheet will be auto-selected by useEffect based on whether category has subcategories
-  };
-
-  const handleSubcategorySelect = (subcategoryId: string) => {
-    setSelectedSubcategoryId(subcategoryId);
-    // Sheet will be auto-selected by useEffect
   };
 
   const toggleCategory = (categoryId: string) => {

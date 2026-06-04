@@ -284,7 +284,7 @@ export const cplRouter = router({
         }
 
         const cleanedSheets: Omit<InsertCplSheet, "id">[] = sheetMeta.map((s) => {
-          const { id, ...rest } = s as InsertCplSheet & { id?: number };
+          const { id: _id, ...rest } = s as InsertCplSheet & { id?: number };
           return rest;
         });
 

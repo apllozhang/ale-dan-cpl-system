@@ -127,7 +127,7 @@ export function SpecDataTab() {
       }
     }).catch(() => { if (!cancelled) setEntriesLoading(false); });
     return () => { cancelled = true; };
-  }, [matchingSetIds.join(','), setsQuery.isLoading, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [matchingSetIds.join(','), setsQuery.isLoading, refreshKey]);
 
   const updateMutation = trpc.productSpecs.updateEntry.useMutation({
     onSuccess: () => {
@@ -180,7 +180,7 @@ export function SpecDataTab() {
 
   // Filter → Sort → Paginate
   const filteredEntries = useMemo(() => {
-    let entries = allEntries.filter((e: { productModel: string }) =>
+    const entries = allEntries.filter((e: { productModel: string }) =>
       !debouncedSearch || e.productModel.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
     if (sortBy === "productModel") {

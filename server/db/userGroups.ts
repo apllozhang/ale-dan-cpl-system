@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { userGroups, organizations, UserGroup } from "../../drizzle/schema";
 import { getDb } from "./index";
 

@@ -134,31 +134,6 @@ for (const r of records) {
 // ==================== 4. Cross-fill from EN to CN subjects ====================
 // For records with EN subject but no CN, and vice versa
 
-// Common keyword translations for product names
-const EN_CN_MAP = {
-  "Phase-in": "正式发布",
-  "Phase-out": "停售通知",
-  "Pricing": "价格",
-  "Service": "服务",
-  "OmniSwitch": "OmniSwitch",
-  "OmniAccess": "OmniAccess",
-  "OmniVista": "OmniVista",
-  "OmniPCX": "OmniPCX",
-  "OpenTouch": "OpenTouch",
-  "Stellar": "Stellar",
-  "Wi-Fi 6": "Wi-Fi 6",
-  "Wi-Fi 7": "Wi-Fi 7",
-  "Wi-Fi 6E": "Wi-Fi 6E",
-  "Access Point": "无线接入点",
-  "General Availability": "正式发布",
-  "software release": "软件版本发布",
-  "price increase": "价格调整",
-  "price update": "价格更新",
-  "End of Life": "停止销售",
-  "End of Sales": "停止销售",
-  "AOS": "AOS",
-};
-
 // For NET Global records missing CN subject but having EN subject,
 // add a prefix based on type
 for (const r of records) {

@@ -2,6 +2,7 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/app/NotFound";
 import { Route, Switch } from "wouter";
+import { useState, useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
@@ -16,7 +17,7 @@ import UserManagement from "@/features/admin/pages/UserManagement";
 import ActivityLog from "@/features/admin/pages/ActivityLog";
 import BusinessAnalysis from "@/features/dashboard/pages/BusinessAnalysis";
 import Customers from "@/features/customers/pages/Customers";
-import ProductSpecsPage, { SpecSetDetail } from "@/features/product-specs/pages/ProductSpecsPage";
+import { SpecSetDetail } from "@/features/product-specs/pages/ProductSpecsPage";
 import CertificationsPage from "@/features/certifications/pages/CertificationsPage";
 import EFlashPage from "@/features/eflash/pages/EFlashPage";
 
@@ -50,7 +51,11 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/share/:token" component={() => {
         // Lazy load to avoid circular deps
-        const QuotationShared = require("@/features/quotations/pages/QuotationShared").default;
+        const [QuotationShared, setQuotationShared] = useState<React.ComponentType | null>(null);
+        useEffect(() => {
+          import("@/features/quotations/pages/QuotationShared").then(mod => setQuotationShared(() => mod.default));
+        }, []);
+        if (!QuotationShared) return null;
         return <QuotationShared />;
       }} />
       <Route component={DashboardRoutes} />
