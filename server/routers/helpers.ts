@@ -1,8 +1,5 @@
 import * as db from "../db";
 
-// Re-export from shared for backward compatibility
-export { calculateSubtotal } from "@shared/quotationMath";
-
 interface AuthedContext {
   user: NonNullable<import("../_core/context").TrpcContext["user"]>;
   req: import("../_core/context").TrpcContext["req"];
@@ -23,11 +20,6 @@ export function logActivity(ctx: AuthedContext, params: {
     detail: params.detail ? JSON.stringify(params.detail) : null,
     ipAddress: ctx.req.ip || ctx.req.headers["x-forwarded-for"] as string || null,
   }).catch((err) => console.error("[ActivityLog] Failed:", err));
-}
-
-/** Check if user has manager/admin privileges */
-export function isManagerOrAdmin(user: { role: string; isSuperAdmin: boolean }): boolean {
-  return ["admin", "sales_manager"].includes(user.role) || user.isSuperAdmin;
 }
 
 /** Escape a value for CSV export */

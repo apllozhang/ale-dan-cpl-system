@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import type { QuotationVersion } from "../../drizzle/schema";
 import * as db from "../db";
-import { isManagerOrAdmin } from "./helpers";
+import { isManagerOrAdmin } from "../domain/quotations/quotation.policy";
 
 interface SnapshotData {
   changeSummary?: string | null;
