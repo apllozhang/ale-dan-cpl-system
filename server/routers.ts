@@ -17,6 +17,7 @@ import { productSpecsRouter } from "./routers/productSpecs";
 import { customersRouter } from "./routers/customers";
 import { certificationsRouter } from "./routers/certifications";
 import { eflashRouter } from "./routers/eflash";
+import { importJobsRouter } from "./routers/importJobs";
 
 export const appRouter = router({
   system: systemRouter,
@@ -27,6 +28,7 @@ export const appRouter = router({
   quotations: quotationsRouter,
   cpl: cplRouter,
   importLogs: importLogsRouter,
+  importJobs: importJobsRouter,
   activityLogs: activityLogsRouter,
   templates: templatesRouter,
   versions: versionsRouter,

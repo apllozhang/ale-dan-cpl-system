@@ -2,6 +2,7 @@ import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG, hasPermission, type Permission } f
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
+import { logger, logSlowOperation } from "./logger";
 
 // ── In-memory sliding window rate limiter ──
 const rateLimitBuckets = new Map<string, { count: number; windowStart: number }>();
@@ -34,6 +35,7 @@ const t = initTRPC.context<TrpcContext>().create({
 });
 
 // ── Structured logging + rate limiting middleware ──
+// This middleware is now applied to ALL procedures (not just publicProcedure)
 const loggingMiddleware = t.middleware(async opts => {
   const start = Date.now();
   const { path, type, meta } = opts;
@@ -49,8 +51,8 @@ const loggingMiddleware = t.middleware(async opts => {
     const key = `rl:${userId}:${path}`;
     const retryAfter = checkRateLimit(key, limit.max, limit.windowMs);
     if (retryAfter !== null) {
-      const logEntry = { requestId, userId, path, type, duration: Date.now() - start, outcome: 'rate_limited' };
-      console.log(JSON.stringify(logEntry));
+      const duration = Date.now() - start;
+      logger.warn("rate_limited", { requestId, userId, path, type, duration });
       throw new TRPCError({
         code: "TOO_MANY_REQUESTS",
         message: `Rate limit exceeded. Try again in ${retryAfter}s`,
@@ -58,25 +60,27 @@ const loggingMiddleware = t.middleware(async opts => {
     }
   }
 
-  let outcome = 'success';
   try {
     const result = await opts.next();
     const duration = Date.now() - start;
-    const logEntry = { requestId, userId, path, type, duration, outcome };
-    console.log(JSON.stringify(logEntry));
+
+    // Log slow requests
+    logSlowOperation(`trpc.${path}`, duration);
+
+    logger.info("trpc_request", { requestId, userId, path, type, duration, outcome: "success" });
     return result;
   } catch (error) {
-    outcome = 'error';
     const duration = Date.now() - start;
-    const errorCode = error instanceof TRPCError ? error.code : 'INTERNAL_SERVER_ERROR';
+    const errorCode = error instanceof TRPCError ? error.code : "INTERNAL_SERVER_ERROR";
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const logEntry = { requestId, userId, path, type, duration, outcome, errorCode, errorMessage };
-    console.log(JSON.stringify(logEntry));
+    logger.error("trpc_request", { requestId, userId, path, type, duration, outcome: "error", errorCode, errorMessage });
     throw error;
   }
 });
 
 export const router = t.router;
+
+// All procedures now go through loggingMiddleware
 export const publicProcedure = t.procedure.use(loggingMiddleware);
 
 const requireUser = t.middleware(async opts => {
@@ -94,9 +98,10 @@ const requireUser = t.middleware(async opts => {
   });
 });
 
-export const protectedProcedure = t.procedure.use(requireUser);
+// protectedProcedure chains logging + auth
+export const protectedProcedure = t.procedure.use(loggingMiddleware).use(requireUser);
 
-export const adminProcedure = t.procedure.use(
+export const adminProcedure = t.procedure.use(loggingMiddleware).use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
@@ -113,7 +118,7 @@ export const adminProcedure = t.procedure.use(
   }),
 );
 
-export const superAdminProcedure = t.procedure.use(
+export const superAdminProcedure = t.procedure.use(loggingMiddleware).use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
@@ -132,7 +137,7 @@ export const superAdminProcedure = t.procedure.use(
 
 // Permission-based procedure factory
 export function permissionProcedure(permission: Permission) {
-  return t.procedure.use(
+  return t.procedure.use(loggingMiddleware).use(
     t.middleware(async opts => {
       const { ctx, next } = opts;
 
