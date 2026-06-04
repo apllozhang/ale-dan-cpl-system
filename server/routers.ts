@@ -4,7 +4,7 @@ import { authRouter } from "./routers/auth";
 import { organizationsRouter } from "./routers/organizations";
 import { userGroupsRouter } from "./routers/userGroups";
 import { usersRouter } from "./routers/users";
-import { quotationsRouter } from "./routers/quotations";
+import { quotationsRouter } from "./domain/quotations/quotation.router";
 import { cplRouter } from "./routers/cpl";
 import { importLogsRouter } from "./routers/importLogs";
 import { activityLogsRouter } from "./routers/activityLogs";

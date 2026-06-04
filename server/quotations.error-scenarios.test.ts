@@ -11,17 +11,22 @@ vi.mock("./_core/env", () => ({
   },
 }));
 
-// Mock db module
-vi.mock("./db", () => ({
+// Mock domain repo module
+vi.mock("./domain/quotations/quotation.repo", () => ({
   getQuotationById: vi.fn().mockResolvedValue(null),
   getQuotations: vi.fn().mockResolvedValue([]),
   getQuotationsByIds: vi.fn().mockResolvedValue([]),
   createQuotation: vi.fn().mockResolvedValue({ id: 1 }),
-  updateQuotation: vi.fn().mockResolvedValue(undefined),
+  updateQuotationFields: vi.fn().mockResolvedValue(true),
+  replaceQuotationItems: vi.fn().mockResolvedValue(undefined),
   updateQuotationStatus: vi.fn().mockResolvedValue(undefined),
   deleteQuotation: vi.fn().mockResolvedValue(undefined),
   batchUpdateQuotationStatus: vi.fn().mockResolvedValue(undefined),
   batchDeleteQuotations: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock domain analytics module
+vi.mock("./domain/quotations/quotation.analytics", () => ({
   getQuotationAnalytics: vi.fn().mockResolvedValue({
     summary: {
       totalQuotations: 0,
@@ -36,14 +41,26 @@ vi.mock("./db", () => ({
     byStatus: [],
     topProducts: [],
   }),
-  createActivityLog: vi.fn().mockResolvedValue(undefined),
   getMyDashboardStats: vi.fn().mockResolvedValue({
     totalQuotations: 0,
     completedRevenue: 0,
     statusCounts: {},
   }),
   getMyRecentQuotations: vi.fn().mockResolvedValue([]),
-  searchQuotations: vi.fn().mockResolvedValue([]),
+}));
+
+// Mock activity log helper
+vi.mock("./routers/helpers", () => ({
+  logActivity: vi.fn().mockResolvedValue(undefined),
+  isManagerOrAdmin: vi.fn().mockReturnValue(false),
+  calculateSubtotal: vi.fn().mockReturnValue(0),
+}));
+
+// Keep legacy db mock for other modules that still use it
+vi.mock("./db", () => ({
+  getDb: vi.fn().mockResolvedValue(null),
+  requireDb: vi.fn().mockRejectedValue(new Error("Database unavailable")),
+  createActivityLog: vi.fn().mockResolvedValue(undefined),
   upsertUser: vi.fn().mockResolvedValue(undefined),
   getUserByOpenId: vi.fn().mockResolvedValue(undefined),
   getUserByUsername: vi.fn().mockResolvedValue(null),
@@ -137,7 +154,7 @@ describe("quotations.getById — NOT_FOUND", () => {
     const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
-    const { getQuotationById } = await import("./db");
+    const { getQuotationById } = await import("./domain/quotations/quotation.repo");
     (getQuotationById as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
 
     await expect(
@@ -154,7 +171,7 @@ describe("quotations.update — FORBIDDEN", () => {
     const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
-    const { getQuotationById } = await import("./db");
+    const { getQuotationById } = await import("./domain/quotations/quotation.repo");
     (getQuotationById as ReturnType<typeof vi.fn>).mockResolvedValueOnce(otherUsersQuotation);
 
     await expect(
@@ -174,7 +191,7 @@ describe("quotations.delete — FORBIDDEN", () => {
     const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
-    const { getQuotationById } = await import("./db");
+    const { getQuotationById } = await import("./domain/quotations/quotation.repo");
     (getQuotationById as ReturnType<typeof vi.fn>).mockResolvedValueOnce(otherUsersQuotation);
 
     await expect(
@@ -191,7 +208,7 @@ describe("quotations.updateStatus — BAD_REQUEST", () => {
     const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
-    const { getQuotationById } = await import("./db");
+    const { getQuotationById } = await import("./domain/quotations/quotation.repo");
     (getQuotationById as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ...otherUsersQuotation,
       createdBy: 1, // owned by current user so we pass ownership check
@@ -206,7 +223,7 @@ describe("quotations.updateStatus — BAD_REQUEST", () => {
     const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
-    const { getQuotationById } = await import("./db");
+    const { getQuotationById } = await import("./domain/quotations/quotation.repo");
     (getQuotationById as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ...otherUsersQuotation,
       status: "completed",
@@ -227,7 +244,7 @@ describe("quotations — INTERNAL_SERVER_ERROR on DB failure", () => {
     const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
-    const { getQuotations } = await import("./db");
+    const { getQuotations } = await import("./domain/quotations/quotation.repo");
     (getQuotations as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("Connection lost")
     );
@@ -241,7 +258,7 @@ describe("quotations — INTERNAL_SERVER_ERROR on DB failure", () => {
     const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
-    const { getQuotationById } = await import("./db");
+    const { getQuotationById } = await import("./domain/quotations/quotation.repo");
     (getQuotationById as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("DB timeout")
     );
@@ -255,7 +272,7 @@ describe("quotations — INTERNAL_SERVER_ERROR on DB failure", () => {
     const { ctx } = createAuthedContext();
     const caller = appRouter.createCaller(ctx);
 
-    const { getQuotationAnalytics } = await import("./db");
+    const { getQuotationAnalytics } = await import("./domain/quotations/quotation.analytics");
     (getQuotationAnalytics as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("Analytics query failed")
     );

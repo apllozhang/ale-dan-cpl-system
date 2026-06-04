@@ -17,20 +17,8 @@ vi.mock("bcryptjs", () => ({
   compare: vi.fn().mockResolvedValue(false),
 }));
 
-// Mock db module with stubs for all functions
-vi.mock("./db", () => ({
-  upsertUser: vi.fn().mockResolvedValue(undefined),
-  getUserByOpenId: vi.fn().mockResolvedValue(undefined),
-  getUserByUsername: vi.fn().mockResolvedValue(null),
-  getCplSheets: vi.fn().mockResolvedValue([]),
-  getCplProducts: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-  getLatestSummary: vi.fn().mockResolvedValue(null),
-  clearAllProducts: vi.fn().mockResolvedValue(undefined),
-  clearAndInsertSheets: vi.fn().mockResolvedValue(undefined),
-  bulkInsertProducts: vi.fn().mockResolvedValue(undefined),
-  insertSummary: vi.fn().mockResolvedValue(undefined),
-  createQuotation: vi.fn().mockResolvedValue({ id: 1, quotationNo: "QT-20260603-001" }),
-  getQuotations: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+// Mock domain repo module
+vi.mock("./domain/quotations/quotation.repo", () => ({
   getQuotationById: vi.fn().mockResolvedValue({
     id: 1,
     quotationNo: "QT-20260603-001",
@@ -54,12 +42,48 @@ vi.mock("./db", () => ({
     shareToken: "test-token",
     items: [],
   }),
-  updateQuotation: vi.fn().mockResolvedValue(undefined),
+  getQuotations: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  getQuotationsByIds: vi.fn().mockResolvedValue([]),
+  createQuotation: vi.fn().mockResolvedValue({ id: 1, quotationNo: "QT-20260603-001" }),
+  updateQuotationFields: vi.fn().mockResolvedValue(true),
+  replaceQuotationItems: vi.fn().mockResolvedValue(undefined),
   updateQuotationStatus: vi.fn().mockResolvedValue(undefined),
   deleteQuotation: vi.fn().mockResolvedValue(undefined),
   batchUpdateQuotationStatus: vi.fn().mockResolvedValue(undefined),
-  getQuotationsByIds: vi.fn().mockResolvedValue([]),
-  searchQuotations: vi.fn().mockResolvedValue([]),
+  batchDeleteQuotations: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock domain analytics module
+vi.mock("./domain/quotations/quotation.analytics", () => ({
+  getQuotationAnalytics: vi.fn().mockResolvedValue({
+    summary: { totalQuotations: 0, completedRevenue: 0, avgAmount: 0, conversionRate: 0 },
+    byIndustry: [], byCustomer: [], bySalesRep: [], byTime: [], byStatus: [], topProducts: [],
+  }),
+  getMyDashboardStats: vi.fn().mockResolvedValue({ totalQuotations: 0, completedRevenue: 0, statusCounts: {} }),
+  getMyRecentQuotations: vi.fn().mockResolvedValue([]),
+}));
+
+// Mock activity log helper
+vi.mock("./routers/helpers", () => ({
+  logActivity: vi.fn().mockResolvedValue(undefined),
+  isManagerOrAdmin: vi.fn().mockReturnValue(false),
+  calculateSubtotal: vi.fn().mockReturnValue(0),
+}));
+
+// Keep legacy db mock for other modules that still use it
+vi.mock("./db", () => ({
+  getDb: vi.fn().mockResolvedValue(null),
+  requireDb: vi.fn().mockRejectedValue(new Error("Database unavailable")),
+  upsertUser: vi.fn().mockResolvedValue(undefined),
+  getUserByOpenId: vi.fn().mockResolvedValue(undefined),
+  getUserByUsername: vi.fn().mockResolvedValue(null),
+  getCplSheets: vi.fn().mockResolvedValue([]),
+  getCplProducts: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  getLatestSummary: vi.fn().mockResolvedValue(null),
+  clearAllProducts: vi.fn().mockResolvedValue(undefined),
+  clearAndInsertSheets: vi.fn().mockResolvedValue(undefined),
+  bulkInsertProducts: vi.fn().mockResolvedValue(undefined),
+  insertSummary: vi.fn().mockResolvedValue(undefined),
   createActivityLog: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -99,7 +123,7 @@ describe("Quotation authorization", () => {
     const caller = appRouter.createCaller(ctx);
 
     // Mock getQuotationById to return quotation owned by user 1
-    const { getQuotationById } = await import("./db");
+    const { getQuotationById } = await import("./domain/quotations/quotation.repo");
     vi.mocked(getQuotationById).mockResolvedValueOnce({
       id: 1,
       quotationNo: "QT-20260603-001",
