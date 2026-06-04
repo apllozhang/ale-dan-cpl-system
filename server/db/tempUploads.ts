@@ -5,12 +5,11 @@ import {
   type InsertTempUpload,
   type TempUpload,
 } from "../../drizzle/schema";
-import { getDb } from "./index";
+import { getDb, requireDb } from "./index";
 import { logger } from "../_core/logger";
 
 export async function createTempUpload(data: InsertTempUpload) {
-  const db = await getDb();
-  if (!db) return;
+  const db = await requireDb();
   await db.insert(tempUploads).values(data);
 }
 
