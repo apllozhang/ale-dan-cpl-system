@@ -47,7 +47,7 @@ export const authRouter = router({
       const rateLimitKey = `login:${clientIp}`;
 
       // Check rate limit
-      const { blocked, remaining } = await checkLoginRateLimit(rateLimitKey);
+      const { blocked } = await checkLoginRateLimit(rateLimitKey);
       if (blocked) {
         throw new TRPCError({
           code: "TOO_MANY_REQUESTS",

@@ -7,7 +7,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, X,
+  Upload, FileSpreadsheet, CheckCircle2, Loader2, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
