@@ -26,16 +26,16 @@ export async function acquireLock(name: string, owner: string, ttlMs: number): P
     });
     return true;
   } catch {
-    // Lock already exists — check if it's expired
-    const [existing] = await db.select().from(systemLocks).where(eq(systemLocks.name, name)).limit(1);
-    if (existing && existing.expiresAt.getTime() < Date.now()) {
-      // Lock expired, update it
-      await db.update(systemLocks)
-        .set({ owner, expiresAt })
-        .where(eq(systemLocks.name, name));
-      return true;
-    }
-    return false;
+    // Lock row exists — atomically claim only if expired
+    const result = await db.update(systemLocks)
+      .set({ owner, expiresAt })
+      .where(and(
+        eq(systemLocks.name, name),
+        sql`${systemLocks.expiresAt} < NOW()`,
+      ));
+
+    const affectedRows = (result[0] as { affectedRows: number }).affectedRows;
+    return affectedRows > 0;
   }
 }
 
