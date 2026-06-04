@@ -129,11 +129,14 @@ function PageTransition({ children, location }: { children: React.ReactNode; loc
       { opacity: 0, y: 16 },
       { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }
     );
-    // Stagger-animate child cards/sections
-    gsap.fromTo(ref.current.querySelectorAll(".stagger-in"),
-      { opacity: 0, y: 12 },
-      { opacity: 1, y: 0, stagger: 0.06, duration: 0.35, ease: "power2.out", delay: 0.1 }
-    );
+    // Stagger-animate child cards/sections (guard against empty NodeList)
+    const staggerTargets = ref.current.querySelectorAll(".stagger-in");
+    if (staggerTargets.length > 0) {
+      gsap.fromTo(staggerTargets,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, stagger: 0.06, duration: 0.35, ease: "power2.out", delay: 0.1 }
+      );
+    }
   }, { dependencies: [location], scope: ref });
 
   return <div ref={ref}>{children}</div>;
@@ -185,13 +188,16 @@ function DashboardLayoutContent({
   const prevStateRef = useRef(state);
   useGSAP(() => {
     if (prevStateRef.current === "collapsed" && state === "expanded") {
-      gsap.fromTo(".menu-item span",
-        { opacity: 0, x: -10 },
-        { opacity: 1, x: 0, stagger: 0.04, duration: 0.3, ease: "power2.out", delay: 0.15 }
-      );
+      const spans = menuRef.current?.querySelectorAll(".menu-item span");
+      if (spans && spans.length > 0) {
+        gsap.fromTo(spans,
+          { opacity: 0, x: -10 },
+          { opacity: 1, x: 0, stagger: 0.04, duration: 0.3, ease: "power2.out", delay: 0.15 }
+        );
+      }
     }
     prevStateRef.current = state;
-  }, [state]);
+  }, { scope: menuRef, dependencies: [state] });
 
   useEffect(() => {
     if (isCollapsed) {
