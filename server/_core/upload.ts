@@ -6,6 +6,7 @@ import fs from "node:fs";
 import fsPromises from "node:fs/promises";
 import { getUserFromRequest } from "./context";
 import { createTempUpload } from "../db/tempUploads";
+import { logger } from "./logger";
 
 // Configure multer for temporary file storage
 const storage = multer.diskStorage({
@@ -144,7 +145,7 @@ export function registerUploadRoutes(app: Express) {
         fileSize: req.file.size,
       });
     } catch (error) {
-      console.error("[Upload] Error:", error);
+      logger.error("upload_failed", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ error: "Upload failed" });
     }
   });

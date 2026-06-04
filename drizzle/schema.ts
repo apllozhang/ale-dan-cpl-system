@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json, index } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -454,7 +454,7 @@ export const loginAttempts = mysqlTable("login_attempts", {
   windowStart: timestamp("windowStart").notNull(),
   expiresAt: timestamp("expiresAt").notNull(),
 }, (table) => [
-  index("login_attempts_key_idx").on(table.key),
+  uniqueIndex("login_attempts_key_unique").on(table.key),
   index("login_attempts_expiresAt_idx").on(table.expiresAt),
 ]);
 
