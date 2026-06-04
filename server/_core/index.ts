@@ -137,15 +137,20 @@ async function startServer() {
   });
 
   // CSRF protection for mutations — validate Origin/Referer
-  // Only applied to cross-origin requests; same-origin requests are inherently safe
+  // Rejects requests with missing Origin header unless on exempt paths (health/ready)
   app.use((req, res, next) => {
     if (req.method === "POST" || req.method === "PUT" || req.method === "DELETE" || req.method === "PATCH") {
       const origin = req.headers.origin || req.headers.referer;
 
-      // Allow health check and upload endpoints without origin (for non-browser clients)
-      const isExemptPath = req.path === "/api/health" || req.path === "/api/ready" || req.path === "/api/upload";
+      // Only health/ready endpoints are exempt from Origin validation
+      const isExemptPath = req.path === "/api/health" || req.path === "/api/ready";
 
-      if (!isExemptPath && origin) {
+      if (!isExemptPath) {
+        if (!origin) {
+          res.status(403).json({ error: "CSRF validation failed: missing origin" });
+          return;
+        }
+
         // Extract hostname from origin for comparison with Host header
         const hostHeader = req.headers.host || "";
         let originHost = "";
