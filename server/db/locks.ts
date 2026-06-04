@@ -1,4 +1,4 @@
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { systemLocks } from "../../drizzle/schema";
 import { requireDb } from "./index";
 
@@ -16,7 +16,7 @@ export async function acquireLock(name: string, owner: string, ttlMs: number): P
 
   try {
     // Clean up expired locks first
-    await db.delete(systemLocks).where(lt(systemLocks.expiresAt, now));
+    await db.delete(systemLocks).where(sql`${systemLocks.expiresAt} < NOW()`);
 
     // Try to insert a new lock
     await db.insert(systemLocks).values({
@@ -28,7 +28,7 @@ export async function acquireLock(name: string, owner: string, ttlMs: number): P
   } catch {
     // Lock already exists — check if it's expired
     const [existing] = await db.select().from(systemLocks).where(eq(systemLocks.name, name)).limit(1);
-    if (existing && existing.expiresAt < now) {
+    if (existing && existing.expiresAt.getTime() < Date.now()) {
       // Lock expired, update it
       await db.update(systemLocks)
         .set({ owner, expiresAt })

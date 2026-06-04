@@ -1,4 +1,4 @@
-import { eq, and, lt, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { sessions } from "../../drizzle/schema";
 import { requireDb } from "./index";
 import crypto from "crypto";
@@ -88,12 +88,10 @@ export async function revokeAllUserSessions(userId: number): Promise<void> {
  */
 export async function cleanupSessions(): Promise<void> {
   const db = await requireDb();
-  const now = new Date();
 
   // Delete expired sessions
-  await db.delete(sessions).where(lt(sessions.expiresAt, now));
+  await db.delete(sessions).where(sql`${sessions.expiresAt} < NOW()`);
 
   // Delete revoked sessions older than 7 days
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  await db.delete(sessions).where(lt(sessions.revokedAt, sevenDaysAgo));
+  await db.delete(sessions).where(sql`${sessions.revokedAt} < NOW() - INTERVAL 7 DAY`);
 }
