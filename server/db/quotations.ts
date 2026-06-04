@@ -1,6 +1,6 @@
 // server/db/quotations.ts — backward-compatible re-export
 // New code should import from server/domain/quotations/ directly
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
   quotations, quotationItems, quotationVersions,
   type InsertQuotation, type InsertQuotationItem,

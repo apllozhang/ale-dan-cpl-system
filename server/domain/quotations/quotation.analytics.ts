@@ -1,5 +1,5 @@
-import { eq, sql, gte, lte, and, desc, SQL } from "drizzle-orm";
-import { quotations, quotationItems, users } from "../../../drizzle/schema";
+import { eq, sql, gte, lte, and, SQL } from "drizzle-orm";
+import { quotations } from "../../../drizzle/schema";
 import { requireDb } from "../../db/index";
 import type {
   RecentQuotation,
