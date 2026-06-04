@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_COLORS, QUOTATION_STATUS_TRANSITIONS } from "@shared/const";
+import { calculateSubtotal } from "@shared/quotationMath";
 import gsap from "gsap";
 import { exportQuotationToExcel } from "@/lib/quotationExport";
 import ProductSelectorDialog from "@/features/quotations/components/ProductSelectorDialog";
@@ -275,7 +276,7 @@ export default function QuotationDetail() {
       listPrice: product.listPrice || "",
       quantity: 1,
       discountRate,
-      subtotal: parseFloat(product.listPrice || "0") * 1 * (discountRate / 100),
+      subtotal: calculateSubtotal(parseFloat(product.listPrice || "0"), 1, discountRate),
     }));
 
     if (isAddMode) {
@@ -305,7 +306,7 @@ export default function QuotationDetail() {
     setItems(prev => prev.map(item => ({
       ...item,
       discountRate,
-      subtotal: parseFloat(item.listPrice || "0") * item.quantity * (discountRate / 100),
+      subtotal: calculateSubtotal(parseFloat(item.listPrice || "0"), item.quantity, discountRate),
     })));
     toast.success("已将折扣率应用到所有行");
   };
@@ -341,7 +342,7 @@ export default function QuotationDetail() {
       listPrice: product.listPrice || "",
       quantity: 1,
       discountRate,
-      subtotal: parseFloat(product.listPrice || "0") * 1 * (discountRate / 100),
+      subtotal: calculateSubtotal(parseFloat(product.listPrice || "0"), 1, discountRate),
     };
     setItems(prev => [...prev, newItem]);
     setQuickSearch("");
@@ -373,7 +374,7 @@ export default function QuotationDetail() {
       listPrice: product.listPrice || "",
       quantity,
       discountRate: discountRate,
-      subtotal: parseFloat(product.listPrice || "0") * quantity * (discountRate / 100),
+      subtotal: calculateSubtotal(parseFloat(product.listPrice || "0"), quantity, discountRate),
     }));
     setItems(prev => [...prev, ...newItems]);
   };
