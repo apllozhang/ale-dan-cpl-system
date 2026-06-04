@@ -69,6 +69,14 @@ function recordRequest(method: string, statusCode: number): void {
 }
 
 async function startServer() {
+  // Production hard requirement: DATABASE_URL must be set
+  if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+    logger.error("fatal_missing_database_url", {
+      message: "DATABASE_URL is not set. Server cannot start in production without a database connection.",
+    });
+    process.exit(1);
+  }
+
   const app = express();
   const server = createServer(app);
 

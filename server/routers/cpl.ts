@@ -232,6 +232,7 @@ export const cplRouter = router({
     }),
 
   // Async import — creates a job for background processing
+  // Requires ENABLE_ASYNC_IMPORT=true to be active; disabled by default for safety
   importAsync: superAdminProcedure
     .input(z.object({
       uploadId: z.string().min(1).max(64),
@@ -239,6 +240,14 @@ export const cplRouter = router({
       selectedSheets: z.array(z.string()).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Guard: async import must be explicitly enabled
+      if (process.env.ENABLE_ASYNC_IMPORT !== "true") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Async import is not enabled. Set ENABLE_ASYNC_IMPORT=true to activate.",
+        });
+      }
+
       try {
         // Verify upload exists and belongs to this user
         const upload = await db.getTempUploadForUser(input.uploadId, ctx.user!.id);

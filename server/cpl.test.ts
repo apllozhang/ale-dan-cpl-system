@@ -20,6 +20,20 @@ vi.mock("bcryptjs", () => ({
   }),
 }));
 
+// Mock login rate limiting (DB-backed, requires DB connection)
+vi.mock("./db/loginAttempts", () => ({
+  checkDualRateLimit: vi.fn().mockResolvedValue({ blocked: false, remaining: 10 }),
+  recordDualLoginFailure: vi.fn().mockResolvedValue(undefined),
+  clearDualLoginAttempts: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock sessions (DB-backed)
+vi.mock("./db/sessions", () => ({
+  createSession: vi.fn().mockResolvedValue("test-session-id"),
+  revokeSession: vi.fn().mockResolvedValue(undefined),
+  SESSION_DURATION_MS: 24 * 60 * 60 * 1000,
+}));
+
 // Mock db module
 vi.mock("./db", () => ({
   upsertUser: vi.fn().mockResolvedValue(undefined),

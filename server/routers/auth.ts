@@ -8,7 +8,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { createSession, revokeSession, SESSION_DURATION_MS } from "../db/sessions";
 import { parse as parseCookieHeader } from "cookie";
-import { checkLoginRateLimit, recordLoginFailure, clearLoginAttempts } from "../db/loginAttempts";
+import { checkDualRateLimit, recordDualLoginFailure, clearDualLoginAttempts } from "../db/loginAttempts";
 
 export const authRouter = router({
   me: publicProcedure.query(({ ctx }) => {
@@ -42,12 +42,14 @@ export const authRouter = router({
       password: z.string().max(128),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Rate limiting by IP — now backed by database for multi-instance support
+      // Dual-dimension rate limiting: IP + username
+      // Prevents brute-force from distributed IPs and targeted attacks on a single account
       const clientIp = ctx.req.ip || (ctx.req.headers["x-forwarded-for"] as string) || "unknown";
-      const rateLimitKey = `login:${clientIp}`;
+      const ipKey = `login:ip:${clientIp}`;
+      const userKey = `login:user:${input.username.toLowerCase()}`;
 
-      // Check rate limit
-      const { blocked } = await checkLoginRateLimit(rateLimitKey);
+      // Check rate limit (both dimensions)
+      const { blocked } = await checkDualRateLimit(ipKey, userKey);
       if (blocked) {
         throw new TRPCError({
           code: "TOO_MANY_REQUESTS",
@@ -57,8 +59,8 @@ export const authRouter = router({
 
       const user = await db.getUserByUsername(input.username);
       if (!user || !user.passwordHash) {
-        // Track failed login attempt
-        await recordLoginFailure(rateLimitKey);
+        // Track failed login attempt on both dimensions
+        await recordDualLoginFailure(ipKey, userKey);
 
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -68,8 +70,8 @@ export const authRouter = router({
 
       const valid = await compare(input.password, user.passwordHash);
       if (!valid) {
-        // Track failed login attempt
-        await recordLoginFailure(rateLimitKey);
+        // Track failed login attempt on both dimensions
+        await recordDualLoginFailure(ipKey, userKey);
 
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -77,8 +79,8 @@ export const authRouter = router({
         });
       }
 
-      // Clear rate limit on successful login
-      await clearLoginAttempts(rateLimitKey);
+      // Clear rate limit on successful login (both dimensions)
+      await clearDualLoginAttempts(ipKey, userKey);
 
       // Update lastSignedIn
       await db.upsertUser({

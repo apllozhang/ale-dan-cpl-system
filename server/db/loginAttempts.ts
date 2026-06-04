@@ -5,11 +5,11 @@
  * TODO: For multi-instance deployment, consider Redis-based rate limiter for lower latency.
  */
 
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, or } from "drizzle-orm";
 import {
   loginAttempts,
 } from "../../drizzle/schema";
-import { getDb } from "./index";
+import { getDb, requireDb } from "./index";
 
 const MAX_LOGIN_ATTEMPTS = 10;
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
@@ -17,10 +17,12 @@ const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 /**
  * Atomic increment: INSERT a new record, or UPDATE count+1 if key exists and window hasn't expired.
  * Uses ON DUPLICATE KEY UPDATE for atomicity — no read-then-write race.
+ *
+ * Uses requireDb() so that a missing database connection throws instead of
+ * silently allowing the login attempt through (fail-closed on DB unavailable).
  */
 export async function recordLoginFailure(key: string): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
+  const db = await requireDb();
 
   const now = new Date();
   const expiresAt = new Date(now.getTime() + WINDOW_MS);
@@ -39,11 +41,11 @@ export async function recordLoginFailure(key: string): Promise<void> {
 
 /**
  * Check if the given key is rate-limited.
- * Reads are inherently safe (no write race); the count is atomically maintained by recordLoginFailure.
+ * Uses requireDb() — if the database is unavailable the call throws, which
+ * causes the login to be rejected (fail-closed).
  */
 export async function checkLoginRateLimit(key: string): Promise<{ blocked: boolean; remaining: number }> {
-  const db = await getDb();
-  if (!db) return { blocked: false, remaining: MAX_LOGIN_ATTEMPTS };
+  const db = await requireDb();
 
   const rows = await db.select().from(loginAttempts).where(eq(loginAttempts.key, key)).limit(1);
   const existing = rows[0];
@@ -65,11 +67,48 @@ export async function checkLoginRateLimit(key: string): Promise<{ blocked: boole
 }
 
 /**
+ * Check rate limits for both IP and username dimensions.
+ * Returns blocked=true if EITHER dimension is rate-limited.
+ */
+export async function checkDualRateLimit(
+  ipKey: string,
+  userKey: string,
+): Promise<{ blocked: boolean; remaining: number }> {
+  const [ipResult, userResult] = await Promise.all([
+    checkLoginRateLimit(ipKey),
+    checkLoginRateLimit(userKey),
+  ]);
+  return {
+    blocked: ipResult.blocked || userResult.blocked,
+    remaining: Math.min(ipResult.remaining, userResult.remaining),
+  };
+}
+
+/**
+ * Record failure on both IP and username dimensions.
+ */
+export async function recordDualLoginFailure(ipKey: string, userKey: string): Promise<void> {
+  await Promise.all([
+    recordLoginFailure(ipKey),
+    recordLoginFailure(userKey),
+  ]);
+}
+
+/**
+ * Clear rate limit entries for both IP and username (on successful login).
+ */
+export async function clearDualLoginAttempts(ipKey: string, userKey: string): Promise<void> {
+  const db = await requireDb();
+  await db.delete(loginAttempts).where(
+    or(eq(loginAttempts.key, ipKey), eq(loginAttempts.key, userKey)),
+  );
+}
+
+/**
  * Clear rate limit entries for the given key (on successful login).
  */
 export async function clearLoginAttempts(key: string): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
+  const db = await requireDb();
   await db.delete(loginAttempts).where(eq(loginAttempts.key, key));
 }
 
