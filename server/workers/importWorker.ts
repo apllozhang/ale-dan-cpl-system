@@ -10,7 +10,7 @@ import { getDb } from "../db";
 import { getUserById, getAllOrganizations, getAllUserGroups } from "../db/index";
 import { getTempUploadById, markTempUploadConsumed } from "../db/tempUploads";
 import { importCplOverwrite } from "../db/cpl";
-import { parseExcelBuffer } from "../routers/cpl";
+import { parseExcelBuffer } from "../lib/excel";
 import { importJobs } from "../../drizzle/schema";
 import type { Organization, UserGroup } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
