@@ -231,7 +231,7 @@ async function startServer() {
   });
 
   // ── Metrics endpoint — returns application metrics ──
-  app.get("/api/metrics", async (_req, res) => {
+  app.get("/api/metrics", requireAuth, async (_req, res) => {
     try {
       const db = await getDb();
 
