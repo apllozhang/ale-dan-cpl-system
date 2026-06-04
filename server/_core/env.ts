@@ -9,11 +9,28 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
 };
 
-// Validate critical environment variables at startup
-if (ENV.isProduction && !ENV.cookieSecret) {
-  console.error("[FATAL] JWT_SECRET is not set. Refusing to start in production without a signing key.");
-  process.exit(1);
+/**
+ * Require an environment variable to be set and non-empty.
+ * Exits immediately in production if missing.
+ */
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value || value.trim() === "") {
+    console.error(`[FATAL] ${name} is not set. Server cannot start without it.`);
+    process.exit(1);
+  }
+  return value;
 }
-if (!ENV.cookieSecret) {
+
+// Production startup validation — all hard dependencies checked before any listener is bound
+if (ENV.isProduction) {
+  requireEnv("DATABASE_URL");
+  requireEnv("CORS_ORIGINS");
+  requireEnv("JWT_SECRET");
+  requireEnv("PORT");
+}
+
+// Non-production warning for missing secrets
+if (!ENV.isProduction && !ENV.cookieSecret) {
   console.warn("[WARN] JWT_SECRET is not set. Using empty string — tokens are trivially forgeable. Set JWT_SECRET in .env");
 }

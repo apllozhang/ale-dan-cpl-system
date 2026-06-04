@@ -45,15 +45,29 @@ process.on("uncaughtException", (error) => {
     stack: error.stack,
     name: error.name,
   });
-  // Give logger time to flush before exiting
+  // Uncaught exceptions leave the process in an unknown state — always exit
   setTimeout(() => process.exit(1), 1000);
 });
 
 process.on("unhandledRejection", (reason) => {
+  const isFatal = reason instanceof Error && (
+    reason.message.includes("ECONNREFUSED") ||
+    reason.message.includes("database") ||
+    reason.message.includes("handshake") ||
+    reason.message.includes("authentication") ||
+    reason.message.includes("Cannot read properties")
+  );
+
   logger.error("unhandled_rejection", {
     reason: reason instanceof Error ? reason.message : String(reason),
     stack: reason instanceof Error ? reason.stack : undefined,
+    fatal: isFatal,
   });
+
+  if (isFatal) {
+    logger.error("fatal_rejection_exiting", { reason: String(reason) });
+    setTimeout(() => process.exit(1), 1000);
+  }
 });
 
 // ── Simple in-memory metrics collector ──
@@ -69,14 +83,6 @@ function recordRequest(method: string, statusCode: number): void {
 }
 
 async function startServer() {
-  // Production hard requirement: DATABASE_URL must be set
-  if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
-    logger.error("fatal_missing_database_url", {
-      message: "DATABASE_URL is not set. Server cannot start in production without a database connection.",
-    });
-    process.exit(1);
-  }
-
   const app = express();
   const server = createServer(app);
 
