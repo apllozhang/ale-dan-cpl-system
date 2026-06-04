@@ -298,7 +298,7 @@ async function startServer() {
 
       // Verify the resolved path is within the uploads directory
       const uploadsDir = path.resolve(process.cwd(), "uploads", "eflash");
-      if (!filePath.startsWith(uploadsDir)) {
+      if (!filePath.startsWith(uploadsDir + path.sep)) {
         res.status(403).json({ error: "Access denied" });
         return;
       }
