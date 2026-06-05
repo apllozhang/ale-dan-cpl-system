@@ -114,4 +114,16 @@ temp/
 
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
+
+# Manus tool cache
+.manus/
+
+# gstack
 .gstack/
+
+# Material / reference files (uploaded at runtime, not source)
+*.pdf
+*.pptx
+*.csv
+/Data CPL*.xlsx
+/ALE常用型号*.xlsx
