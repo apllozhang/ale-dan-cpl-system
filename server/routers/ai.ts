@@ -2,6 +2,7 @@ import { router, permissionProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
+import { DATA_QUERY_TOOLS, executeDataTool } from "../db/ai-data-query";
 import { decryptConfigKey, maskConfigKey, decryptSearchKey, maskSearchKey } from "../db/ai";
 import { invokeLLM, type ProviderConfig, type MessageContent } from "../_core/llm";
 import { webSearch, type SearchConfig } from "../_core/search";
@@ -604,7 +605,12 @@ export const aiRouter = router({
             process.env.AI_DEFAULT_SYSTEM_PROMPT ||
             "You are a helpful AI assistant. Answer questions accurately and concisely.";
 
-          const llmMessages: Array<{ role: "system" | "user" | "assistant"; content: string | MessageContent[] }> = [
+          const llmMessages: Array<{
+            role: "system" | "user" | "assistant" | "tool";
+            content: string | MessageContent[];
+            tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[];
+            tool_call_id?: string;
+          }> = [
             { role: "system", content: systemPrompt },
           ];
 
@@ -650,18 +656,66 @@ export const aiRouter = router({
             })) : null,
           });
 
-          // 8. Call LLM
-          const result = await invokeLLM({ messages: llmMessages }, providerConfig);
-          const assistantContent = result.choices?.[0]?.message?.content;
-          const content = typeof assistantContent === "string"
-            ? assistantContent
-            : JSON.stringify(assistantContent) ?? "";
+          // 8. Call LLM with tool calling loop
+          const MAX_TOOL_ROUNDS = 3;
+          let assistantContent = "";
+          const toolMessages = [...llmMessages];
+
+          for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+            const result = await invokeLLM(
+              {
+                messages: toolMessages,
+                tools: conv.mode === "local" ? DATA_QUERY_TOOLS : undefined,
+                toolChoice: conv.mode === "local" ? "auto" : undefined,
+              },
+              providerConfig
+            );
+
+            const choice = result.choices?.[0];
+            if (!choice) break;
+
+            if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
+              toolMessages.push({
+                role: "assistant",
+                content: typeof choice.message.content === "string" ? choice.message.content : "",
+                tool_calls: choice.message.tool_calls,
+              } as typeof toolMessages[number]);
+
+              for (const toolCall of choice.message.tool_calls) {
+                const fnName = toolCall.function.name;
+                let fnArgs: Record<string, unknown>;
+                try {
+                  fnArgs = JSON.parse(toolCall.function.arguments);
+                } catch {
+                  fnArgs = {};
+                }
+
+                const toolResult = await executeDataTool(fnName, fnArgs);
+
+                toolMessages.push({
+                  role: "tool",
+                  content: toolResult,
+                  tool_call_id: toolCall.id,
+                } as typeof toolMessages[number]);
+              }
+
+              continue;
+            }
+
+            const raw = choice.message?.content;
+            assistantContent = typeof raw === "string" ? raw : JSON.stringify(raw) ?? "";
+            break;
+          }
+
+          if (!assistantContent) {
+            assistantContent = "抱歉，处理您的请求时出现了问题。";
+          }
 
           // 9. Store assistant message
           await db.createMessage({
             conversationId: input.conversationId,
             role: "assistant",
-            content,
+            content: assistantContent,
             mode: conv.mode,
             searchResults: searchResults.length > 0 ? searchResults : null,
           });
@@ -674,7 +728,7 @@ export const aiRouter = router({
 
           // 11. Return response
           return {
-            content,
+            content: assistantContent,
             searchResults: searchResults.length > 0 ? searchResults : undefined,
             attachedFiles: input.files?.map((f) => ({ name: f.name, size: f.size, type: f.type })),
           };
