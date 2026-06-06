@@ -68,7 +68,18 @@ function AIChatContent() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
   const handleSendMessage = (content: string) => {
-    sendMessage(content, selectedMode === "local" && uploadedFiles.length > 0 ? uploadedFiles : undefined);
+    const imageFiles = uploadedFiles.filter((f) =>
+      ["png", "jpg", "jpeg", "gif", "webp"].includes(f.type)
+    );
+    const docFiles = uploadedFiles.filter(
+      (f) => !["png", "jpg", "jpeg", "gif", "webp"].includes(f.type)
+    );
+
+    sendMessage(
+      content,
+      selectedMode === "local" && docFiles.length > 0 ? docFiles : undefined,
+      imageFiles.length > 0 ? imageFiles : undefined,
+    );
     setUploadedFiles([]);
   };
 

@@ -266,7 +266,7 @@ const normalizeResponseFormat = ({
 };
 
 export type ProviderConfig = {
-  provider: "openai_compatible" | "google_gemini";
+  provider: "openai_compatible" | "google_gemini" | "anthropic";
   apiBaseUrl: string;
   apiKey: string;
   modelName: string;
@@ -316,10 +316,150 @@ function buildBasePayload(params: InvokeParams): Record<string, unknown> {
   return payload;
 }
 
+// ── Error classification ──
+function classifyHttpError(status: number, _provider: string, errorBody: string): string {
+  switch (status) {
+    case 401: return "认证失败：API Key 无效或已过期";
+    case 402: return "配额不足：请检查账户余额";
+    case 403: return "访问被拒绝：权限不足或 IP 受限";
+    case 404: return "模型不存在：请确认模型名称是否正确";
+    case 429: return "请求过于频繁：请稍后重试或检查配额";
+    default: {
+      try {
+        const parsed = JSON.parse(errorBody);
+        const msg = parsed.error?.message || parsed.message || errorBody;
+        return `连接失败 (${status}): ${msg}`;
+      } catch {
+        return `连接失败 (${status}): ${errorBody.slice(0, 200)}`;
+      }
+    }
+  }
+}
+
+// ── Anthropic message conversion ──
+type AnthropicImageSource =
+  | { type: "base64"; media_type: string; data: string }
+  | { type: "url"; url: string };
+
+type AnthropicContent =
+  | { type: "text"; text: string }
+  | { type: "image"; source: AnthropicImageSource };
+
+function toAnthropicContentPart(part: MessageContent): AnthropicContent {
+  if (typeof part === "string") return { type: "text", text: part };
+  if (part.type === "text") return { type: "text", text: part.text };
+  if (part.type === "image_url") {
+    const match = part.image_url.url.match(/^data:(image\/[\w+]+);base64,(.+)$/);
+    if (match) {
+      return {
+        type: "image",
+        source: { type: "base64", media_type: match[1], data: match[2] },
+      };
+    }
+    return {
+      type: "image",
+      source: { type: "url", url: part.image_url.url },
+    };
+  }
+  // Fallback for file_url or unknown types
+  return { type: "text", text: JSON.stringify(part) };
+}
+
+function toAnthropicMessages(
+  messages: Message[]
+): Array<{ role: string; content: string | AnthropicContent[] }> {
+  return messages.map((msg) => {
+    if (typeof msg.content === "string") {
+      return { role: msg.role, content: msg.content };
+    }
+    const parts = ensureArray(msg.content).map(toAnthropicContentPart);
+    return { role: msg.role, content: parts };
+  });
+}
+
 /**
- * Invoke LLM with an explicit provider configuration (multi-model).
+ * Invoke Anthropic Messages API and normalize to InvokeResult.
  */
-async function invokeProviderLLM(
+async function invokeAnthropicLLM(
+  params: InvokeParams,
+  config: ProviderConfig
+): Promise<InvokeResult> {
+  const allMessages = toAnthropicMessages(params.messages);
+
+  // Anthropic requires system at top-level, not in messages
+  const systemMessage = allMessages.find((m) => m.role === "system");
+  const nonSystemMessages = allMessages.filter((m) => m.role !== "system");
+
+  let systemContent: string | undefined;
+  if (systemMessage) {
+    const c = systemMessage.content;
+    systemContent = typeof c === "string"
+      ? c
+      : Array.isArray(c)
+        ? c.filter((p): p is { type: "text"; text: string } => "text" in p).map((p) => p.text).join("\n")
+        : String(c);
+  }
+
+  const payload: Record<string, unknown> = {
+    model: config.modelName,
+    max_tokens: config.maxTokens ?? 4096,
+    messages: nonSystemMessages,
+    ...(systemContent ? { system: systemContent } : {}),
+    ...(config.temperature !== undefined ? { temperature: config.temperature } : {}),
+  };
+
+  const url = `${config.apiBaseUrl.replace(/\/$/, "")}/v1/messages`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": config.apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const userMessage = classifyHttpError(response.status, config.provider, errorText);
+    throw new Error(`LLM invoke failed (${config.modelName}): ${userMessage}`);
+  }
+
+  const data = (await response.json()) as {
+    id: string;
+    model: string;
+    role: string;
+    content: Array<{ type: string; text?: string }>;
+    usage?: { input_tokens: number; output_tokens: number };
+  };
+
+  const textContent = data.content?.find((c) => c.type === "text");
+  return {
+    id: data.id,
+    created: Date.now(),
+    model: data.model,
+    choices: [
+      {
+        index: 0,
+        message: { role: "assistant", content: textContent?.text ?? "" },
+        finish_reason: "stop",
+      },
+    ],
+    usage: data.usage
+      ? {
+          prompt_tokens: data.usage.input_tokens,
+          completion_tokens: data.usage.output_tokens,
+          total_tokens: data.usage.input_tokens + data.usage.output_tokens,
+        }
+      : undefined,
+  };
+}
+
+/**
+ * Invoke LLM with an explicit provider configuration — OpenAI compatible.
+ */
+async function invokeOpenAILLM(
   params: InvokeParams,
   config: ProviderConfig
 ): Promise<InvokeResult> {
@@ -343,12 +483,25 @@ async function invokeProviderLLM(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed (${config.modelName}): ${response.status} ${response.statusText} – ${errorText}`
-    );
+    const userMessage = classifyHttpError(response.status, config.provider, errorText);
+    throw new Error(`LLM invoke failed (${config.modelName}): ${userMessage}`);
   }
 
   return (await response.json()) as InvokeResult;
+}
+
+/**
+ * Invoke LLM with an explicit provider configuration (multi-model).
+ * Routes to the correct adapter based on provider type.
+ */
+async function invokeProviderLLM(
+  params: InvokeParams,
+  config: ProviderConfig
+): Promise<InvokeResult> {
+  if (config.provider === "anthropic") {
+    return invokeAnthropicLLM(params, config);
+  }
+  return invokeOpenAILLM(params, config);
 }
 
 /**
@@ -396,12 +549,98 @@ export async function invokeLLM(
 }
 
 /**
+ * Stream Anthropic LLM responses via SSE.
+ * Anthropic uses content_block_delta events with text_delta.
+ */
+async function* streamAnthropicLLM(
+  params: InvokeParams,
+  config: ProviderConfig
+): AsyncGenerator<string> {
+  const allMessages = toAnthropicMessages(params.messages);
+
+  const systemMessage = allMessages.find((m) => m.role === "system");
+  const nonSystemMessages = allMessages.filter((m) => m.role !== "system");
+
+  let systemContent: string | undefined;
+  if (systemMessage) {
+    const c = systemMessage.content;
+    systemContent = typeof c === "string"
+      ? c
+      : Array.isArray(c)
+        ? c.filter((p): p is { type: "text"; text: string } => "text" in p).map((p) => p.text).join("\n")
+        : String(c);
+  }
+
+  const payload: Record<string, unknown> = {
+    model: config.modelName,
+    max_tokens: config.maxTokens ?? 4096,
+    messages: nonSystemMessages,
+    stream: true,
+    ...(systemContent ? { system: systemContent } : {}),
+    ...(config.temperature !== undefined ? { temperature: config.temperature } : {}),
+  };
+
+  const url = `${config.apiBaseUrl.replace(/\/$/, "")}/v1/messages`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": config.apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const userMessage = classifyHttpError(response.status, config.provider, errorText);
+    throw new Error(`LLM stream failed (${config.modelName}): ${userMessage}`);
+  }
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split("\n");
+    buffer = lines.pop()!;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith("data: ")) continue;
+      const data = trimmed.slice(6);
+      try {
+        const chunk = JSON.parse(data);
+        if (chunk.type === "content_block_delta" && chunk.delta?.type === "text_delta") {
+          const text = chunk.delta.text;
+          if (text) yield text;
+        }
+      } catch {
+        // Skip malformed JSON chunks
+      }
+    }
+  }
+}
+
+/**
  * Stream LLM responses via SSE. Yields text deltas in real-time.
+ * Routes to the correct streaming adapter based on provider type.
  */
 export async function* streamLLM(
   params: InvokeParams,
   config: ProviderConfig
 ): AsyncGenerator<string> {
+  if (config.provider === "anthropic") {
+    yield* streamAnthropicLLM(params, config);
+    return;
+  }
+
+  // OpenAI-compatible streaming
   const payload = buildBasePayload(params);
   payload.model = config.modelName;
   payload.max_tokens = config.maxTokens ?? 4096;
@@ -423,8 +662,9 @@ export async function* streamLLM(
 
   if (!response.ok) {
     const errorText = await response.text();
+    const userMessage = classifyHttpError(response.status, config.provider, errorText);
     throw new Error(
-      `LLM stream failed (${config.modelName}): ${response.status} ${response.statusText} – ${errorText}`
+      `LLM stream failed (${config.modelName}): ${userMessage}`
     );
   }
 

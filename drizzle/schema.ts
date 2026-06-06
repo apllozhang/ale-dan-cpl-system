@@ -468,7 +468,7 @@ export type InsertLoginAttempt = typeof loginAttempts.$inferInsert;
 export const aiProviderConfigs = mysqlTable("ai_provider_configs", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
-  provider: mysqlEnum("provider", ["openai_compatible", "google_gemini"]).notNull(),
+  provider: mysqlEnum("provider", ["openai_compatible", "google_gemini", "anthropic"]).notNull(),
   apiBaseUrl: varchar("api_base_url", { length: 500 }).notNull(),
   apiKey: text("api_key").notNull(), // AES-256-GCM encrypted
   modelName: varchar("model_name", { length: 100 }).notNull(),

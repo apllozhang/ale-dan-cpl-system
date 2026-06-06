@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "../db";
 import { decryptConfigKey, maskConfigKey, decryptSearchKey, maskSearchKey } from "../db/ai";
-import { invokeLLM, type ProviderConfig } from "../_core/llm";
+import { invokeLLM, type ProviderConfig, type MessageContent } from "../_core/llm";
 import { webSearch, type SearchConfig } from "../_core/search";
 import { extractText } from "../_core/file-extract";
 import { PERMISSIONS } from "@shared/const";
@@ -16,7 +16,7 @@ const aiConfigProcedure = permissionProcedure(PERMISSIONS.MANAGE_AI_CONFIG);
 const aiUserProcedure = permissionProcedure(PERMISSIONS.USE_AI_AGENT);
 
 // ── Shared Zod schemas ──
-const providerEnum = z.enum(["openai_compatible", "google_gemini"]);
+const providerEnum = z.enum(["openai_compatible", "google_gemini", "anthropic"]);
 const searchProviderEnum = z.enum(["serper", "serpapi", "google_custom", "bing", "tavily", "custom"]);
 const modeEnum = z.enum(["local", "expert"]);
 
@@ -508,6 +508,12 @@ export const aiRouter = router({
           type: z.string(),
           extractedText: z.string().optional(),
         })).optional(),
+        images: z.array(z.object({
+          name: z.string(),
+          size: z.number(),
+          type: z.enum(["image/png", "image/jpeg", "image/gif", "image/webp"]),
+          data: z.string().max(6_710_886), // 5MB raw ≈ 6.7MB base64
+        })).max(4).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         try {
@@ -598,7 +604,7 @@ export const aiRouter = router({
             process.env.AI_DEFAULT_SYSTEM_PROMPT ||
             "You are a helpful AI assistant. Answer questions accurately and concisely.";
 
-          const llmMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          const llmMessages: Array<{ role: "system" | "user" | "assistant"; content: string | MessageContent[] }> = [
             { role: "system", content: systemPrompt },
           ];
 
@@ -617,8 +623,19 @@ export const aiRouter = router({
             }
           }
 
-          // Add user message
-          llmMessages.push({ role: "user", content: input.message });
+          // Add user message (with images if present)
+          if (input.images && input.images.length > 0) {
+            const userContent: MessageContent[] = [
+              { type: "text", text: input.message },
+              ...input.images.map((img) => ({
+                type: "image_url" as const,
+                image_url: { url: `data:${img.type};base64,${img.data}` },
+              })),
+            ];
+            llmMessages.push({ role: "user", content: userContent });
+          } else {
+            llmMessages.push({ role: "user", content: input.message });
+          }
 
           // 7. Store user message
           await db.createMessage({

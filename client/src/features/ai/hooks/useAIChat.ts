@@ -16,6 +16,7 @@ export type UploadedFile = {
   size: number;
   type: string;
   extractedText?: string;
+  preview?: string;
 };
 
 export type UseAIChatReturn = {
@@ -40,7 +41,7 @@ export type UseAIChatReturn = {
   // actions
   createConversation: () => Promise<number | null>;
   deleteConversation: (id: number) => Promise<void>;
-  sendMessage: (content: string, files?: UploadedFile[]) => Promise<void>;
+  sendMessage: (content: string, files?: UploadedFile[], images?: UploadedFile[]) => Promise<void>;
 };
 
 export function useAIChat(): UseAIChatReturn {
@@ -140,7 +141,7 @@ export function useAIChat(): UseAIChatReturn {
   );
 
   const sendMessage = useCallback(
-    async (content: string, files?: UploadedFile[]) => {
+    async (content: string, files?: UploadedFile[], images?: UploadedFile[]) => {
       let convId = activeConversationId;
 
       // 1. Create conversation if needed
@@ -166,6 +167,26 @@ export function useAIChat(): UseAIChatReturn {
           conversationId: convId,
           message: content,
           files: files?.length ? files : undefined,
+          images: images?.length
+            ? await Promise.all(
+                images.map(async (img) => {
+                  // If preview (data URL) exists, extract base64; otherwise read file
+                  const base64Data = img.preview
+                    ? img.preview.split(",")[1] ?? ""
+                    : "";
+                  return {
+                    name: img.name,
+                    size: img.size,
+                    type: `image/${img.type === "jpg" ? "jpeg" : img.type}` as
+                      | "image/png"
+                      | "image/jpeg"
+                      | "image/gif"
+                      | "image/webp",
+                    data: base64Data,
+                  };
+                })
+              )
+            : undefined,
         });
 
         // 4. Update with real messages from server after refetch

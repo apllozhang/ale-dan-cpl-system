@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Upload, X, FileText } from "lucide-react";
+import { Upload, X, FileText, ImageIcon } from "lucide-react";
 import { useRef } from "react";
 
 export type UploadedFile = {
@@ -8,6 +8,7 @@ export type UploadedFile = {
   size: number;
   type: string;
   extractedText?: string;
+  preview?: string;
 };
 
 type Props = {
@@ -15,7 +16,8 @@ type Props = {
   onFilesChange: (files: UploadedFile[]) => void;
 };
 
-const ALLOWED_EXTENSIONS = ["pdf", "docx", "doc", "xlsx", "xls", "txt", "csv"];
+const ALLOWED_EXTENSIONS = ["pdf", "docx", "doc", "xlsx", "xls", "txt", "csv", "png", "jpg", "jpeg", "gif", "webp"];
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp"];
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 function formatFileSize(bytes: number): string {
@@ -38,21 +40,41 @@ export function FileUploadZone({ files, onFilesChange }: Props) {
     if (!selectedFiles) return;
 
     const newFiles: UploadedFile[] = [];
-    for (let i = 0; i < selectedFiles.length; i++) {
+    let pendingReaders = 0;
+    const totalFiles = selectedFiles.length;
+
+    for (let i = 0; i < totalFiles; i++) {
       const file = selectedFiles[i];
       const ext = getFileExtension(file.name);
 
       if (!ALLOWED_EXTENSIONS.includes(ext)) continue;
       if (file.size > MAX_FILE_SIZE) continue;
 
-      newFiles.push({
+      const isImage = IMAGE_EXTENSIONS.includes(ext);
+      const entry: UploadedFile = {
         name: file.name,
         size: file.size,
         type: ext,
-      });
+        preview: undefined,
+      };
+
+      if (isImage) {
+        pendingReaders++;
+        const reader = new FileReader();
+        reader.onload = () => {
+          entry.preview = reader.result as string;
+          pendingReaders--;
+          if (pendingReaders === 0) {
+            onFilesChange([...files, ...newFiles]);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+
+      newFiles.push(entry);
     }
 
-    if (newFiles.length > 0) {
+    if (pendingReaders === 0 && newFiles.length > 0) {
       onFilesChange([...files, ...newFiles]);
     }
 
@@ -93,7 +115,13 @@ export function FileUploadZone({ files, onFilesChange }: Props) {
               key={`${file.name}-${index}`}
               className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs"
             >
-              <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+              {IMAGE_EXTENSIONS.includes(file.type) && file.preview ? (
+                <img src={file.preview} className="size-5 object-cover rounded shrink-0" alt={file.name} />
+              ) : IMAGE_EXTENSIONS.includes(file.type) ? (
+                <ImageIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              ) : (
+                <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+              )}
               <span className="flex-1 truncate">{file.name}</span>
               <span className="shrink-0 text-muted-foreground">
                 {formatFileSize(file.size)}

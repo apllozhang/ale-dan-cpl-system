@@ -24,7 +24,7 @@ import { useTranslation } from "react-i18next";
 // ── Types ──
 type ModelForm = {
   name: string;
-  provider: "openai_compatible" | "google_gemini";
+  provider: "openai_compatible" | "google_gemini" | "anthropic";
   apiBaseUrl: string;
   apiKey: string;
   modelName: string;
@@ -234,6 +234,7 @@ function ModelsPanel() {
                 <SelectContent>
                   <SelectItem value="openai_compatible">OpenAI Compatible</SelectItem>
                   <SelectItem value="google_gemini">Google Gemini</SelectItem>
+                  <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
