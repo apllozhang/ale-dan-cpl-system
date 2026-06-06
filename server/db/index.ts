@@ -64,3 +64,4 @@ export * from "./importJobs";
 export * from "./loginAttempts";
 export * from "./ai";
 export * from "./knowledgeBase";
+export * from "./ai-data-query";
