@@ -1,0 +1,1 @@
+ALTER TABLE `ai_provider_configs` MODIFY COLUMN `provider` enum('openai_compatible','google_gemini','anthropic') NOT NULL;
