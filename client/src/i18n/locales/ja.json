@@ -11,7 +11,8 @@
     "customers": "顧客管理",
     "techSpecs": "技術仕様",
     "certifications": "認証管理",
-    "eflash": "eFlash"
+    "eflash": "eFlash",
+    "aiAgent": "AIエージェント"
   },
   "dashboard": {
     "welcome": "おかえりなさい",
@@ -828,5 +829,48 @@
     "table": {
       "empty": "eFlashレコードがありません"
     }
+  },
+  "ai": {
+    "newConversation": "新しい会話",
+    "untitled": "無題",
+    "noConversations": "会話がありません",
+    "localMode": "ローカルモード",
+    "expertMode": "エキスパートモード",
+    "selectModel": "モデルを選択",
+    "noModelsConfigured": "モデルが設定されていません。管理者にお問い合わせください",
+    "uploadFiles": "ファイルをアップロード",
+    "searchResults": "検索結果",
+    "sendMessageFailed": "メッセージの送信に失敗しました",
+    "configTitle": "AI設定管理",
+    "modelsTab": "モデル",
+    "searchTab": "検索サービス",
+    "knowledgeTab": "ナレッジベース",
+    "modelList": "モデル一覧",
+    "addModel": "モデルを追加",
+    "editModel": "モデルを編集",
+    "modelName": "モデル名",
+    "provider": "プロバイダー",
+    "setAsDefault": "デフォルトに設定",
+    "leaveEmptyToKeep": "現在の値を維持する場合は空欄",
+    "test": "テスト",
+    "disabled": "無効",
+    "noModels": "モデル未設定",
+    "modelSaved": "モデルを保存しました",
+    "testSuccess": "接続成功: {{model}} ({{latency}}ms)",
+    "testFailed": "接続テストに失敗しました",
+    "searchServiceList": "検索サービス一覧",
+    "addSearchConfig": "検索サービスを追加",
+    "serviceName": "サービス名",
+    "searchConfigSaved": "検索設定を保存しました",
+    "searchTestSuccess": "検索成功: {{count}}件 ({{latency}}ms)",
+    "noSearchConfigs": "検索設定なし",
+    "knowledgeBases": "ナレッジベース一覧",
+    "kbName": "ナレッジベース名",
+    "kbDescription": "説明（任意）",
+    "kbCreated": "ナレッジベースを作成しました",
+    "documents": "ドキュメント一覧",
+    "uploadDoc": "ドキュメントをアップロード",
+    "docUploaded": "ドキュメントをアップロードしました",
+    "selectKb": "先にナレッジベースを選択してください"
   }
 }

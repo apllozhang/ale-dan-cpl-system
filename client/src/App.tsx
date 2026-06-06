@@ -20,6 +20,8 @@ import Customers from "@/features/customers/pages/Customers";
 import { SpecSetDetail } from "@/features/product-specs/pages/ProductSpecsPage";
 import CertificationsPage from "@/features/certifications/pages/CertificationsPage";
 import EFlashPage from "@/features/eflash/pages/EFlashPage";
+import AIChatPage from "@/features/ai/pages/AIChatPage";
+import AIConfigPage from "@/features/ai/pages/AIConfigPage";
 
 function DashboardRoutes() {
   return (
@@ -38,6 +40,8 @@ function DashboardRoutes() {
         <Route path="/activity" component={ActivityLog} />
         <Route path="/stats" component={BusinessAnalysis} />
         <Route path="/customers" component={Customers} />
+        <Route path="/ai" component={AIChatPage} />
+        <Route path="/ai/config" component={AIConfigPage} />
         <Route path="/data/specs/:setId" component={({ params }) => <SpecSetDetail setId={Number(params!.setId)} onBack={() => window.location.href = "/data"} />} />
         <Route component={NotFound} />
       </Switch>

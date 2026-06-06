@@ -48,6 +48,7 @@ import {
   Monitor,
   Info,
   Megaphone,
+  Bot,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -71,6 +72,7 @@ const menuItems = [
   { icon: Megaphone, labelKey: "menu.eflash", path: "/eflash", permission: PERMISSIONS.VIEW_PRODUCTS },
   { icon: Activity, labelKey: "menu.activity", path: "/activity", permission: PERMISSIONS.VIEW_ACTIVITY_LOGS },
   { icon: Users, labelKey: "menu.users", path: "/users", permission: PERMISSIONS.MANAGE_USERS },
+  { icon: Bot, labelKey: "menu.aiAgent", path: "/ai", permission: PERMISSIONS.USE_AI_AGENT },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

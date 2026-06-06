@@ -265,9 +265,16 @@ const normalizeResponseFormat = ({
   };
 };
 
-export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
+export type ProviderConfig = {
+  provider: "openai_compatible" | "google_gemini";
+  apiBaseUrl: string;
+  apiKey: string;
+  modelName: string;
+  maxTokens?: number;
+  temperature?: number;
+};
 
+function buildBasePayload(params: InvokeParams): Record<string, unknown> {
   const {
     messages,
     tools,
@@ -280,7 +287,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,11 +302,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
-  }
-
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
     response_format,
@@ -311,6 +312,55 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (normalizedResponseFormat) {
     payload.response_format = normalizedResponseFormat;
   }
+
+  return payload;
+}
+
+/**
+ * Invoke LLM with an explicit provider configuration (multi-model).
+ */
+async function invokeProviderLLM(
+  params: InvokeParams,
+  config: ProviderConfig
+): Promise<InvokeResult> {
+  const payload = buildBasePayload(params);
+  payload.model = config.modelName;
+  payload.max_tokens = config.maxTokens ?? 4096;
+  if (config.temperature !== undefined) {
+    payload.temperature = config.temperature;
+  }
+
+  const url = `${config.apiBaseUrl.replace(/\/$/, "")}/chat/completions`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `LLM invoke failed (${config.modelName}): ${response.status} ${response.statusText} – ${errorText}`
+    );
+  }
+
+  return (await response.json()) as InvokeResult;
+}
+
+/**
+ * Invoke LLM using the legacy forge.manus.im endpoint (backward compatible).
+ */
+async function invokeLegacyLLM(params: InvokeParams): Promise<InvokeResult> {
+  assertApiKey();
+
+  const payload = buildBasePayload(params);
+  payload.model = "gemini-2.5-flash";
+  payload.max_tokens = 32768;
+  payload.thinking = { budget_tokens: 128 };
 
   const response = await fetch(resolveApiUrl(), {
     method: "POST",
@@ -329,4 +379,79 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   return (await response.json()) as InvokeResult;
+}
+
+/**
+ * Invoke LLM — routes to configured provider or legacy forge endpoint.
+ * Backward compatible: omit providerConfig to use existing forge.manus.im.
+ */
+export async function invokeLLM(
+  params: InvokeParams,
+  providerConfig?: ProviderConfig
+): Promise<InvokeResult> {
+  if (providerConfig) {
+    return invokeProviderLLM(params, providerConfig);
+  }
+  return invokeLegacyLLM(params);
+}
+
+/**
+ * Stream LLM responses via SSE. Yields text deltas in real-time.
+ */
+export async function* streamLLM(
+  params: InvokeParams,
+  config: ProviderConfig
+): AsyncGenerator<string> {
+  const payload = buildBasePayload(params);
+  payload.model = config.modelName;
+  payload.max_tokens = config.maxTokens ?? 4096;
+  payload.stream = true;
+  if (config.temperature !== undefined) {
+    payload.temperature = config.temperature;
+  }
+
+  const url = `${config.apiBaseUrl.replace(/\/$/, "")}/chat/completions`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `LLM stream failed (${config.modelName}): ${response.status} ${response.statusText} – ${errorText}`
+    );
+  }
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split("\n");
+    buffer = lines.pop()!;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith("data: ")) continue;
+      const data = trimmed.slice(6);
+      if (data === "[DONE]") return;
+      try {
+        const chunk = JSON.parse(data);
+        const delta = chunk.choices?.[0]?.delta?.content;
+        if (delta) yield delta;
+      } catch {
+        // Skip malformed JSON chunks
+      }
+    }
+  }
 }

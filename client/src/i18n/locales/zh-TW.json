@@ -11,7 +11,8 @@
     "customers": "客戶管理",
     "techSpecs": "技術參數",
     "certifications": "證書管理",
-    "eflash": "eFlash"
+    "eflash": "eFlash",
+    "aiAgent": "AI 智慧助手"
   },
   "dashboard": {
     "welcome": "歡迎回來",
@@ -828,5 +829,48 @@
     "table": {
       "empty": "暫無 eFlash 記錄"
     }
+  },
+  "ai": {
+    "newConversation": "新建對話",
+    "untitled": "未命名對話",
+    "noConversations": "暫無對話",
+    "localMode": "本地模式",
+    "expertMode": "專家模式",
+    "selectModel": "選擇模型",
+    "noModelsConfigured": "暫無可用模型，請聯繫管理員配置",
+    "uploadFiles": "上傳檔案",
+    "searchResults": "搜尋結果",
+    "sendMessageFailed": "發送失敗，請重試",
+    "configTitle": "AI 設定管理",
+    "modelsTab": "模型管理",
+    "searchTab": "搜尋服務",
+    "knowledgeTab": "知識庫",
+    "modelList": "模型列表",
+    "addModel": "添加模型",
+    "editModel": "編輯模型",
+    "modelName": "模型名稱",
+    "provider": "提供商",
+    "setAsDefault": "設為預設",
+    "leaveEmptyToKeep": "留空保持不變",
+    "test": "測試",
+    "disabled": "已停用",
+    "noModels": "暫無模型設定",
+    "modelSaved": "模型設定已儲存",
+    "testSuccess": "連線成功: {{model}} ({{latency}}ms)",
+    "testFailed": "連線測試失敗",
+    "searchServiceList": "搜尋服務列表",
+    "addSearchConfig": "添加搜尋服務",
+    "serviceName": "服務名稱",
+    "searchConfigSaved": "搜尋設定已儲存",
+    "searchTestSuccess": "搜尋成功: {{count}} 筆結果 ({{latency}}ms)",
+    "noSearchConfigs": "暫無搜尋設定",
+    "knowledgeBases": "知識庫列表",
+    "kbName": "知識庫名稱",
+    "kbDescription": "描述（可選）",
+    "kbCreated": "知識庫已建立",
+    "documents": "文件列表",
+    "uploadDoc": "上傳文件",
+    "docUploaded": "文件已上傳",
+    "selectKb": "請先選擇一個知識庫"
   }
 }

@@ -11,7 +11,8 @@
     "customers": "Clients",
     "techSpecs": "Spécifications",
     "certifications": "Certifications",
-    "eflash": "eFlash"
+    "eflash": "eFlash",
+    "aiAgent": "Agent IA"
   },
   "dashboard": {
     "welcome": "Bienvenue",
@@ -828,5 +829,48 @@
     "table": {
       "empty": "Aucun enregistrement eFlash"
     }
+  },
+  "ai": {
+    "newConversation": "Nouvelle Conversation",
+    "untitled": "Sans titre",
+    "noConversations": "Aucune conversation",
+    "localMode": "Mode Local",
+    "expertMode": "Mode Expert",
+    "selectModel": "Sélectionner un Modèle",
+    "noModelsConfigured": "Aucun modèle configuré. Contactez votre administrateur.",
+    "uploadFiles": "Téléverser des Fichiers",
+    "searchResults": "Résultats de Recherche",
+    "sendMessageFailed": "Échec de l'envoi du message",
+    "configTitle": "Configuration IA",
+    "modelsTab": "Modèles",
+    "searchTab": "Services de Recherche",
+    "knowledgeTab": "Base de Connaissances",
+    "modelList": "Liste des Modèles",
+    "addModel": "Ajouter un Modèle",
+    "editModel": "Modifier le Modèle",
+    "modelName": "Nom du Modèle",
+    "provider": "Fournisseur",
+    "setAsDefault": "Définir par Défaut",
+    "leaveEmptyToKeep": "Laisser vide pour conserver l'actuel",
+    "test": "Tester",
+    "disabled": "Désactivé",
+    "noModels": "Aucun modèle configuré",
+    "modelSaved": "Modèle enregistré",
+    "testSuccess": "Connecté : {{model}} ({{latency}}ms)",
+    "testFailed": "Test de connexion échoué",
+    "searchServiceList": "Services de Recherche",
+    "addSearchConfig": "Ajouter un Service de Recherche",
+    "serviceName": "Nom du Service",
+    "searchConfigSaved": "Configuration de recherche enregistrée",
+    "searchTestSuccess": "Recherche OK : {{count}} résultats ({{latency}}ms)",
+    "noSearchConfigs": "Aucune configuration de recherche",
+    "knowledgeBases": "Bases de Connaissances",
+    "kbName": "Nom de la Base de Connaissances",
+    "kbDescription": "Description (facultatif)",
+    "kbCreated": "Base de connaissances créée",
+    "documents": "Documents",
+    "uploadDoc": "Téléverser un Document",
+    "docUploaded": "Document téléversé",
+    "selectKb": "Veuillez d'abord sélectionner une base de connaissances"
   }
 }

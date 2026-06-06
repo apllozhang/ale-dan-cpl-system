@@ -11,7 +11,8 @@
     "customers": "Customers",
     "techSpecs": "Tech Specs",
     "certifications": "Certifications",
-    "eflash": "eFlash"
+    "eflash": "eFlash",
+    "aiAgent": "AI Agent"
   },
   "dashboard": {
     "welcome": "Welcome back",
@@ -828,5 +829,48 @@
     "table": {
       "empty": "No eFlash records"
     }
+  },
+  "ai": {
+    "newConversation": "New Conversation",
+    "untitled": "Untitled",
+    "noConversations": "No conversations yet",
+    "localMode": "Local Mode",
+    "expertMode": "Expert Mode",
+    "selectModel": "Select Model",
+    "noModelsConfigured": "No models configured. Contact your admin.",
+    "uploadFiles": "Upload Files",
+    "searchResults": "Search Results",
+    "sendMessageFailed": "Failed to send message",
+    "configTitle": "AI Configuration",
+    "modelsTab": "Models",
+    "searchTab": "Search Services",
+    "knowledgeTab": "Knowledge Base",
+    "modelList": "Model List",
+    "addModel": "Add Model",
+    "editModel": "Edit Model",
+    "modelName": "Model Name",
+    "provider": "Provider",
+    "setAsDefault": "Set as Default",
+    "leaveEmptyToKeep": "Leave empty to keep current",
+    "test": "Test",
+    "disabled": "Disabled",
+    "noModels": "No models configured",
+    "modelSaved": "Model saved",
+    "testSuccess": "Connected: {{model}} ({{latency}}ms)",
+    "testFailed": "Connection test failed",
+    "searchServiceList": "Search Services",
+    "addSearchConfig": "Add Search Service",
+    "serviceName": "Service Name",
+    "searchConfigSaved": "Search config saved",
+    "searchTestSuccess": "Search OK: {{count}} results ({{latency}}ms)",
+    "noSearchConfigs": "No search configs",
+    "knowledgeBases": "Knowledge Bases",
+    "kbName": "Knowledge Base Name",
+    "kbDescription": "Description (optional)",
+    "kbCreated": "Knowledge base created",
+    "documents": "Documents",
+    "uploadDoc": "Upload Document",
+    "docUploaded": "Document uploaded",
+    "selectKb": "Select a knowledge base first"
   }
 }

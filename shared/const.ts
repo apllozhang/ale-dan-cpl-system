@@ -32,6 +32,8 @@ export const PERMISSIONS = {
   MANAGE_SPECS: "manage_specs",
   MANAGE_CERTIFICATIONS: "manage_certifications",
   EFLASH_MANAGE: "manage_eflash",
+  USE_AI_AGENT: "use_ai_agent",
+  MANAGE_AI_CONFIG: "manage_ai_config",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -53,6 +55,8 @@ export const ROLE_PERMISSIONS: Record<Permission, RoleOrSuper[]> = {
   [PERMISSIONS.MANAGE_SPECS]: [SUPER_ADMIN_ROLE, "admin"],
   [PERMISSIONS.MANAGE_CERTIFICATIONS]: [SUPER_ADMIN_ROLE, "admin", "sales_manager"],
   [PERMISSIONS.EFLASH_MANAGE]: [SUPER_ADMIN_ROLE, "admin", "sales_manager"],
+  [PERMISSIONS.USE_AI_AGENT]: [SUPER_ADMIN_ROLE, "admin", "sales_manager", "sales_rep", "viewer", "user"],
+  [PERMISSIONS.MANAGE_AI_CONFIG]: [SUPER_ADMIN_ROLE, "admin"],
 };
 
 export function hasPermission(user: { role: string; isSuperAdmin: boolean }, permission: Permission): boolean {

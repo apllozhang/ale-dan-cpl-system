@@ -7,6 +7,7 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  aiEncryptionKey: process.env.AI_ENCRYPTION_KEY ?? "",
 };
 
 /**
@@ -33,4 +34,12 @@ if (ENV.isProduction) {
 // Non-production warning for missing secrets
 if (!ENV.isProduction && !ENV.cookieSecret) {
   console.warn("[WARN] JWT_SECRET is not set. Using empty string — tokens are trivially forgeable. Set JWT_SECRET in .env");
+}
+
+if (!ENV.aiEncryptionKey) {
+  if (ENV.isProduction) {
+    requireEnv("AI_ENCRYPTION_KEY");
+  } else {
+    console.warn("[WARN] AI_ENCRYPTION_KEY is not set. AI Agent feature will not work. Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"");
+  }
 }

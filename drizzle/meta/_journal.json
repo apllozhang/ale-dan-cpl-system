@@ -155,6 +155,13 @@
       "when": 1780559115071,
       "tag": "0021_test_verify",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1780675700642,
+      "tag": "0022_lush_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }

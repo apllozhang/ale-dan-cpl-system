@@ -460,3 +460,102 @@ export const loginAttempts = mysqlTable("login_attempts", {
 
 export type LoginAttempt = typeof loginAttempts.$inferSelect;
 export type InsertLoginAttempt = typeof loginAttempts.$inferInsert;
+
+// ============================================================
+// AI Agent tables
+// ============================================================
+
+export const aiProviderConfigs = mysqlTable("ai_provider_configs", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  provider: mysqlEnum("provider", ["openai_compatible", "google_gemini"]).notNull(),
+  apiBaseUrl: varchar("api_base_url", { length: 500 }).notNull(),
+  apiKey: text("api_key").notNull(), // AES-256-GCM encrypted
+  modelName: varchar("model_name", { length: 100 }).notNull(),
+  maxTokens: int("max_tokens").default(4096),
+  temperature: decimal("temperature", { precision: 3, scale: 2 }).default("0.70"),
+  isEnabled: boolean("is_enabled").default(true).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  costPerInputToken: decimal("cost_per_input_token", { precision: 10, scale: 8 }).default("0"),
+  costPerOutputToken: decimal("cost_per_output_token", { precision: 10, scale: 8 }).default("0"),
+  createdBy: int("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export const aiSearchConfigs = mysqlTable("ai_search_configs", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  provider: mysqlEnum("provider", ["serper", "serpapi", "google_custom", "bing", "tavily", "custom"]).notNull(),
+  apiBaseUrl: varchar("api_base_url", { length: 500 }).notNull(),
+  apiKey: text("api_key").notNull(), // AES-256-GCM encrypted
+  extraParams: json("extra_params").$type<Record<string, string>>(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  isEnabled: boolean("is_enabled").default(true).notNull(),
+  dailyLimit: int("daily_limit").default(1000),
+  createdBy: int("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export const aiKnowledgeBases = mysqlTable("ai_knowledge_bases", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  createdBy: int("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const aiKnowledgeDocs = mysqlTable("ai_knowledge_docs", {
+  id: int("id").autoincrement().primaryKey(),
+  knowledgeBaseId: int("knowledge_base_id").notNull(),
+  fileName: varchar("file_name", { length: 500 }).notNull(),
+  fileType: varchar("file_type", { length: 20 }).notNull(),
+  fileSize: int("file_size").notNull(),
+  extractedText: text("extracted_text"),
+  chunkCount: int("chunk_count").default(0),
+  status: mysqlEnum("status", ["processing", "ready", "failed"]).default("processing").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const aiConversations = mysqlTable("ai_conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  title: varchar("title", { length: 200 }),
+  mode: mysqlEnum("mode", ["local", "expert"]).default("expert").notNull(),
+  providerConfigId: int("provider_config_id"),
+  searchConfigId: int("search_config_id"),
+  knowledgeBaseId: int("knowledge_base_id"),
+  systemPrompt: text("system_prompt"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("ai_conversations_user_id_idx").on(table.userId),
+]);
+
+export const aiMessages = mysqlTable("ai_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: int("conversation_id").notNull(),
+  role: mysqlEnum("role", ["system", "user", "assistant"]).notNull(),
+  content: text("content").notNull(),
+  mode: mysqlEnum("mode", ["local", "expert"]),
+  attachedFiles: json("attached_files").$type<Array<{ name: string; size: number; type: string }>>(),
+  searchResults: json("search_results").$type<Array<{ title: string; url: string; snippet: string; date?: string }>>(),
+  tokenCount: int("token_count"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_messages_conversation_id_idx").on(table.conversationId),
+]);
+
+export type AiProviderConfig = typeof aiProviderConfigs.$inferSelect;
+export type InsertAiProviderConfig = typeof aiProviderConfigs.$inferInsert;
+export type AiSearchConfig = typeof aiSearchConfigs.$inferSelect;
+export type InsertAiSearchConfig = typeof aiSearchConfigs.$inferInsert;
+export type AiKnowledgeBase = typeof aiKnowledgeBases.$inferSelect;
+export type InsertAiKnowledgeBase = typeof aiKnowledgeBases.$inferInsert;
+export type AiKnowledgeDoc = typeof aiKnowledgeDocs.$inferSelect;
+export type InsertAiKnowledgeDoc = typeof aiKnowledgeDocs.$inferInsert;
+export type AiConversation = typeof aiConversations.$inferSelect;
+export type InsertAiConversation = typeof aiConversations.$inferInsert;
+export type AiMessage = typeof aiMessages.$inferSelect;
+export type InsertAiMessage = typeof aiMessages.$inferInsert;

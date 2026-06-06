@@ -62,3 +62,5 @@ export * from "./eflash";
 export * from "./tempUploads";
 export * from "./importJobs";
 export * from "./loginAttempts";
+export * from "./ai";
+export * from "./knowledgeBase";

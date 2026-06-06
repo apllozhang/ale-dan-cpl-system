@@ -18,6 +18,7 @@ import { customersRouter } from "./routers/customers";
 import { certificationsRouter } from "./routers/certifications";
 import { eflashRouter } from "./routers/eflash";
 import { importJobsRouter } from "./routers/importJobs";
+import { aiRouter } from "./routers/ai";
 
 export const appRouter = router({
   system: systemRouter,
@@ -39,6 +40,7 @@ export const appRouter = router({
   customers: customersRouter,
   certifications: certificationsRouter,
   eflash: eflashRouter,
+  ai: aiRouter,
 });
 
 export type AppRouter = typeof appRouter;

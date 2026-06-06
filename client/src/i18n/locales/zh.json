@@ -11,7 +11,8 @@
     "customers": "客户管理",
     "techSpecs": "技术参数",
     "certifications": "证书管理",
-    "eflash": "eFlash"
+    "eflash": "eFlash",
+    "aiAgent": "AI 智能体"
   },
   "dashboard": {
     "welcome": "欢迎回来",
@@ -829,5 +830,48 @@
     "table": {
       "empty": "暂无 eFlash 记录"
     }
+  },
+  "ai": {
+    "newConversation": "新建对话",
+    "untitled": "未命名对话",
+    "noConversations": "暂无对话",
+    "localMode": "本地模式",
+    "expertMode": "专家模式",
+    "selectModel": "选择模型",
+    "noModelsConfigured": "暂无可用模型，请联系管理员配置",
+    "uploadFiles": "上传文件",
+    "searchResults": "搜索结果",
+    "sendMessageFailed": "发送失败，请重试",
+    "configTitle": "AI 配置管理",
+    "modelsTab": "模型管理",
+    "searchTab": "搜索服务",
+    "knowledgeTab": "知识库",
+    "modelList": "模型列表",
+    "addModel": "添加模型",
+    "editModel": "编辑模型",
+    "modelName": "模型名称",
+    "provider": "提供商",
+    "setAsDefault": "设为默认",
+    "leaveEmptyToKeep": "留空保持不变",
+    "test": "测试",
+    "disabled": "已禁用",
+    "noModels": "暂无模型配置",
+    "modelSaved": "模型配置已保存",
+    "testSuccess": "连接成功: {{model}} ({{latency}}ms)",
+    "testFailed": "连接测试失败",
+    "searchServiceList": "搜索服务列表",
+    "addSearchConfig": "添加搜索服务",
+    "serviceName": "服务名称",
+    "searchConfigSaved": "搜索配置已保存",
+    "searchTestSuccess": "搜索成功: {{count}} 条结果 ({{latency}}ms)",
+    "noSearchConfigs": "暂无搜索配置",
+    "knowledgeBases": "知识库列表",
+    "kbName": "知识库名称",
+    "kbDescription": "描述（可选）",
+    "kbCreated": "知识库已创建",
+    "documents": "文档列表",
+    "uploadDoc": "上传文档",
+    "docUploaded": "文档已上传",
+    "selectKb": "请先选择一个知识库"
   }
 }

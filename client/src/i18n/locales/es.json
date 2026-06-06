@@ -11,7 +11,8 @@
     "customers": "Clientes",
     "techSpecs": "Especificaciones",
     "certifications": "Certificaciones",
-    "eflash": "eFlash"
+    "eflash": "eFlash",
+    "aiAgent": "Agente de IA"
   },
   "dashboard": {
     "welcome": "Bienvenido de nuevo",
@@ -828,5 +829,48 @@
     "table": {
       "empty": "Sin registros eFlash"
     }
+  },
+  "ai": {
+    "newConversation": "Nueva Conversación",
+    "untitled": "Sin título",
+    "noConversations": "Sin conversaciones",
+    "localMode": "Modo Local",
+    "expertMode": "Modo Experto",
+    "selectModel": "Seleccionar Modelo",
+    "noModelsConfigured": "No hay modelos configurados. Contacte al administrador.",
+    "uploadFiles": "Subir Archivos",
+    "searchResults": "Resultados de Búsqueda",
+    "sendMessageFailed": "Error al enviar mensaje",
+    "configTitle": "Configuración de IA",
+    "modelsTab": "Modelos",
+    "searchTab": "Servicios de Búsqueda",
+    "knowledgeTab": "Base de Conocimiento",
+    "modelList": "Lista de Modelos",
+    "addModel": "Agregar Modelo",
+    "editModel": "Editar Modelo",
+    "modelName": "Nombre del Modelo",
+    "provider": "Proveedor",
+    "setAsDefault": "Establecer como Predeterminado",
+    "leaveEmptyToKeep": "Dejar vacío para mantener el actual",
+    "test": "Probar",
+    "disabled": "Deshabilitado",
+    "noModels": "Sin modelos configurados",
+    "modelSaved": "Modelo guardado",
+    "testSuccess": "Conectado: {{model}} ({{latency}}ms)",
+    "testFailed": "Prueba de conexión fallida",
+    "searchServiceList": "Servicios de Búsqueda",
+    "addSearchConfig": "Agregar Servicio de Búsqueda",
+    "serviceName": "Nombre del Servicio",
+    "searchConfigSaved": "Configuración de búsqueda guardada",
+    "searchTestSuccess": "Búsqueda OK: {{count}} resultados ({{latency}}ms)",
+    "noSearchConfigs": "Sin configuraciones de búsqueda",
+    "knowledgeBases": "Bases de Conocimiento",
+    "kbName": "Nombre de la Base de Conocimiento",
+    "kbDescription": "Descripción (opcional)",
+    "kbCreated": "Base de conocimiento creada",
+    "documents": "Documentos",
+    "uploadDoc": "Subir Documento",
+    "docUploaded": "Documento subido",
+    "selectKb": "Seleccione una base de conocimiento primero"
   }
 }
