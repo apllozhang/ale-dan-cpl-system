@@ -60,7 +60,51 @@ Canonical (OpenAI)                    Anthropic
 
 **总计约 110 行。** 所有协议差异封装在 `llm.ts` 内部。
 
-## 4. 安全
+## 4. 连通性测试机制
+
+每个模型配置添加后，必须可测试对接是否成功。`models.test` 路由按 provider 分流测试：
+
+### 测试流程
+
+```
+管理员添加模型 → 点击"测试"按钮 → 后端按 provider 发测试请求 → 返回明确结果
+```
+
+### 成功响应
+
+```json
+{ "success": true, "model": "claude-sonnet-4-6", "provider": "anthropic", "latencyMs": 1203 }
+```
+
+前端 toast: `✅ 连接成功: claude-sonnet-4-6 (1203ms)`
+
+### 失败响应 — 按错误类型分类提示
+
+| 错误场景 | HTTP 状态码 | 提示信息 |
+|---------|-----------|---------|
+| API Key 无效/过期 | 401 | `❌ 认证失败：API Key 无效或已过期` |
+| 余额不足/配额用尽 | 402/429 | `❌ 配额不足：请检查账户余额或等待重试` |
+| 网络不通/URL 错误 | ENOTFOUND/ECONNREFUSED | `❌ 网络错误：无法连接到 API 地址，请检查 URL` |
+| 模型名不存在 | 404 | `❌ 模型不存在：请确认模型名称是否正确` |
+| Anthropic 缺少必需 header | 400 | `❌ 请求格式错误：请确认 provider 类型选择正确` |
+| 超时（>15s） | TIMEOUT | `❌ 连接超时：服务器响应时间过长` |
+| 其他未知错误 | - | `❌ 连接失败：{原始错误信息}` |
+
+### 实现
+
+在 `invokeAnthropicLLM` / `invokeOpenAILLM` 中，对 HTTP 响应码做结构化错误分类：
+
+```typescript
+if (!response.ok) {
+  const errorText = await response.text();
+  const userMessage = classifyHttpError(response.status, config.provider, errorText);
+  throw new TRPCError({ code: mapStatusToTRPC(response.status), message: userMessage });
+}
+```
+
+前端对 `TRPCError.message` 直接展示，无需额外解析。
+
+## 5. 安全
 
 | 风险 | 防护 |
 |------|------|
